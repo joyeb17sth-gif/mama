@@ -1,0 +1,125 @@
+---
+description: Deployment workflow to GitHub repository https://github.com/joyeb17sth-gif/mama.git
+alwaysApply: true
+---
+
+# GitHub Deployment Workflow
+
+## Repository Information
+- **Repository URL**: https://github.com/joyeb17sth-gif/mama.git
+- **Default Branch**: main
+- **Project Type**: React + Vite application
+
+## Deployment Checklist
+
+Before deploying, ensure:
+1. ✅ All changes are tested locally (`npm run dev`)
+2. ✅ Build succeeds (`npm run build`)
+3. ✅ No sensitive data in code (API keys, passwords, etc.)
+4. ✅ `.gitignore` properly configured
+5. ✅ All files are staged and ready
+
+## Standard Deployment Workflow
+
+### 1. Check Status
+```bash
+git status
+```
+
+### 2. Stage Changes
+```bash
+git add .
+# Or stage specific files:
+git add <file1> <file2>
+```
+
+### 3. Commit with Descriptive Message
+```bash
+git commit -m "feat: add new feature"
+git commit -m "fix: resolve deployment issue"
+git commit -m "docs: update README"
+```
+
+**Commit Message Convention:**
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `docs:` - Documentation changes
+- `style:` - Code style changes (formatting, etc.)
+- `refactor:` - Code refactoring
+- `test:` - Adding or updating tests
+- `chore:` - Maintenance tasks
+
+### 4. Push to GitHub
+```bash
+git push -u origin main
+```
+
+## Authentication
+
+If authentication fails:
+1. **Use Personal Access Token (PAT)**:
+   - Create at: https://github.com/settings/tokens
+   - Scope: `repo` (full control)
+   - Use token as password when prompted
+
+2. **Or use SSH**:
+   ```bash
+   git remote set-url origin git@github.com:joyeb17sth-gif/mama.git
+   ```
+
+## Common Issues & Solutions
+
+### Issue: "Permission denied"
+- **Solution**: Use Personal Access Token or configure SSH keys
+
+### Issue: "Branch is behind"
+- **Solution**: 
+  ```bash
+  git pull origin main
+  # Resolve conflicts if any
+  git push origin main
+  ```
+
+### Issue: "Nothing to commit"
+- **Solution**: Check if changes are already committed or not staged
+
+### Issue: Build fails on Vercel
+- **Solution**: 
+  - Verify `vercel.json` exists
+  - Check `package.json` has correct build script
+  - Ensure `dist` folder is in `.gitignore` (it should be)
+
+## Pre-Deployment Commands
+
+Always run before deploying:
+```bash
+# Install dependencies
+npm install
+
+# Test build
+npm run build
+
+# Check for linting errors (if configured)
+# npm run lint
+```
+
+## Post-Deployment
+
+After successful push:
+1. Verify on GitHub: https://github.com/joyeb17sth-gif/mama
+2. Check if Vercel auto-deploys (if connected)
+3. Test the deployed application
+
+## Quick Deploy Command Sequence
+
+```bash
+git add .
+git commit -m "feat: your feature description"
+git push -u origin main
+```
+
+## Important Notes
+
+- **Never commit**: `node_modules/`, `.env` files with secrets, `dist/` folder
+- **Always commit**: Source code, configuration files, documentation
+- **Test locally** before pushing to avoid breaking production
