@@ -11,7 +11,24 @@ import {
 } from './utils/storage';
 import { encryptData } from './utils/encryptionUtils';
 import { isAuthenticated, setAuthenticated } from './utils/auth';
-// ... other imports ...
+
+// Components
+import Navbar from './components/Navbar';
+import ContractorList from './components/ContractorList';
+import ContractorForm from './components/ContractorForm';
+import SiteList from './components/SiteList';
+import SiteForm from './components/SiteForm';
+import SiteAllocation from './components/SiteAllocation';
+import PayRateConfiguration from './components/PayRateConfiguration';
+import TimesheetEntry from './components/TimesheetEntry';
+import TimesheetList from './components/TimesheetList';
+import PaymentSummary from './components/PaymentSummary';
+import TrainingEscrowManager from './components/TrainingEscrowManager';
+import AuditLogViewer from './components/AuditLogViewer';
+import Login from './components/Login';
+import ForgotPassword from './components/ForgotPassword';
+import Settings from './components/Settings';
+import Toast from './components/Toast';
 
 function App() {
   const [authenticated, setAuthenticatedState] = useState(false);
@@ -19,7 +36,24 @@ function App() {
   const [activeTab, setActiveTab] = useState('contractors');
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Contractors ... (other states stay same)
+  // Contractors
+  const [contractors, setContractors] = useState([]);
+  const [showContractorForm, setShowContractorForm] = useState(false);
+  const [editingContractor, setEditingContractor] = useState(null);
+
+  // Sites
+  const [sites, setSites] = useState([]);
+  const [showSiteForm, setShowSiteForm] = useState(false);
+  const [editingSite, setEditingSite] = useState(null);
+
+  // Timesheets
+  const [selectedSiteForTimesheet, setSelectedSiteForTimesheet] = useState(null);
+  const [timesheetPeriodStart, setTimesheetPeriodStart] = useState('');
+  const [timesheetPeriodEnd, setTimesheetPeriodEnd] = useState('');
+  const [showTimesheetList, setShowTimesheetList] = useState(false);
+  const [isEnteringTimesheet, setIsEnteringTimesheet] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   const syncData = async () => {
     if (!isAuthenticated()) return;
@@ -282,8 +316,8 @@ function App() {
             </button>
             <button
               onClick={() => {
-                setActiveTab('sites');
                 setSites(getSites());
+                setActiveTab('sites');
               }}
               className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'sites'
                 ? 'border-blue-500 text-blue-600'
@@ -358,7 +392,7 @@ function App() {
           </nav>
         </div>
 
-        {/* Contractors Tab */}
+        {/* Tab Content */}
         {activeTab === 'contractors' && (
           <div className="mt-6">
             {!showContractorForm ? (
