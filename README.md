@@ -1,80 +1,57 @@
-# Payslip Generator
+# Contractor & Timesheet Management System
 
-A modern web application for automatically generating professional payslips for your business employees.
+A specialized system for managing cleaning service contractors, multi-site timesheets, complex pay rates, and training pay escrow.
 
 ## Features
 
-- **Employee Management**: Add, edit, and manage employee information
-- **Automatic Calculations**: Automatically calculates gross salary, net salary, and deductions
-- **PDF Export**: Generate professional PDF payslips ready for printing or email
-- **Company Information**: Customize company details on payslips
-- **Local Storage**: All data is saved locally in your browser
-- **Modern UI**: Clean, responsive interface built with React and Tailwind CSS
+### 1. Contractor Management
+- Manage contractors with unique IDs and bank details (BSB, Account Number).
+- Track active/inactive status.
+- **Audit Logging:** All creations, updates, and deletions are logged.
 
-## Installation
+### 2. Multi-Site & Pay Rates
+- create multiple sites with specific budgets (Hours/Cost).
+- Configure **site-specific pay rates** for Weekdays, Saturdays, Sundays, and Public Holidays.
+- Allocate contractors to specific sites.
 
-1. Install dependencies:
-```bash
-npm install
-```
+### 3. Timesheet Management
+- **Excel-style Grid:** Daily entry for hours.
+- **Auto-Population:** Pre-fills allocated contractors for the site.
+- **Budget Control:** Real-time visual warnings (Red Banner) if site budget is exceeded.
+- **Manual Override:** "Lump Sum" option to override calculated daily pay.
+- **Escrow Display:** Clearly shows "Escrowed" (Held) amounts vs "Payable" amounts.
+- **Management:** View history, check statuses, and **Delete** incorrect timesheets.
 
-2. Start the development server:
-```bash
-npm run dev
-```
+### 4. Training Pay Escrow (Unique Feature)
+- **Accumulation:** Mark days as "Training" in the timesheet. Pay is calculated but **HELD** (Escrowed), not paid immediately.
+- **Management:** Dedicated "Training Pay" tab to view accumulated balances per contractor.
+- **Release:** Admin can "Release" specific amounts (e.g., after 4 weeks).
+- **Consolidation:** Released amounts are legally added to the *current* period's payment summary.
 
-3. Open your browser and navigate to the URL shown in the terminal (usually `http://localhost:5173`)
+### 5. Payment Consolidation
+- Generates a single payment record per contractor per period.
+- Combines hours from multiple sites.
+- Includes any **Training Pay Releases** processed in that period.
+- Export to CSV for bank processing.
 
-## Usage
+### 6. Audit Trail
+- Tracks all sensitive actions:
+    - Contractor Changes
+    - Site Changes
+    - Timesheet Submissions & Deletions
+    - Training Pay Releases
+- Filterable view to Audit Logs.
 
-### Adding Employees
-
-1. Go to the "Employees" tab
-2. Click "Add Employee"
-3. Fill in the employee details:
-   - Full Name (required)
-   - Employee ID (required)
-   - Designation (required)
-   - Department (required)
-   - Email, Phone, Address (optional)
-4. Click "Add Employee"
-
-### Generating Payslips
-
-1. Go to the "Generate Payslip" tab
-2. Fill in company information (if not already set)
-3. Select an employee from the dropdown
-4. Choose the pay period (month and year)
-5. Enter salary details:
-   - Basic Salary (required)
-   - Allowances (optional)
-   - Deductions (optional)
-6. Click "Generate & Download Payslip"
-
-The payslip will be automatically downloaded as a PDF file.
-
-## Technologies Used
-
-- React 18
-- Vite
+## Tech Stack
+- React + Vite
 - Tailwind CSS
-- jsPDF (for PDF generation)
-- date-fns (for date formatting)
+- LocalStorage (Persistence)
 
-## Browser Compatibility
-
-Works on all modern browsers that support:
-- ES6+ JavaScript
-- Local Storage API
-- PDF generation
-
-## Data Storage
-
-All employee data and company information is stored locally in your browser's localStorage. This means:
-- Data persists between sessions
-- Data is private to your browser
-- No data is sent to any server
-
-## License
-
-This project is open source and available for personal and commercial use.
+## Quick Start
+1. **Contractors:** Add your contractors.
+2. **Sites:** Create sites and set budgets.
+3. **Pay Rates:** Configure rates for each site.
+4. **Allocation:** Assign contractors to sites.
+5. **Timesheets:** Enter daily hours. Watch for Budget Warnings!
+6. **Training:** Release held pay when ready.
+7. **Payments:** Generate and export the final pay run.

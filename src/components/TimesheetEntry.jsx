@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { generatePeriodDates, formatDateDisplay } from '../utils/dateUtils';
-import { calculateTimesheetPay } from '../utils/payrollCalculations';
+import { checkBudgetStatus, calculateTimesheetPay } from '../utils/payrollCalculations';
 import { getPayRates } from '../utils/storage';
 import Toast from './Toast';
 
@@ -10,12 +10,41 @@ const TimesheetEntry = ({ site, periodStart, periodEnd, contractors, onSave }) =
   const [payRates, setPayRates] = useState({});
   const [manualLumpSum, setManualLumpSum] = useState({});
   const [showToast, setShowToast] = useState(false);
+  const [budgetStatus, setBudgetStatus] = useState(null);
+  const [totalStats, setTotalStats] = useState({ hours: 0, pay: 0 });
+
+  useEffect(() => {
+    if (entries.length > 0) {
+      const totals = entries.reduce((acc, entry) => {
+        const calc = calculateTimesheetPay(entry, payRates);
+        return {
+          hours: acc.hours + calc.totalHours,
+          pay: acc.pay + calc.totalPay
+        };
+      }, { hours: 0, pay: 0 });
+
+      setTotalStats(totals);
+
+      if (site.budgetedHours || site.budgetedAmount) {
+        const siteBudgetHours = parseFloat(site.budgetedHours) || 0;
+        const siteBudgetAmount = parseFloat(site.budgetedAmount) || 0;
+
+        const status = checkBudgetStatus(
+          totals.hours,
+          totals.pay,
+          siteBudgetHours,
+          siteBudgetAmount
+        );
+        setBudgetStatus(status);
+      }
+    }
+  }, [entries, payRates, site]);
 
   useEffect(() => {
     if (site && periodStart && periodEnd) {
       const periodDates = generatePeriodDates(periodStart, periodEnd);
       setDates(periodDates);
-      
+
       // Load pay rates for this site
       const allRates = getPayRates();
       const siteRates = allRates.find(r => r.siteId === site.id);
@@ -35,17 +64,17 @@ const TimesheetEntry = ({ site, periodStart, periodEnd, contractors, onSave }) =
         });
         alert('⚠️ No pay rates configured for this site. Please configure pay rates first.');
       }
-      
+
       // Initialize entries from allocated contractors
-      const allocatedContractors = contractors.filter(c => 
+      const allocatedContractors = contractors.filter(c =>
         site.allocatedContractors?.includes(c.id)
       );
-      
+
       if (allocatedContractors.length === 0) {
         alert('⚠️ No contractors allocated to this site. Please allocate contractors first.');
         return;
       }
-      
+
       setEntries(allocatedContractors.map(contractor => ({
         contractorId: contractor.id,
         contractorName: contractor.name,
@@ -60,12 +89,19 @@ const TimesheetEntry = ({ site, periodStart, periodEnd, contractors, onSave }) =
   }, [site, periodStart, periodEnd, contractors]);
 
   const handleHoursChange = (contractorId, date, value) => {
+    const numValue = parseFloat(value) || 0;
+
+    if (numValue > 24) {
+      alert("Cannot enter more than 24 hours in a single day.");
+      return;
+    }
+
     setEntries(entries.map(entry => {
       if (entry.contractorId === contractorId) {
         return {
           ...entry,
           dailyHours: entry.dailyHours.map(dh =>
-            dh.date === date ? { ...dh, hours: parseFloat(value) || 0 } : dh
+            dh.date === date ? { ...dh, hours: numValue } : dh
           ),
         };
       }
@@ -76,6 +112,16 @@ const TimesheetEntry = ({ site, periodStart, periodEnd, contractors, onSave }) =
   const handleTrainingToggle = (contractorId, date) => {
     setEntries(entries.map(entry => {
       if (entry.contractorId === contractorId) {
+        // Count currently selected training days
+        const trainingDaysCount = entry.dailyHours.filter(d => d.isTraining).length;
+        const isCurrentDayTraining = entry.dailyHours.find(d => d.date === date)?.isTraining;
+
+        // If trying to add (toggle on) and already at 5, block it
+        if (!isCurrentDayTraining && trainingDaysCount >= 5) {
+          alert('Maximum of 5 training days allowed per timesheet.');
+          return entry;
+        }
+
         return {
           ...entry,
           dailyHours: entry.dailyHours.map(dh =>
@@ -92,7 +138,7 @@ const TimesheetEntry = ({ site, periodStart, periodEnd, contractors, onSave }) =
       ...manualLumpSum,
       [contractorId]: parseFloat(value) || null,
     });
-    
+
     setEntries(entries.map(entry => {
       if (entry.contractorId === contractorId) {
         return {
@@ -141,6 +187,55 @@ const TimesheetEntry = ({ site, periodStart, periodEnd, contractors, onSave }) =
           onClose={() => setShowToast(false)}
         />
       )}
+
+      {/* Budget Status Banner */}
+      {budgetStatus && (!budgetStatus.withinBudget) && (
+        <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <span className="text-red-500 text-xl">⚠️</span>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Budget Limit Exceeded</h3>
+              <div className="mt-2 text-sm text-red-700">
+                <ul className="list-disc pl-5 space-y-1">
+                  {budgetStatus.hoursOver > 0 && (
+                    <li>Hours: {totalStats.hours.toFixed(2)} / {site.budgetedHours} (Over by {budgetStatus.hoursOver.toFixed(2)})</li>
+                  )}
+                  {budgetStatus.amountOver > 0 && (
+                    <li>Cost: ${totalStats.pay.toFixed(2)} / ${site.budgetedAmount} (Over by ${budgetStatus.amountOver.toFixed(2)})</li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Budget Info Bar */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+        <div>
+          <span className="block text-xs font-medium text-gray-500 uppercase">Total Hours</span>
+          <span className={`text-xl font-bold ${budgetStatus?.hoursOver > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+            {totalStats.hours.toFixed(2)}
+            {site.budgetedHours > 0 && <span className="text-sm font-normal text-gray-500"> / {site.budgetedHours}</span>}
+          </span>
+        </div>
+        <div>
+          <span className="block text-xs font-medium text-gray-500 uppercase">Total Cost</span>
+          <span className={`text-xl font-bold ${budgetStatus?.amountOver > 0 ? 'text-red-600' : 'text-green-600'}`}>
+            ${totalStats.pay.toFixed(2)}
+            {site.budgetedAmount > 0 && <span className="text-sm font-normal text-gray-500"> / ${site.budgetedAmount}</span>}
+          </span>
+        </div>
+        <div>
+          <span className="block text-xs font-medium text-gray-500 uppercase">Status</span>
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${!budgetStatus || budgetStatus.withinBudget ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            }`}>
+            {!budgetStatus || budgetStatus.withinBudget ? 'Within Budget' : 'Over Budget'}
+          </span>
+        </div>
+      </div>
       <div className="mb-4 flex justify-between items-center">
         <div>
           <h3 className="text-lg font-semibold">
@@ -184,6 +279,9 @@ const TimesheetEntry = ({ site, periodStart, periodEnd, contractors, onSave }) =
               </th>
               <th className="border border-gray-300 px-3 py-2 text-center text-sm font-medium text-gray-700">
                 Payable Amount
+              </th>
+              <th className="border border-gray-300 px-3 py-2 text-center text-sm font-medium text-gray-700">
+                Escrowed
               </th>
             </tr>
           </thead>
@@ -254,6 +352,10 @@ const TimesheetEntry = ({ site, periodStart, periodEnd, contractors, onSave }) =
                   </td>
                   <td className="border border-gray-300 px-3 py-2 text-center font-medium text-green-600">
                     ${calculation.totalPay.toFixed(2)}
+                  </td>
+                  <td className="border border-gray-300 px-3 py-2 text-center font-medium text-amber-600">
+                    {calculation.trainingPay > 0 ? `$${calculation.trainingPay.toFixed(2)}` : '-'}
+                    {calculation.trainingPay > 0 && <div className="text-xs text-gray-500">(Held)</div>}
                   </td>
                 </tr>
               );

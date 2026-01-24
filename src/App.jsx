@@ -1,52 +1,65 @@
 import { useState, useEffect } from 'react';
-import { 
-  getContractors, saveContractors, 
-  getSites, saveSites,
-  getTimesheets, saveTimesheets,
-  getSiteAllocations
+import {
+  getContractors, saveContractors, getContractorsAsync,
+  getSites, saveSites, getSitesAsync,
+  getTimesheets, saveTimesheets, getTimesheetsAsync,
+  getPayRatesAsync,
+  getTrainingReleasesAsync,
+  getAuditLogsAsync,
+  getSiteAllocations,
+  logAction
 } from './utils/storage';
+import { encryptData } from './utils/encryptionUtils';
 import { isAuthenticated, setAuthenticated } from './utils/auth';
-import Login from './components/Login';
-import ForgotPassword from './components/ForgotPassword';
-import Settings from './components/Settings';
-import ContractorForm from './components/ContractorForm';
-import ContractorList from './components/ContractorList';
-import SiteForm from './components/SiteForm';
-import SiteList from './components/SiteList';
-import SiteAllocation from './components/SiteAllocation';
-import PayRateConfiguration from './components/PayRateConfiguration';
-import TimesheetEntry from './components/TimesheetEntry';
-import TimesheetList from './components/TimesheetList';
-import PaymentSummary from './components/PaymentSummary';
-import Toast from './components/Toast';
+// ... other imports ...
 
 function App() {
   const [authenticated, setAuthenticatedState] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [activeTab, setActiveTab] = useState('contractors');
-  
-  // Contractors
-  const [contractors, setContractors] = useState([]);
-  const [showContractorForm, setShowContractorForm] = useState(false);
-  const [editingContractor, setEditingContractor] = useState(null);
-  
-  // Sites
-  const [sites, setSites] = useState([]);
-  const [showSiteForm, setShowSiteForm] = useState(false);
-  const [editingSite, setEditingSite] = useState(null);
-  
-  // Timesheets
-  const [selectedSiteForTimesheet, setSelectedSiteForTimesheet] = useState(null);
-  const [timesheetPeriodStart, setTimesheetPeriodStart] = useState('');
-  const [timesheetPeriodEnd, setTimesheetPeriodEnd] = useState('');
-  const [showTimesheetList, setShowTimesheetList] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Contractors ... (other states stay same)
+
+  const syncData = async () => {
+    if (!isAuthenticated()) return;
+    setIsSyncing(true);
+    try {
+      const cloudContractors = await getContractorsAsync();
+      const cloudSites = await getSitesAsync();
+      const cloudTimesheets = await getTimesheetsAsync();
+      const cloudPayRates = await getPayRatesAsync();
+      const cloudReleases = await getTrainingReleasesAsync();
+      const cloudAuditLogs = await getAuditLogsAsync();
+
+      if (cloudContractors) {
+        localStorage.setItem('contractors', encryptData(cloudContractors));
+        setContractors(cloudContractors);
+      }
+      if (cloudSites) {
+        localStorage.setItem('sites', encryptData(cloudSites));
+        setSites(cloudSites);
+      }
+      if (cloudTimesheets) localStorage.setItem('timesheets', encryptData(cloudTimesheets));
+      if (cloudPayRates) localStorage.setItem('payRates', encryptData(cloudPayRates));
+      if (cloudReleases) localStorage.setItem('trainingReleases', encryptData(cloudReleases));
+      if (cloudAuditLogs) localStorage.setItem('auditLogs', encryptData(cloudAuditLogs));
+
+    } catch (e) {
+      console.error('Cloud sync failed', e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   useEffect(() => {
-    setAuthenticatedState(isAuthenticated());
-    setContractors(getContractors());
-    setSites(getSites());
+    const authStatus = isAuthenticated();
+    setAuthenticatedState(authStatus);
+    if (authStatus) {
+      setContractors(getContractors());
+      setSites(getSites());
+      syncData();
+    }
   }, []);
 
   // Contractor handlers
@@ -67,6 +80,11 @@ function App() {
       );
       setContractors(updated);
       saveContractors(updated);
+      logAction('UPDATE_CONTRACTOR', {
+        id: editingContractor.id,
+        name: formData.name,
+        changes: formData
+      });
     } else {
       const newContractor = {
         id: Date.now().toString(),
@@ -75,6 +93,10 @@ function App() {
       const updated = [...contractors, newContractor];
       setContractors(updated);
       saveContractors(updated);
+      logAction('CREATE_CONTRACTOR', {
+        id: newContractor.id,
+        name: newContractor.name
+      });
     }
     setShowContractorForm(false);
     setEditingContractor(null);
@@ -85,6 +107,7 @@ function App() {
       const updated = contractors.filter(c => c.id !== id);
       setContractors(updated);
       saveContractors(updated);
+      logAction('DELETE_CONTRACTOR', { id });
     }
   };
 
@@ -106,6 +129,11 @@ function App() {
       );
       setSites(updated);
       saveSites(updated);
+      logAction('UPDATE_SITE', {
+        id: editingSite.id,
+        name: formData.siteName,
+        changes: formData
+      });
     } else {
       const newSite = {
         id: Date.now().toString(),
@@ -115,6 +143,10 @@ function App() {
       const updated = [...sites, newSite];
       setSites(updated);
       saveSites(updated);
+      logAction('CREATE_SITE', {
+        id: newSite.id,
+        name: newSite.siteName
+      });
     }
     setShowSiteForm(false);
     setEditingSite(null);
@@ -126,6 +158,7 @@ function App() {
       const updated = sites.filter(s => s.id !== id);
       setSites(updated);
       saveSites(updated);
+      logAction('DELETE_SITE', { id });
     }
   };
 
@@ -134,6 +167,13 @@ function App() {
     const allTimesheets = getTimesheets();
     allTimesheets.push(timesheet);
     saveTimesheets(allTimesheets);
+
+    logAction('SAVE_TIMESHEET', {
+      siteId: timesheet.siteId,
+      siteName: timesheet.siteName,
+      period: `${timesheet.periodStart} to ${timesheet.periodEnd}`,
+      totalPay: timesheet.entries.reduce((sum, e) => sum + e.totalPay, 0)
+    });
     setToastMessage(`Timesheet saved successfully for ${timesheet.siteName}!`);
     setShowToast(true);
     setSelectedSiteForTimesheet(null);
@@ -151,6 +191,7 @@ function App() {
       setShowForgotPassword(true);
     } else {
       setAuthenticatedState(true);
+      syncData(); // Sync immediately on login
     }
   };
 
@@ -158,6 +199,7 @@ function App() {
     setAuthenticated(false);
     setAuthenticatedState(false);
     setActiveTab('contractors');
+    localStorage.clear(); // Clear local data on logout for shared machine security
   };
 
   // Show login if not authenticated
@@ -169,6 +211,7 @@ function App() {
           onLogin={() => {
             setShowForgotPassword(false);
             setAuthenticatedState(true);
+            syncData();
           }}
         />
       );
@@ -186,10 +229,41 @@ function App() {
         />
       )}
       {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-3xl font-bold text-gray-900">Contractor Timesheet & Payroll Management</h1>
-          <p className="text-gray-600 mt-1">Cleaning & Housekeeping Services</p>
+      <header className="bg-white shadow-sm sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Contractor Timesheet & Payroll Management</h1>
+            <p className="text-gray-600 mt-1">Cleaning & Housekeeping Services</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              {isSyncing ? (
+                <div className="flex items-center gap-2 text-blue-600 text-sm font-medium">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Syncing Cloud...</span>
+                </div>
+              ) : (
+                <button
+                  onClick={syncData}
+                  className="p-2 text-gray-400 hover:text-blue-600 transition-colors rounded-full hover:bg-blue-50"
+                  title="Sync with Cloud"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-md transition"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 
@@ -199,11 +273,10 @@ function App() {
           <nav className="-mb-px flex space-x-8 overflow-x-auto">
             <button
               onClick={() => setActiveTab('contractors')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'contractors'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'contractors'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               Contractors
             </button>
@@ -212,61 +285,73 @@ function App() {
                 setActiveTab('sites');
                 setSites(getSites());
               }}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'sites'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'sites'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               Sites
             </button>
             <button
               onClick={() => setActiveTab('allocation')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'allocation'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'allocation'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               Allocation
             </button>
             <button
               onClick={() => setActiveTab('payrates')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'payrates'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'payrates'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               Pay Rates
             </button>
             <button
               onClick={() => setActiveTab('timesheets')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'timesheets'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'timesheets'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               Timesheets
             </button>
             <button
+              onClick={() => setActiveTab('training')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'training'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              Training Pay
+            </button>
+            <button
               onClick={() => setActiveTab('payments')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'payments'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'payments'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               Payment Summary
             </button>
             <button
+              onClick={() => setActiveTab('logs')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'logs'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              Audit Logs
+            </button>
+            <button
               onClick={() => setActiveTab('settings')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === 'settings'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'settings'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               Settings
             </button>
@@ -417,19 +502,28 @@ function App() {
                 <h3 className="text-lg font-semibold mb-4">Saved Timesheets</h3>
                 <TimesheetList />
               </div>
-            ) : selectedSiteForTimesheet && timesheetPeriodStart && timesheetPeriodEnd ? (
-              <TimesheetEntry
-                site={getSites().find(s => s.id === selectedSiteForTimesheet.id)}
-                periodStart={timesheetPeriodStart}
-                periodEnd={timesheetPeriodEnd}
-                contractors={contractors}
-                onSave={(timesheet) => {
-                  handleSaveTimesheet(timesheet);
-                  setSelectedSiteForTimesheet(null);
-                  setTimesheetPeriodStart('');
-                  setTimesheetPeriodEnd('');
-                }}
-              />
+            ) : isEnteringTimesheet && selectedSiteForTimesheet && timesheetPeriodStart && timesheetPeriodEnd ? (
+              <div>
+                <button
+                  onClick={() => setIsEnteringTimesheet(false)}
+                  className="mb-4 text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium"
+                >
+                  ← Back to Selection
+                </button>
+                <TimesheetEntry
+                  site={getSites().find(s => s.id === selectedSiteForTimesheet.id)}
+                  periodStart={timesheetPeriodStart}
+                  periodEnd={timesheetPeriodEnd}
+                  contractors={contractors}
+                  onSave={(timesheet) => {
+                    handleSaveTimesheet(timesheet);
+                    setSelectedSiteForTimesheet(null);
+                    setTimesheetPeriodStart('');
+                    setTimesheetPeriodEnd('');
+                    setIsEnteringTimesheet(false);
+                  }}
+                />
+              </div>
             ) : (
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="space-y-4">
@@ -459,34 +553,58 @@ function App() {
                     )}
                   </div>
                   {selectedSiteForTimesheet && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Period Start Date
-                        </label>
-                        <input
-                          type="date"
-                          value={timesheetPeriodStart}
-                          onChange={(e) => setTimesheetPeriodStart(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Period Start Date
+                          </label>
+                          <input
+                            type="date"
+                            value={timesheetPeriodStart}
+                            onChange={(e) => setTimesheetPeriodStart(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Period End Date
+                          </label>
+                          <input
+                            type="date"
+                            value={timesheetPeriodEnd}
+                            min={timesheetPeriodStart}
+                            onChange={(e) => setTimesheetPeriodEnd(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Period End Date
-                        </label>
-                        <input
-                          type="date"
-                          value={timesheetPeriodEnd}
-                          onChange={(e) => setTimesheetPeriodEnd(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                    </div>
+
+                      {timesheetPeriodStart && timesheetPeriodEnd && selectedSiteForTimesheet.allocatedContractors?.length > 0 && (
+                        <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
+                          <button
+                            onClick={() => setIsEnteringTimesheet(true)}
+                            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition font-medium shadow-md flex items-center gap-2"
+                          >
+                            <span>Confirm & Proceed</span>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Training Pay Tab */}
+        {activeTab === 'training' && (
+          <div className="mt-6">
+            <TrainingEscrowManager />
           </div>
         )}
 
@@ -502,6 +620,13 @@ function App() {
         {activeTab === 'settings' && (
           <div className="mt-6">
             <Settings onLogout={handleLogout} />
+          </div>
+        )}
+
+        {/* Audit Logs Tab */}
+        {activeTab === 'logs' && (
+          <div className="mt-6">
+            <AuditLogViewer />
           </div>
         )}
       </div>

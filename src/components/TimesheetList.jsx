@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getTimesheets, getSites, getContractors } from '../utils/storage';
+import { getTimesheets, getSites, getContractors, saveTimesheets, logAction } from '../utils/storage';
 import { formatDateDisplay } from '../utils/dateUtils';
 
 const TimesheetList = () => {
@@ -15,6 +15,15 @@ const TimesheetList = () => {
     setTimesheets(getTimesheets());
     setSites(getSites());
     setContractors(getContractors());
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm('Are you sure you want to delete this timesheet? This action cannot be undone.')) {
+      const updated = timesheets.filter(t => t.id !== id);
+      setTimesheets(updated);
+      saveTimesheets(updated);
+      logAction('DELETE_TIMESHEET', { id });
+    }
   };
 
   if (timesheets.length === 0) {
@@ -46,10 +55,16 @@ const TimesheetList = () => {
               Total Payable
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Escrowed
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Status
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Created
+            </th>
+            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Actions
             </th>
           </tr>
         </thead>
@@ -81,19 +96,30 @@ const TimesheetList = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
                   ${totalPay.toFixed(2)}
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-amber-600">
+                  {/* Calculate total escrowed for this timesheet */}
+                  ${timesheet.entries?.reduce((sum, e) => sum + (e.trainingPay || 0), 0).toFixed(2)}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
-                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      timesheet.status === 'approved'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}
+                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${timesheet.status === 'approved'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-yellow-100 text-yellow-800'
+                      }`}
                   >
                     {timesheet.status}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {new Date(timesheet.createdAt).toLocaleDateString()}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <button
+                    onClick={() => handleDelete(timesheet.id)}
+                    className="text-red-600 hover:text-red-900 ml-4"
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             );
@@ -103,5 +129,4 @@ const TimesheetList = () => {
     </div>
   );
 };
-
 export default TimesheetList;
