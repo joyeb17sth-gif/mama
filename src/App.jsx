@@ -6,14 +6,12 @@ import {
   getPayRatesAsync,
   getTrainingReleasesAsync,
   getAuditLogsAsync,
-  getSiteAllocations,
   logAction
 } from './utils/storage';
 import { encryptData } from './utils/encryptionUtils';
 import { isAuthenticated, setAuthenticated } from './utils/auth';
 
 // Components
-import Navbar from './components/Navbar';
 import ContractorList from './components/ContractorList';
 import ContractorForm from './components/ContractorForm';
 import SiteList from './components/SiteList';
@@ -225,7 +223,7 @@ function App() {
       setShowForgotPassword(true);
     } else {
       setAuthenticatedState(true);
-      syncData(); // Sync immediately on login
+      syncData();
     }
   };
 
@@ -233,7 +231,7 @@ function App() {
     setAuthenticated(false);
     setAuthenticatedState(false);
     setActiveTab('contractors');
-    localStorage.clear(); // Clear local data on logout for shared machine security
+    localStorage.clear();
   };
 
   // Show login if not authenticated

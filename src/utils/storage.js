@@ -88,32 +88,37 @@ export const getCredentialsCloud = () => getSingleFromCloud('app_credentials', '
  */
 export const getContractors = () => {
   const stored = localStorage.getItem('contractors');
-  return stored ? decryptData(stored) : [];
+  return (stored ? decryptData(stored) : null) || [];
 };
 
 export const getSites = () => {
   const stored = localStorage.getItem('sites');
-  return stored ? decryptData(stored) : [];
+  return (stored ? decryptData(stored) : null) || [];
+};
+
+export const getSiteAllocations = () => {
+  const stored = localStorage.getItem('siteAllocations');
+  return (stored ? decryptData(stored) : null) || [];
 };
 
 export const getTimesheets = () => {
   const stored = localStorage.getItem('timesheets');
-  return stored ? decryptData(stored) : [];
+  return (stored ? decryptData(stored) : null) || [];
 };
 
 export const getPayRates = () => {
   const stored = localStorage.getItem('payRates');
-  return stored ? decryptData(stored) : [];
+  return (stored ? decryptData(stored) : null) || [];
 };
 
 export const getTrainingReleases = () => {
   const stored = localStorage.getItem('trainingReleases');
-  return stored ? decryptData(stored) : [];
+  return (stored ? decryptData(stored) : null) || [];
 };
 
 export const getAuditLogs = () => {
   const stored = localStorage.getItem('auditLogs');
-  return stored ? decryptData(stored) : [];
+  return (stored ? decryptData(stored) : null) || [];
 };
 
 export const logAction = (action, details, user = 'Admin') => {
