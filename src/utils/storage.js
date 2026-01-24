@@ -75,6 +75,12 @@ export const saveAuditLogs = async (logs) => {
 };
 export const getAuditLogsAsync = () => getSingleFromCloud('audit_logs', 'main_list');
 
+// --- PAYMENT SUMMARIES ---
+export const savePaymentSummaries = async (summaries) => {
+  await saveToCloud('payment_summaries', 'main_list', summaries);
+};
+export const getPaymentSummariesAsync = () => getSingleFromCloud('payment_summaries', 'main_list');
+
 // --- CREDENTIALS ---
 export const saveCredentialsCloud = async (creds) => {
   await saveToCloud('app_credentials', 'main', creds);
@@ -118,6 +124,11 @@ export const getTrainingReleases = () => {
 
 export const getAuditLogs = () => {
   const stored = localStorage.getItem('auditLogs');
+  return (stored ? decryptData(stored) : null) || [];
+};
+
+export const getPaymentSummaries = () => {
+  const stored = localStorage.getItem('paymentSummaries');
   return (stored ? decryptData(stored) : null) || [];
 };
 

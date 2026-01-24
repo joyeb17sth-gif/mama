@@ -6,6 +6,7 @@ import {
   getPayRatesAsync,
   getTrainingReleasesAsync,
   getAuditLogsAsync,
+  getPaymentSummariesAsync,
   logAction
 } from './utils/storage';
 import { encryptData } from './utils/encryptionUtils';
@@ -63,6 +64,7 @@ function App() {
       const cloudPayRates = await getPayRatesAsync();
       const cloudReleases = await getTrainingReleasesAsync();
       const cloudAuditLogs = await getAuditLogsAsync();
+      const cloudPaymentSummaries = await getPaymentSummariesAsync();
 
       if (cloudContractors) {
         localStorage.setItem('contractors', encryptData(cloudContractors));
@@ -76,6 +78,7 @@ function App() {
       if (cloudPayRates) localStorage.setItem('payRates', encryptData(cloudPayRates));
       if (cloudReleases) localStorage.setItem('trainingReleases', encryptData(cloudReleases));
       if (cloudAuditLogs) localStorage.setItem('auditLogs', encryptData(cloudAuditLogs));
+      if (cloudPaymentSummaries) localStorage.setItem('paymentSummaries', encryptData(cloudPaymentSummaries));
 
     } catch (e) {
       console.error('Cloud sync failed', e);
