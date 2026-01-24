@@ -39,32 +39,35 @@ const getSingleFromCloud = async (table, id) => {
 
 // --- CONTRACTORS ---
 export const saveContractors = async (contractors) => {
-  // We store the whole array as one record for easy transition, 
-  // or we could store row by row. Moving as one record for now to match current logic.
+  localStorage.setItem('contractors', encryptData(contractors));
   await saveToCloud('contractors', 'main_list', contractors);
 };
 export const getContractorsAsync = () => getSingleFromCloud('contractors', 'main_list');
 
 // --- SITES ---
 export const saveSites = async (sites) => {
+  localStorage.setItem('sites', encryptData(sites));
   await saveToCloud('sites', 'main_list', sites);
 };
 export const getSitesAsync = () => getSingleFromCloud('sites', 'main_list');
 
 // --- TIMESHEETS ---
 export const saveTimesheets = async (timesheets) => {
+  localStorage.setItem('timesheets', encryptData(timesheets));
   await saveToCloud('timesheets', 'main_list', timesheets);
 };
 export const getTimesheetsAsync = () => getSingleFromCloud('timesheets', 'main_list');
 
 // --- PAY RATES ---
 export const savePayRates = async (rates) => {
+  localStorage.setItem('payRates', encryptData(rates));
   await saveToCloud('pay_rates', 'main_list', rates);
 };
 export const getPayRatesAsync = () => getSingleFromCloud('pay_rates', 'main_list');
 
 // --- TRAINING RELEASES ---
 export const saveTrainingReleases = async (releases) => {
+  localStorage.setItem('trainingReleases', encryptData(releases));
   await saveToCloud('training_releases', 'main_list', releases);
 };
 export const getTrainingReleasesAsync = () => getSingleFromCloud('training_releases', 'main_list');
@@ -77,6 +80,7 @@ export const getAuditLogsAsync = () => getSingleFromCloud('audit_logs', 'main_li
 
 // --- PAYMENT SUMMARIES ---
 export const savePaymentSummaries = async (summaries) => {
+  localStorage.setItem('paymentSummaries', encryptData(summaries));
   await saveToCloud('payment_summaries', 'main_list', summaries);
 };
 export const getPaymentSummariesAsync = () => getSingleFromCloud('payment_summaries', 'main_list');
