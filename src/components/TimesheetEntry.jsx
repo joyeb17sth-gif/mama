@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { generatePeriodDates, formatDateDisplay } from '../utils/dateUtils';
 import { checkBudgetStatus, calculateTimesheetPay } from '../utils/payrollCalculations';
-import { getPayRates } from '../utils/storage';
+import { getPayRates, getTimesheets } from '../utils/storage';
 import Toast from './Toast';
 
 const TimesheetEntry = ({ site, periodStart, periodEnd, contractors, onSave, initialData = null }) => {
@@ -122,15 +122,26 @@ const TimesheetEntry = ({ site, periodStart, periodEnd, contractors, onSave, ini
   };
 
   const handleTrainingToggle = (contractorId, date) => {
+    const allTimesheets = getTimesheets();
+    // Exclude the current timesheet if we are editing so we don't double count
+    const otherTimesheets = allTimesheets.filter(ts => ts.id !== initialData?.id);
+
+    // Calculate how many training days this contractor has already used in OTHER timesheets
+    const historicalTrainingDays = otherTimesheets.flatMap(ts => ts.entries)
+      .filter(entry => entry.contractorId === contractorId)
+      .reduce((sum, entry) => {
+        return sum + (entry.dailyHours?.filter(d => d.isTraining && d.hours > 0).length || 0);
+      }, 0);
+
     setEntries(entries.map(entry => {
       if (entry.contractorId === contractorId) {
-        // Count currently selected training days
-        const trainingDaysCount = entry.dailyHours.filter(d => d.isTraining).length;
+        // Count currently selected training days in THIS timesheet
+        const currentTimesheetTrainingDays = entry.dailyHours.filter(d => d.isTraining).length;
         const isCurrentDayTraining = entry.dailyHours.find(d => d.date === date)?.isTraining;
 
-        // If trying to add (toggle on) and already at 5, block it
-        if (!isCurrentDayTraining && trainingDaysCount >= 5) {
-          alert('Maximum of 5 training days allowed per timesheet.');
+        // If trying to add (toggle on) and (historical + current) would exceed 5, block it
+        if (!isCurrentDayTraining && (historicalTrainingDays + currentTimesheetTrainingDays) >= 5) {
+          alert(`Maximum of 5 training days allowed in total. This contractor has already used ${historicalTrainingDays} training day(s) in previous timesheets.`);
           return entry;
         }
 
