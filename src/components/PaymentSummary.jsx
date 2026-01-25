@@ -47,13 +47,16 @@ const PaymentSummary = () => {
       return;
     }
 
-    // Get unique contractor IDs from both timesheets AND releases
+    // 4. Get unique contractor IDs from both timesheets AND releases
+    // Filter out any invalid IDs
     const timesheetContractorIds = periodTimesheets.flatMap(ts => ts.entries.map(e => e.contractorId));
     const releaseContractorIds = periodReleases.map(r => r.contractorId);
-    const contractorIds = [...new Set([...timesheetContractorIds, ...releaseContractorIds])];
+    const contractorIds = [...new Set([...timesheetContractorIds, ...releaseContractorIds])].filter(Boolean);
 
-    // Consolidate payments for each contractor
+    // 5. Consolidate payments for each contractor
     const consolidated = contractorIds.map(contractorId => {
+      const contractor = contractors.find(c => c.id === contractorId);
+
       // Get all timesheets for this contractor in this period
       const contractorTimesheets = periodTimesheets
         .flatMap(ts => ts.entries.map(entry => ({
@@ -68,24 +71,16 @@ const PaymentSummary = () => {
       const contractorReleases = periodReleases.filter(r => r.contractorId === contractorId);
       const totalReleaseAmount = contractorReleases.reduce((sum, r) => sum + r.amount, 0);
 
-      // Get pay rates for each site
       let totalHours = 0;
-      let totalPay = 0;
       let totalTrainingHours = 0;
+      let totalPay = 0;
       const siteBreakdown = [];
 
+      // Process timesheet entries
       contractorTimesheets.forEach(entry => {
-        const siteRate = payRates.find(r => r.siteId === entry.siteId);
-        const rates = siteRate || { weekday: 0, saturday: 0, sunday: 0, publicHoliday: 0 };
-
-        // Calculate pay using the updated logic where training is separate
-        // entry.totalPay comes from calculateTimesheetPay which excludes training pay
-        // We use the values already computed in the entry
-        // NOTE: calculateTimesheetPay returns totalPay (regular) and trainingPay
-
         const hours = entry.totalHours || 0;
         const tHours = entry.trainingHours || 0;
-        const pay = entry.totalPay || (hours * rates.weekday);
+        const pay = entry.totalPay || 0;
 
         totalHours += hours;
         totalTrainingHours += tHours;
@@ -94,32 +89,37 @@ const PaymentSummary = () => {
         const existingSite = siteBreakdown.find(s => s.siteId === entry.siteId);
         if (existingSite) {
           existingSite.hours += hours;
+          existingSite.trainingHours += tHours;
           existingSite.pay += pay;
         } else {
           siteBreakdown.push({
             siteId: entry.siteId,
             siteName: entry.siteName,
             hours,
+            trainingHours: tHours,
             pay,
           });
         }
       });
 
-      // Add release to total pay
+      // Add releases to total pay
       totalPay += totalReleaseAmount;
 
-      // Add release to site breakdown for clarity (as a special item)
+      // Add releases to breakdown
       if (totalReleaseAmount > 0) {
         siteBreakdown.push({
           siteId: 'training-release',
           siteName: 'Training Pay Release',
-          hours: 0, // It's a lump sum release
-          pay: totalReleaseAmount
+          hours: 0,
+          trainingHours: 0,
+          pay: totalReleaseAmount,
+          isRelease: true
         });
       }
 
       return {
         contractorId,
+        contractorName: contractor?.name || 'Unknown',
         totalHours,
         totalTrainingHours,
         totalPay,
@@ -127,13 +127,16 @@ const PaymentSummary = () => {
       };
     });
 
-    setSummary(consolidated);
+    // Final filter to remove rows with no pay and no hours (just in case)
+    const filteredSummary = consolidated.filter(item => item.totalPay > 0 || item.totalHours > 0 || item.totalTrainingHours > 0);
+
+    setSummary(filteredSummary);
 
     // Save summary
     const summaryRecord = {
       id: Date.now().toString(),
       period: selectedPeriod,
-      summary: consolidated,
+      summary: filteredSummary,
       generatedAt: new Date().toISOString(),
     };
 
@@ -250,11 +253,16 @@ const PaymentSummary = () => {
                       ${payment.totalPay.toFixed(2)}
                     </td>
                     <td className="border border-gray-300 px-4 py-2 text-sm">
-                      {payment.siteBreakdown.map(s =>
-                        (s.siteId === 'training-release' || s.siteName === 'Training Pay Release')
-                          ? `${s.siteName}: $${s.pay.toFixed(2)}`
-                          : `${s.siteName}: ${s.hours.toFixed(2)}h`
-                      ).join(', ')}
+                      {payment.siteBreakdown.map(s => {
+                        if (s.isRelease) {
+                          return `${s.siteName}: $${s.pay.toFixed(2)}`;
+                        }
+                        const hourParts = [];
+                        if (s.hours > 0) hourParts.push(`${s.hours.toFixed(2)}h`);
+                        if (s.trainingHours > 0) hourParts.push(`${s.trainingHours.toFixed(2)}h (Training)`);
+
+                        return `${s.siteName}: ${hourParts.join(' + ')}`;
+                      }).join(', ')}
                     </td>
                   </tr>
                 );

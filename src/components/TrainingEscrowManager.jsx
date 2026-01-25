@@ -5,6 +5,7 @@ import Toast from './Toast';
 const TrainingEscrowManager = () => {
     const [contractors, setContractors] = useState([]);
     const [balances, setBalances] = useState([]);
+    const [releases, setReleases] = useState([]);
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
     const [selectedContractor, setSelectedContractor] = useState(null);
@@ -18,6 +19,7 @@ const TrainingEscrowManager = () => {
         const allContractors = getContractors();
         const allTimesheets = getTimesheets();
         const allReleases = getTrainingReleases();
+        setReleases(allReleases);
 
         const contractorBalances = allContractors.map(contractor => {
             // 1. Calculate Total Accumulated
@@ -29,14 +31,11 @@ const TrainingEscrowManager = () => {
             }, 0);
 
             const totalTrainingDays = contractorTimesheets.reduce((sum, entry) => {
-                // Count days with training
-                // entry.dailyHours is array of {date, hours, isTraining}
                 const days = entry.dailyHours?.filter(d => d.isTraining && d.hours > 0).length || 0;
                 return sum + days;
             }, 0);
 
             const totalTrainingHours = contractorTimesheets.reduce((sum, entry) => {
-                // Count hours marked as training
                 const hours = entry.dailyHours?.filter(d => d.isTraining).reduce((hSum, d) => hSum + (d.hours || 0), 0) || 0;
                 return sum + hours;
             }, 0);
@@ -70,6 +69,22 @@ const TrainingEscrowManager = () => {
         setReleaseAmount(contractor.currentBalance.toFixed(2));
     };
 
+    const handleCancelRelease = (releaseId) => {
+        if (!window.confirm('Are you sure you want to cancel this pay release? The amount will be returned to the contractor\'s training balance.')) {
+            return;
+        }
+
+        const allReleases = getTrainingReleases();
+        const filteredReleases = allReleases.filter(r => r.id !== releaseId);
+        saveTrainingReleases(filteredReleases);
+
+        logAction('CANCEL_TRAINING_RELEASE', { releaseId });
+
+        setToastMessage('Release cancelled successfully');
+        setShowToast(true);
+        loadData();
+    };
+
     const confirmRelease = () => {
         if (!selectedContractor || !releaseAmount) return;
 
@@ -87,10 +102,11 @@ const TrainingEscrowManager = () => {
         const newRelease = {
             id: Date.now().toString(),
             contractorId: selectedContractor.id,
+            contractorName: selectedContractor.name, // Added for easier display in history
             amount: amount,
             date: new Date().toISOString(),
-            releasedBy: 'Admin', // Placeholder user
-            period: new Date().toISOString().slice(0, 7) // Store strictly as YYYY-MM for simpler grouping if needed
+            releasedBy: 'Admin',
+            period: new Date().toISOString().slice(0, 7)
         };
 
         const allReleases = getTrainingReleases();
@@ -220,6 +236,52 @@ const TrainingEscrowManager = () => {
                         )}
                     </tbody>
                 </table>
+            </div>
+
+            <div className="mt-12">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">Recent Training Pay Releases</h3>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full border border-gray-300">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="border border-gray-300 px-4 py-3 text-left text-sm font-medium text-gray-700">Date</th>
+                                <th className="border border-gray-300 px-4 py-3 text-left text-sm font-medium text-gray-700">Contractor</th>
+                                <th className="border border-gray-300 px-4 py-3 text-right text-sm font-medium text-gray-700">Amount</th>
+                                <th className="border border-gray-300 px-4 py-3 text-center text-sm font-medium text-gray-700">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {releases.length > 0 ? (
+                                [...releases].reverse().map(release => (
+                                    <tr key={release.id} className="hover:bg-gray-50">
+                                        <td className="border border-gray-300 px-4 py-3 text-sm text-gray-600">
+                                            {new Date(release.date).toLocaleDateString()}
+                                        </td>
+                                        <td className="border border-gray-300 px-4 py-3 text-sm font-medium text-gray-900">
+                                            {release.contractorName || 'Unknown'}
+                                            <div className="text-xs text-gray-500 font-normal">ID: {release.contractorId}</div>
+                                        </td>
+                                        <td className="border border-gray-300 px-4 py-3 text-right text-sm font-bold text-green-600">
+                                            ${release.amount.toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 px-4 py-3 text-center">
+                                            <button
+                                                onClick={() => handleCancelRelease(release.id)}
+                                                className="text-red-600 hover:text-red-800 text-sm font-medium transition"
+                                            >
+                                                Cancel Release
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="4" className="text-center py-4 text-gray-500 italic">No releases recorded yet.</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );

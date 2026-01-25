@@ -4,7 +4,7 @@ import { checkBudgetStatus, calculateTimesheetPay } from '../utils/payrollCalcul
 import { getPayRates } from '../utils/storage';
 import Toast from './Toast';
 
-const TimesheetEntry = ({ site, periodStart, periodEnd, contractors, onSave }) => {
+const TimesheetEntry = ({ site, periodStart, periodEnd, contractors, onSave, initialData = null }) => {
   const [dates, setDates] = useState([]);
   const [entries, setEntries] = useState([]);
   const [payRates, setPayRates] = useState({});
@@ -65,28 +65,40 @@ const TimesheetEntry = ({ site, periodStart, periodEnd, contractors, onSave }) =
         alert('⚠️ No pay rates configured for this site. Please configure pay rates first.');
       }
 
-      // Initialize entries from allocated contractors
-      const allocatedContractors = contractors.filter(c =>
-        site.allocatedContractors?.includes(c.id)
-      );
+      if (initialData && initialData.entries) {
+        // Load existing entries
+        setEntries(initialData.entries);
+        const lumpSums = {};
+        initialData.entries.forEach(e => {
+          if (e.manualLumpSumHours !== null) {
+            lumpSums[e.contractorId] = e.manualLumpSumHours;
+          }
+        });
+        setManualLumpSum(lumpSums);
+      } else {
+        // Initialize entries from allocated contractors
+        const allocatedContractors = contractors.filter(c =>
+          site.allocatedContractors?.includes(c.id)
+        );
 
-      if (allocatedContractors.length === 0) {
-        alert('⚠️ No contractors allocated to this site. Please allocate contractors first.');
-        return;
+        if (allocatedContractors.length === 0) {
+          alert('⚠️ No contractors allocated to this site. Please allocate contractors first.');
+          return;
+        }
+
+        setEntries(allocatedContractors.map(contractor => ({
+          contractorId: contractor.id,
+          contractorName: contractor.name,
+          dailyHours: periodDates.map(d => ({
+            date: d.date,
+            hours: 0,
+            isTraining: false,
+          })),
+          manualLumpSumHours: null,
+        })));
       }
-
-      setEntries(allocatedContractors.map(contractor => ({
-        contractorId: contractor.id,
-        contractorName: contractor.name,
-        dailyHours: periodDates.map(d => ({
-          date: d.date,
-          hours: 0,
-          isTraining: false,
-        })),
-        manualLumpSumHours: null,
-      })));
     }
-  }, [site, periodStart, periodEnd, contractors]);
+  }, [site, periodStart, periodEnd, contractors, initialData]);
 
   const handleHoursChange = (contractorId, date, value) => {
     const numValue = parseFloat(value) || 0;
@@ -152,7 +164,7 @@ const TimesheetEntry = ({ site, periodStart, periodEnd, contractors, onSave }) =
 
   const handleSave = () => {
     const timesheet = {
-      id: Date.now().toString(),
+      id: initialData?.id || Date.now().toString(),
       siteId: site.id,
       siteName: site.siteName,
       periodStart,
@@ -161,8 +173,9 @@ const TimesheetEntry = ({ site, periodStart, periodEnd, contractors, onSave }) =
         ...entry,
         ...calculateTimesheetPay(entry, payRates),
       })),
-      status: 'draft',
-      createdAt: new Date().toISOString(),
+      status: initialData?.status || 'draft',
+      createdAt: initialData?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     onSave(timesheet);
     setShowToast(true);

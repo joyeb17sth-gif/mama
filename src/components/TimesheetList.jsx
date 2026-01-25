@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getTimesheets, getSites, getContractors, saveTimesheets, logAction } from '../utils/storage';
 import { formatDateDisplay } from '../utils/dateUtils';
 
-const TimesheetList = () => {
+const TimesheetList = ({ onEdit }) => {
   const [timesheets, setTimesheets] = useState([]);
   const [sites, setSites] = useState([]);
   const [contractors, setContractors] = useState([]);
@@ -115,8 +115,14 @@ const TimesheetList = () => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button
+                    onClick={() => onEdit(timesheet)}
+                    className="text-blue-600 hover:text-blue-900 mr-4"
+                  >
+                    Edit
+                  </button>
+                  <button
                     onClick={() => handleDelete(timesheet.id)}
-                    className="text-red-600 hover:text-red-900 ml-4"
+                    className="text-red-600 hover:text-red-900"
                   >
                     Delete
                   </button>

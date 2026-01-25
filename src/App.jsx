@@ -52,6 +52,7 @@ function App() {
   const [timesheetPeriodEnd, setTimesheetPeriodEnd] = useState('');
   const [showTimesheetList, setShowTimesheetList] = useState(false);
   const [isEnteringTimesheet, setIsEnteringTimesheet] = useState(false);
+  const [editingTimesheet, setEditingTimesheet] = useState(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
@@ -208,20 +209,46 @@ function App() {
   // Timesheet handler
   const handleSaveTimesheet = (timesheet) => {
     const allTimesheets = getTimesheets();
-    allTimesheets.push(timesheet);
-    saveTimesheets(allTimesheets);
+    const existingIndex = allTimesheets.findIndex(t => t.id === timesheet.id);
 
-    logAction('SAVE_TIMESHEET', {
-      siteId: timesheet.siteId,
-      siteName: timesheet.siteName,
-      period: `${timesheet.periodStart} to ${timesheet.periodEnd}`,
-      totalPay: timesheet.entries.reduce((sum, e) => sum + e.totalPay, 0)
-    });
+    if (existingIndex >= 0) {
+      allTimesheets[existingIndex] = timesheet;
+      logAction('UPDATE_TIMESHEET', {
+        id: timesheet.id,
+        siteName: timesheet.siteName,
+        totalPay: timesheet.entries.reduce((sum, e) => sum + e.totalPay, 0)
+      });
+    } else {
+      allTimesheets.push(timesheet);
+      logAction('SAVE_TIMESHEET', {
+        siteId: timesheet.siteId,
+        siteName: timesheet.siteName,
+        period: `${timesheet.periodStart} to ${timesheet.periodEnd}`,
+        totalPay: timesheet.entries.reduce((sum, e) => sum + e.totalPay, 0)
+      });
+    }
+
+    saveTimesheets(allTimesheets);
     setToastMessage(`Timesheet saved successfully for ${timesheet.siteName}!`);
     setShowToast(true);
     setSelectedSiteForTimesheet(null);
     setTimesheetPeriodStart('');
     setTimesheetPeriodEnd('');
+    setEditingTimesheet(null);
+  };
+
+  const handleEditTimesheet = (timesheet) => {
+    const site = getSites().find(s => s.id === timesheet.siteId);
+    if (!site) {
+      showToastMessage('Error: Associated site not found. It may have been deleted.', 'error');
+      return;
+    }
+    setSelectedSiteForTimesheet(site);
+    setTimesheetPeriodStart(timesheet.periodStart);
+    setTimesheetPeriodEnd(timesheet.periodEnd);
+    setEditingTimesheet(timesheet);
+    setIsEnteringTimesheet(true);
+    setShowTimesheetList(false);
   };
 
   const showToastMessage = (message, type = 'success') => {
@@ -534,7 +561,10 @@ function App() {
               <h2 className="text-2xl font-semibold text-gray-900">Timesheet Management</h2>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setShowTimesheetList(!showTimesheetList)}
+                  onClick={() => {
+                    setShowTimesheetList(!showTimesheetList);
+                    setEditingTimesheet(null);
+                  }}
                   className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition"
                 >
                   {showTimesheetList ? 'Create New' : 'View Saved Timesheets'}
@@ -544,12 +574,15 @@ function App() {
             {showTimesheetList ? (
               <div className="bg-white rounded-lg shadow p-6">
                 <h3 className="text-lg font-semibold mb-4">Saved Timesheets</h3>
-                <TimesheetList />
+                <TimesheetList onEdit={handleEditTimesheet} />
               </div>
             ) : isEnteringTimesheet && selectedSiteForTimesheet && timesheetPeriodStart && timesheetPeriodEnd ? (
               <div>
                 <button
-                  onClick={() => setIsEnteringTimesheet(false)}
+                  onClick={() => {
+                    setIsEnteringTimesheet(false);
+                    setEditingTimesheet(null);
+                  }}
                   className="mb-4 text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium"
                 >
                   ← Back to Selection
@@ -559,12 +592,14 @@ function App() {
                   periodStart={timesheetPeriodStart}
                   periodEnd={timesheetPeriodEnd}
                   contractors={contractors}
+                  initialData={editingTimesheet}
                   onSave={(timesheet) => {
                     handleSaveTimesheet(timesheet);
                     setSelectedSiteForTimesheet(null);
                     setTimesheetPeriodStart('');
                     setTimesheetPeriodEnd('');
                     setIsEnteringTimesheet(false);
+                    setEditingTimesheet(null);
                   }}
                 />
               </div>
