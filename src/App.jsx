@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
+import { parseISO, differenceInDays, addDays, format } from 'date-fns';
 import {
   getContractors, saveContractors, getContractorsAsync,
   getSites, saveSites, getSitesAsync,
   getTimesheets, saveTimesheets, getTimesheetsAsync,
-  getPayRatesAsync,
+  getPayRates, savePayRates, getPayRatesAsync,
   getTrainingReleasesAsync,
   getAuditLogsAsync,
   getPaymentSummariesAsync,
@@ -53,6 +54,7 @@ function App() {
   const [isEnteringTimesheet, setIsEnteringTimesheet] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
 
   const syncData = async () => {
     if (!isAuthenticated()) return;
@@ -193,6 +195,12 @@ function App() {
       const updated = sites.filter(s => s.id !== id);
       setSites(updated);
       saveSites(updated);
+
+      // Clean up associated pay rates
+      const allRates = getPayRates();
+      const updatedRates = allRates.filter(r => r.siteId !== id);
+      savePayRates(updatedRates);
+
       logAction('DELETE_SITE', { id });
     }
   };
@@ -216,8 +224,9 @@ function App() {
     setTimesheetPeriodEnd('');
   };
 
-  const showToastMessage = (message) => {
+  const showToastMessage = (message, type = 'success') => {
     setToastMessage(message);
+    setToastType(type);
     setShowToast(true);
   };
 
@@ -259,7 +268,7 @@ function App() {
       {showToast && (
         <Toast
           message={toastMessage}
-          type="success"
+          type={toastType}
           onClose={() => setShowToast(false)}
         />
       )}
@@ -597,7 +606,11 @@ function App() {
                           <input
                             type="date"
                             value={timesheetPeriodStart}
-                            onChange={(e) => setTimesheetPeriodStart(e.target.value)}
+                            onChange={(e) => {
+                              setTimesheetPeriodStart(e.target.value);
+                              // Auto-clear end date if cycle changes or if it becomes invalid
+                              setTimesheetPeriodEnd('');
+                            }}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
@@ -609,16 +622,54 @@ function App() {
                             type="date"
                             value={timesheetPeriodEnd}
                             min={timesheetPeriodStart}
+                            max={(() => {
+                              if (!timesheetPeriodStart || !selectedSiteForTimesheet) return "";
+                              const start = parseISO(timesheetPeriodStart);
+                              if (selectedSiteForTimesheet.payrollCycle === 'weekly') {
+                                return format(addDays(start, 6), 'yyyy-MM-dd');
+                              }
+                              if (selectedSiteForTimesheet.payrollCycle === 'fortnightly') {
+                                return format(addDays(start, 13), 'yyyy-MM-dd');
+                              }
+                              return "";
+                            })()}
                             onChange={(e) => setTimesheetPeriodEnd(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
+                          {selectedSiteForTimesheet && (
+                            <p className="mt-1 text-xs text-gray-500">
+                              {selectedSiteForTimesheet.payrollCycle === 'weekly'
+                                ? 'Max 7 days allowed'
+                                : selectedSiteForTimesheet.payrollCycle === 'fortnightly'
+                                  ? 'Max 14 days allowed'
+                                  : 'Custom range selected'}
+                            </p>
+                          )}
                         </div>
                       </div>
 
                       {timesheetPeriodStart && timesheetPeriodEnd && selectedSiteForTimesheet.allocatedContractors?.length > 0 && (
                         <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
                           <button
-                            onClick={() => setIsEnteringTimesheet(true)}
+                            onClick={() => {
+                              const start = parseISO(timesheetPeriodStart);
+                              const end = parseISO(timesheetPeriodEnd);
+                              const days = differenceInDays(end, start) + 1;
+
+                              if (selectedSiteForTimesheet.payrollCycle === 'weekly' && days > 7) {
+                                showToastMessage('Error: Weekly payroll cycle cannot exceed 7 days.', 'error');
+                                return;
+                              }
+                              if (selectedSiteForTimesheet.payrollCycle === 'fortnightly' && days > 14) {
+                                showToastMessage('Error: Fortnightly payroll cycle cannot exceed 14 days.', 'error');
+                                return;
+                              }
+                              if (days <= 0) {
+                                showToastMessage('Error: End date must be after start date.', 'error');
+                                return;
+                              }
+                              setIsEnteringTimesheet(true);
+                            }}
                             className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition font-medium shadow-md flex items-center gap-2"
                           >
                             <span>Confirm & Proceed</span>
