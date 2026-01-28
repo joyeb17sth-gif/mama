@@ -23,12 +23,45 @@ const AuditLogViewer = () => {
             case 'UPDATE_CONTRACTOR': return 'bg-blue-100 text-blue-800';
             case 'DELETE_CONTRACTOR': return 'bg-red-100 text-red-800';
             case 'SAVE_TIMESHEET': return 'bg-indigo-100 text-indigo-800';
+            case 'UPDATE_TIMESHEET': return 'bg-indigo-100 text-indigo-800';
             case 'RELEASE_TRAINING_PAY': return 'bg-amber-100 text-amber-800';
             case 'CREATE_SITE': return 'bg-purple-100 text-purple-800';
             case 'UPDATE_SITE': return 'bg-pink-100 text-pink-800';
             case 'DELETE_SITE': return 'bg-red-100 text-red-800';
             case 'DELETE_TIMESHEET': return 'bg-red-100 text-red-800';
             default: return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    const formatLogDetails = (log) => {
+        const { action, details } = log;
+        if (typeof details === 'string') return details;
+
+        switch (action) {
+            case 'CREATE_CONTRACTOR':
+                return `Added contractor: ${details.name} (ID: ${details.contractorId || 'N/A'})`;
+            case 'UPDATE_CONTRACTOR':
+                return `Updated contractor info for: ${details.name}`;
+            case 'DELETE_CONTRACTOR':
+                return `Deleted contractor (ID: ${details.id})`;
+            case 'CREATE_SITE':
+                return `Created new site: ${details.siteName || details.name}`;
+            case 'UPDATE_SITE':
+                return `Updated site settings for: ${details.siteName || details.name}`;
+            case 'DELETE_SITE':
+                return `Deleted site (ID: ${details.id})`;
+            case 'SAVE_TIMESHEET':
+                return `Saved timesheet for ${details.siteName} (${details.period})`;
+            case 'UPDATE_TIMESHEET':
+                return `Modified timesheet for ${details.siteName}`;
+            case 'DELETE_TIMESHEET':
+                return `Removed timesheet (ID: ${details.id})`;
+            case 'RELEASE_TRAINING_PAY':
+                return `Released $${parseFloat(details.amount).toFixed(2)} training pay for ${details.contractorName}`;
+            case 'CANCEL_TRAINING_RELEASE':
+                return `Cancelled training pay release (ID: ${details.releaseId})`;
+            default:
+                return JSON.stringify(details);
         }
     };
 
@@ -50,6 +83,7 @@ const AuditLogViewer = () => {
                         <option value="UPDATE_SITE">Update Site</option>
                         <option value="DELETE_SITE">Delete Site</option>
                         <option value="SAVE_TIMESHEET">Save Timesheet</option>
+                        <option value="UPDATE_TIMESHEET">Update Timesheet</option>
                         <option value="DELETE_TIMESHEET">Delete Timesheet</option>
                         <option value="RELEASE_TRAINING_PAY">Release Training Pay</option>
                     </select>
@@ -65,30 +99,29 @@ const AuditLogViewer = () => {
             <div className="overflow-x-auto">
                 <table className="min-w-full border border-gray-300">
                     <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                        <tr className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                            <th className="px-6 py-3 text-left">Timestamp</th>
+                            <th className="px-6 py-3 text-left">User</th>
+                            <th className="px-6 py-3 text-left">Action</th>
+                            <th className="px-6 py-3 text-left">Details</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredLogs.map(log => (
+                        {filteredLogs.reverse().map(log => (
                             <tr key={log.id} className="hover:bg-gray-50">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {new Date(log.timestamp).toLocaleString()}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                                     {log.user}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getActionColor(log.action)}`}>
-                                        {log.action}
+                                    <span className={`px-2 py-1 inline-flex text-[10px] font-bold uppercase rounded-full ${getActionColor(log.action)}`}>
+                                        {log.action.replace(/_/g, ' ')}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 text-sm text-gray-500">
-                                    {/* Render details object as string if necessary, or specific fields */}
-                                    {typeof log.details === 'string' ? log.details : JSON.stringify(log.details)}
+                                <td className="px-6 py-4 text-sm text-gray-600">
+                                    {formatLogDetails(log)}
                                 </td>
                             </tr>
                         ))}

@@ -92,48 +92,60 @@ export const saveCredentialsCloud = async (creds) => {
 export const getCredentialsCloud = () => getSingleFromCloud('app_credentials', 'main');
 
 
+// --- PUBLIC HOLIDAYS ---
+export const savePublicHolidays = async (holidays) => {
+  localStorage.setItem('publicHolidays', encryptData(holidays));
+  await saveToCloud('public_holidays', 'main_list', holidays);
+};
+export const getPublicHolidaysAsync = () => getSingleFromCloud('public_holidays', 'main_list');
+
 /** 
  * LEGACY / SYNCHRONOUS FALLBACKS 
  * (These are kept for UI compatibility but should ideally be updated to Async)
  */
+export const getPublicHolidays = () => {
+  const stored = localStorage.getItem('publicHolidays');
+  return ((stored ? decryptData(stored) : null) || []).filter(Boolean);
+};
+
 export const getContractors = () => {
   const stored = localStorage.getItem('contractors');
-  return (stored ? decryptData(stored) : null) || [];
+  return ((stored ? decryptData(stored) : null) || []).filter(Boolean);
 };
 
 export const getSites = () => {
   const stored = localStorage.getItem('sites');
-  return (stored ? decryptData(stored) : null) || [];
+  return ((stored ? decryptData(stored) : null) || []).filter(Boolean);
 };
 
 export const getSiteAllocations = () => {
   const stored = localStorage.getItem('siteAllocations');
-  return (stored ? decryptData(stored) : null) || [];
+  return ((stored ? decryptData(stored) : null) || []).filter(Boolean);
 };
 
 export const getTimesheets = () => {
   const stored = localStorage.getItem('timesheets');
-  return (stored ? decryptData(stored) : null) || [];
+  return ((stored ? decryptData(stored) : null) || []).filter(Boolean);
 };
 
 export const getPayRates = () => {
   const stored = localStorage.getItem('payRates');
-  return (stored ? decryptData(stored) : null) || [];
+  return ((stored ? decryptData(stored) : null) || []).filter(Boolean);
 };
 
 export const getTrainingReleases = () => {
   const stored = localStorage.getItem('trainingReleases');
-  return (stored ? decryptData(stored) : null) || [];
+  return ((stored ? decryptData(stored) : null) || []).filter(Boolean);
 };
 
 export const getAuditLogs = () => {
   const stored = localStorage.getItem('auditLogs');
-  return (stored ? decryptData(stored) : null) || [];
+  return ((stored ? decryptData(stored) : null) || []).filter(Boolean);
 };
 
 export const getPaymentSummaries = () => {
   const stored = localStorage.getItem('paymentSummaries');
-  return (stored ? decryptData(stored) : null) || [];
+  return ((stored ? decryptData(stored) : null) || []).filter(Boolean);
 };
 
 export const logAction = (action, details, user = 'Admin') => {

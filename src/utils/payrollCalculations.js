@@ -13,33 +13,78 @@ export const calculateTimesheetPay = (timesheetEntry, payRates, publicHolidays =
   let trainingHours = 0;
   let trainingPay = 0;
 
-  timesheetEntry.dailyHours?.forEach(day => {
-    if (day.hours > 0) {
-      const dayType = getDayType(day.date, publicHolidays);
-      const dayPay = calculateDayPay(day.hours, dayType, payRates);
+  // Determine if we are in Manual Mode (Lump Sum)
+  const isManual = timesheetEntry.manualLumpSumHours !== null;
 
-      if (day.isTraining) {
-        trainingHours += day.hours;
-        trainingPay += dayPay;
-      } else {
-        totalHours += day.hours;
-        totalPay += dayPay;
-      }
+  const hoursByRateType = {
+    weekday: 0,
+    saturday: 0,
+    sunday: 0,
+    publicHoliday: 0
+  };
+
+  if (isManual) {
+    // MODE 1: Manual Lump Sum Calculation
+    const manualData = timesheetEntry.manualLumpSumHours;
+    if (typeof manualData === 'object') {
+      const rateTypes = ['weekday', 'saturday', 'sunday', 'publicHoliday'];
+      rateTypes.forEach(type => {
+        const hrs = parseFloat(manualData[type]) || 0;
+        if (hrs > 0) {
+          totalHours += hrs;
+          totalPay += hrs * (payRates[type] || 0);
+          hoursByRateType[type] += hrs;
+        }
+      });
+    } else {
+      // Legacy fallback
+      totalHours = parseFloat(manualData) || 0;
+      totalPay = totalHours * (payRates.weekday || 0);
+      hoursByRateType.weekday = totalHours;
     }
-  });
+  } else {
+    // MODE 2: Standard Daily Hours Calculation
+    timesheetEntry.dailyHours?.forEach(day => {
+      if (day.hours > 0) {
+        const dayType = day.isPH ? 'publicHoliday' : getDayType(day.date, publicHolidays);
+        const dayPay = calculateDayPay(day.hours, dayType, payRates);
 
-  // If manual lump sum is set, use that instead for REGULAR pay
-  // Training pay is tracked separately and likely shouldn't be overridden by a general lump sum, 
-  // or the lump sum implies "Total Payable". 
-  // Requirement: "Manual Override: Allow a 'Lump-Sum' entry... that overrides daily calculations".
-  // Assuming Lump Sum replaces the "Payable" amount. Training is separate logic.
-  if (timesheetEntry.manualLumpSumHours !== null && timesheetEntry.manualLumpSumHours !== undefined) {
-    totalHours = timesheetEntry.manualLumpSumHours;
-    totalPay = totalHours * (payRates.weekday || 0); // Default to weekday rate
-    // Note: We keep training calculations as they are tracked separately for escrow
+        if (day.isTraining) {
+          trainingHours += day.hours;
+          trainingPay += dayPay;
+        } else {
+          totalHours += day.hours;
+          totalPay += dayPay;
+          hoursByRateType[dayType] += day.hours;
+        }
+      }
+    });
   }
 
-  return { totalHours, totalPay, trainingHours, trainingPay };
+  // Add Extra Hours if present
+  if (timesheetEntry.extraHours > 0) {
+    const extraPay = timesheetEntry.extraHours * (payRates.weekday || 0);
+    totalHours += timesheetEntry.extraHours;
+    totalPay += extraPay;
+    hoursByRateType.weekday += timesheetEntry.extraHours;
+  }
+
+  const allowance = parseFloat(timesheetEntry.allowance) || 0;
+  const otherPay = parseFloat(timesheetEntry.otherPay) || 0;
+  const deduction = parseFloat(timesheetEntry.deduction) || 0;
+  const netPay = totalPay + allowance + otherPay - deduction;
+
+  return {
+    totalHours,
+    totalPay,
+    trainingHours,
+    trainingPay,
+    allowance,
+    otherPay,
+    deduction,
+    netPay,
+    hoursByRateType // Added for detailed payslips
+  };
 };
 
 // Check if budget is exceeded
@@ -97,7 +142,7 @@ export const calculateTrainingPay = (timesheetEntry, payRates, publicHolidays = 
 
   timesheetEntry.dailyHours?.forEach(day => {
     if (day.isTraining && day.hours > 0) {
-      const dayType = getDayType(day.date, publicHolidays);
+      const dayType = day.isPH ? 'publicHoliday' : getDayType(day.date, publicHolidays);
       const dayPay = calculateDayPay(day.hours, dayType, payRates);
       trainingHours += day.hours;
       trainingPay += dayPay;

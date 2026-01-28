@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getSites, getPayRates, savePayRates } from '../utils/storage';
 import Toast from './Toast';
 
@@ -94,58 +94,58 @@ const PayRateConfiguration = () => {
     <div className="space-y-6">
       {/* All Pay Rates Summary List */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">All Saved Pay Rates</h3>
+        <h3 className="text-lg font-semibold mb-4 text-gray-900 uppercase tracking-tight">All Saved Pay Rates</h3>
         {payRatesSummary.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="min-w-full border border-gray-300">
-              <thead className="bg-gray-50">
+            <table className="min-w-full border border-gray-100 rounded-xl overflow-hidden">
+              <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">
+                  <th className="px-4 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
                     Site Name
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">
+                  <th className="px-4 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
                     Weekday ($/hr)
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">
+                  <th className="px-4 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
                     Saturday ($/hr)
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">
+                  <th className="px-4 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
                     Sunday ($/hr)
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300">
+                  <th className="px-4 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
                     Public Holiday ($/hr)
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-50">
                 {payRatesSummary.map((rate) => (
-                  <tr key={rate.siteId} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border border-gray-300">
+                  <tr key={rate.siteId} className="hover:bg-slate-50/50 transition">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
                       {rate.siteName}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-700 border border-gray-300">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-gray-700 font-medium">
                       ${rate.weekday?.toFixed(2) || '0.00'}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-700 border border-gray-300">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-gray-700 font-medium">
                       ${rate.saturday?.toFixed(2) || '0.00'}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-700 border border-gray-300">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-gray-700 font-medium">
                       ${rate.sunday?.toFixed(2) || '0.00'}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-700 border border-gray-300">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-gray-700 font-medium">
                       ${rate.publicHoliday?.toFixed(2) || '0.00'}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <p className="text-xs text-gray-600 mt-3">
-              Total: {payRatesSummary.length} site(s) with configured pay rates
+            <p className="text-[10px] text-gray-400 font-black uppercase mt-3 tracking-widest">
+              Total: {payRatesSummary.length} configured sites
             </p>
           </div>
         ) : (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-            <p className="text-gray-600">No pay rates configured yet. Configure pay rates for sites below.</p>
+          <div className="bg-slate-50 border border-slate-100 rounded-xl p-8 text-center">
+            <p className="text-gray-500 font-medium">No pay rates configured yet. Configure pay rates for sites below.</p>
           </div>
         )}
       </div>
@@ -159,10 +159,10 @@ const PayRateConfiguration = () => {
             onClose={() => setShowToast(false)}
           />
         )}
-        <h3 className="text-lg font-semibold mb-4">Configure Pay Rates</h3>
+        <h3 className="text-lg font-semibold mb-6 text-gray-900 uppercase tracking-tight">Configure Pay Rates</h3>
 
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+        <div className="mb-6">
+          <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
             Select Site
           </label>
           <select
@@ -172,13 +172,20 @@ const PayRateConfiguration = () => {
               setSelectedSite(site || null);
             }}
             onFocus={loadSites}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none font-bold text-gray-900 transition-all shadow-sm"
           >
             <option value="">Choose a site...</option>
-            {sites.map(site => (
-              <option key={site.id} value={site.id}>
-                {site.siteName}
-              </option>
+            {sites.filter(s => !s.isSubSite).map(mainSite => (
+              <React.Fragment key={mainSite.id}>
+                <option value={mainSite.id} className="font-black text-blue-600 bg-blue-50">
+                  🏢 {mainSite.siteName} (Primary)
+                </option>
+                {sites.filter(s => s.isSubSite && s.parentSiteId === mainSite.id).map(subSite => (
+                  <option key={subSite.id} value={subSite.id} className="pl-4">
+                    &nbsp;&nbsp;&nbsp;↳ {subSite.siteName}
+                  </option>
+                ))}
+              </React.Fragment>
             ))}
           </select>
         </div>

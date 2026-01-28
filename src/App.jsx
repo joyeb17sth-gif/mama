@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { parseISO, differenceInDays, addDays, format } from 'date-fns';
 import {
   getContractors, saveContractors, getContractorsAsync,
   getSites, saveSites, getSitesAsync,
   getTimesheets, saveTimesheets, getTimesheetsAsync,
   getPayRates, savePayRates, getPayRatesAsync,
+  getPublicHolidays, savePublicHolidays, getPublicHolidaysAsync,
   getTrainingReleasesAsync,
   getAuditLogsAsync,
   getPaymentSummariesAsync,
@@ -14,6 +15,7 @@ import { encryptData } from './utils/encryptionUtils';
 import { isAuthenticated, setAuthenticated } from './utils/auth';
 
 // Components
+import Dashboard from './components/Dashboard';
 import ContractorList from './components/ContractorList';
 import ContractorForm from './components/ContractorForm';
 import SiteList from './components/SiteList';
@@ -28,12 +30,15 @@ import AuditLogViewer from './components/AuditLogViewer';
 import Login from './components/Login';
 import ForgotPassword from './components/ForgotPassword';
 import Settings from './components/Settings';
+import PublicHolidayManager from './components/PublicHolidayManager';
+
 import Toast from './components/Toast';
+import Layout from './components/Layout';
 
 function App() {
   const [authenticated, setAuthenticatedState] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [activeTab, setActiveTab] = useState('contractors');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Contractors
@@ -66,6 +71,7 @@ function App() {
       const cloudTimesheets = await getTimesheetsAsync();
       const cloudPayRates = await getPayRatesAsync();
       const cloudReleases = await getTrainingReleasesAsync();
+      const cloudPublicHolidays = await getPublicHolidaysAsync();
       const cloudAuditLogs = await getAuditLogsAsync();
       const cloudPaymentSummaries = await getPaymentSummariesAsync();
 
@@ -77,6 +83,7 @@ function App() {
         localStorage.setItem('sites', encryptData(cloudSites));
         setSites(cloudSites);
       }
+      if (cloudPublicHolidays) localStorage.setItem('publicHolidays', encryptData(cloudPublicHolidays));
       if (cloudTimesheets) localStorage.setItem('timesheets', encryptData(cloudTimesheets));
       if (cloudPayRates) localStorage.setItem('payRates', encryptData(cloudPayRates));
       if (cloudReleases) localStorage.setItem('trainingReleases', encryptData(cloudReleases));
@@ -160,8 +167,19 @@ function App() {
     setShowSiteForm(true);
   };
 
+  const handleAddSubSite = (parentSite) => {
+    // Create a skeleton site object with the relationship pre-filled
+    setEditingSite({
+      isSubSite: true,
+      parentSiteId: parentSite.id,
+      siteName: '', // Let user type name
+      clientName: parentSite.clientName // Inherit client by default?
+    });
+    setShowSiteForm(true);
+  };
+
   const handleSaveSite = (formData) => {
-    if (editingSite) {
+    if (editingSite && editingSite.id) {
       const updated = sites.map(s =>
         s.id === editingSite.id ? { ...s, ...formData } : s
       );
@@ -273,6 +291,13 @@ function App() {
     localStorage.clear();
   };
 
+  const handleSetActiveTab = (tab) => {
+    setActiveTab(tab);
+    if (tab === 'sites') {
+      setSites(getSites());
+    }
+  };
+
   // Show login if not authenticated
   if (!authenticated) {
     if (showForgotPassword) {
@@ -291,318 +316,209 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {showToast && (
-        <Toast
-          message={toastMessage}
-          type={toastType}
-          onClose={() => setShowToast(false)}
-        />
+    <Layout
+      activeTab={activeTab}
+      setActiveTab={handleSetActiveTab}
+      onLogout={handleLogout}
+      isSyncing={isSyncing}
+      syncData={syncData}
+      userProfile={{ name: 'Admin User', role: 'Administrator' }}
+    >
+      <div className="print:hidden">
+        {showToast && (
+          <Toast
+            message={toastMessage}
+            type={toastType}
+            onClose={() => setShowToast(false)}
+          />
+        )}
+      </div>
+
+      {/* Content Area */}
+
+      {/* Tab Content */}
+      {activeTab === 'dashboard' && (
+        <div className="mt-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold text-gray-900">System Overview</h2>
+          </div>
+          <Dashboard />
+        </div>
       )}
-      {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Contractor Timesheet & Payroll Management</h1>
-            <p className="text-gray-600 mt-1">Cleaning & Housekeeping Services</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              {isSyncing ? (
-                <div className="flex items-center gap-2 text-blue-600 text-sm font-medium">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span>Syncing Cloud...</span>
-                </div>
-              ) : (
+
+      {activeTab === 'contractors' && (
+        <div className="mt-6">
+          {!showContractorForm ? (
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-semibold text-gray-900">Contractor Management</h2>
                 <button
-                  onClick={syncData}
-                  className="p-2 text-gray-400 hover:text-blue-600 transition-colors rounded-full hover:bg-blue-50"
-                  title="Sync with Cloud"
+                  onClick={handleAddContractor}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                </button>
-              )}
-            </div>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-md transition"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Navigation Tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 overflow-x-auto">
-            <button
-              onClick={() => setActiveTab('contractors')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'contractors'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-            >
-              Contractors
-            </button>
-            <button
-              onClick={() => {
-                setSites(getSites());
-                setActiveTab('sites');
-              }}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'sites'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-            >
-              Sites
-            </button>
-            <button
-              onClick={() => setActiveTab('allocation')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'allocation'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-            >
-              Allocation
-            </button>
-            <button
-              onClick={() => setActiveTab('payrates')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'payrates'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-            >
-              Pay Rates
-            </button>
-            <button
-              onClick={() => setActiveTab('timesheets')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'timesheets'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-            >
-              Timesheets
-            </button>
-            <button
-              onClick={() => setActiveTab('training')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'training'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-            >
-              Training Pay
-            </button>
-            <button
-              onClick={() => setActiveTab('payments')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'payments'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-            >
-              Payment Summary
-            </button>
-            <button
-              onClick={() => setActiveTab('logs')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'logs'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-            >
-              Audit Logs
-            </button>
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'settings'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-            >
-              Settings
-            </button>
-          </nav>
-        </div>
-
-        {/* Tab Content */}
-        {activeTab === 'contractors' && (
-          <div className="mt-6">
-            {!showContractorForm ? (
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-semibold text-gray-900">Contractor Management</h2>
-                  <button
-                    onClick={handleAddContractor}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                  >
-                    + Add Contractor
-                  </button>
-                </div>
-                <div className="bg-white rounded-lg shadow p-6">
-                  <ContractorList
-                    contractors={contractors}
-                    onEdit={handleEditContractor}
-                    onDelete={handleDeleteContractor}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-semibold text-gray-900">
-                    {editingContractor ? 'Edit Contractor' : 'Add New Contractor'}
-                  </h2>
-                  <button
-                    onClick={() => {
-                      setShowContractorForm(false);
-                      setEditingContractor(null);
-                    }}
-                    className="text-gray-600 hover:text-gray-800"
-                  >
-                    ← Back to List
-                  </button>
-                </div>
-                <div className="bg-white rounded-lg shadow p-6">
-                  <ContractorForm
-                    contractor={editingContractor}
-                    onSave={handleSaveContractor}
-                    onCancel={() => {
-                      setShowContractorForm(false);
-                      setEditingContractor(null);
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Sites Tab */}
-        {activeTab === 'sites' && (
-          <div className="mt-6">
-            {!showSiteForm ? (
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-semibold text-gray-900">Site Management</h2>
-                  <button
-                    onClick={() => {
-                      setSites(getSites());
-                      handleAddSite();
-                    }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                  >
-                    + Add Site
-                  </button>
-                </div>
-                <div className="bg-white rounded-lg shadow p-6">
-                  <SiteList
-                    sites={getSites()}
-                    onEdit={handleEditSite}
-                    onDelete={handleDeleteSite}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-semibold text-gray-900">
-                    {editingSite ? 'Edit Site' : 'Add New Site'}
-                  </h2>
-                  <button
-                    onClick={() => {
-                      setShowSiteForm(false);
-                      setEditingSite(null);
-                    }}
-                    className="text-gray-600 hover:text-gray-800"
-                  >
-                    ← Back to List
-                  </button>
-                </div>
-                <div className="bg-white rounded-lg shadow p-6">
-                  <SiteForm
-                    site={editingSite}
-                    onSave={handleSaveSite}
-                    onCancel={() => {
-                      setShowSiteForm(false);
-                      setEditingSite(null);
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Allocation Tab */}
-        {activeTab === 'allocation' && (
-          <div className="mt-6">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6">Contractor Allocation</h2>
-            <SiteAllocation key={sites.length} />
-          </div>
-        )}
-
-        {/* Pay Rates Tab */}
-        {activeTab === 'payrates' && (
-          <div className="mt-6">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6">Pay Rate Configuration</h2>
-            <PayRateConfiguration />
-          </div>
-        )}
-
-        {/* Timesheets Tab */}
-        {activeTab === 'timesheets' && (
-          <div className="mt-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-semibold text-gray-900">Timesheet Management</h2>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setShowTimesheetList(!showTimesheetList);
-                    setEditingTimesheet(null);
-                  }}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition"
-                >
-                  {showTimesheetList ? 'Create New' : 'View Saved Timesheets'}
+                  + Add Contractor
                 </button>
               </div>
-            </div>
-            {showTimesheetList ? (
               <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold mb-4">Saved Timesheets</h3>
-                <TimesheetList onEdit={handleEditTimesheet} />
+                <ContractorList
+                  contractors={contractors}
+                  onEdit={handleEditContractor}
+                  onDelete={handleDeleteContractor}
+                />
               </div>
-            ) : isEnteringTimesheet && selectedSiteForTimesheet && timesheetPeriodStart && timesheetPeriodEnd ? (
-              <div>
+            </div>
+          ) : (
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-semibold text-gray-900">
+                  {editingContractor ? 'Edit Contractor' : 'Add New Contractor'}
+                </h2>
                 <button
                   onClick={() => {
-                    setIsEnteringTimesheet(false);
-                    setEditingTimesheet(null);
+                    setShowContractorForm(false);
+                    setEditingContractor(null);
                   }}
-                  className="mb-4 text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium"
+                  className="text-gray-600 hover:text-gray-800"
                 >
-                  ← Back to Selection
+                  ← Back to List
                 </button>
-                <TimesheetEntry
-                  site={getSites().find(s => s.id === selectedSiteForTimesheet.id)}
-                  periodStart={timesheetPeriodStart}
-                  periodEnd={timesheetPeriodEnd}
-                  contractors={contractors}
-                  initialData={editingTimesheet}
-                  onSave={(timesheet) => {
-                    handleSaveTimesheet(timesheet);
-                    setSelectedSiteForTimesheet(null);
-                    setTimesheetPeriodStart('');
-                    setTimesheetPeriodEnd('');
-                    setIsEnteringTimesheet(false);
-                    setEditingTimesheet(null);
+              </div>
+              <div className="bg-white rounded-lg shadow p-6">
+                <ContractorForm
+                  contractor={editingContractor}
+                  onSave={handleSaveContractor}
+                  onCancel={() => {
+                    setShowContractorForm(false);
+                    setEditingContractor(null);
                   }}
                 />
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Sites Tab */}
+      {activeTab === 'sites' && (
+        <div className="mt-6">
+          {!showSiteForm ? (
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-semibold text-gray-900">Site Management</h2>
+                <button
+                  onClick={() => {
+                    setSites(getSites());
+                    handleAddSite();
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                >
+                  + Add Site
+                </button>
+              </div>
+              <div className="bg-white rounded-lg shadow p-6">
+                <SiteList
+                  sites={sites}
+                  onEdit={handleEditSite}
+                  onAddSubSite={handleAddSubSite}
+                  onDelete={handleDeleteSite}
+                />
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-semibold text-gray-900">
+                  {editingSite?.id ? 'Edit Site' : (editingSite?.isSubSite ? 'Add New Sub-Site' : 'Add New Site')}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowSiteForm(false);
+                    setEditingSite(null);
+                  }}
+                  className="text-gray-600 hover:text-gray-800"
+                >
+                  ← Back to List
+                </button>
+              </div>
+              <div className="bg-white rounded-lg shadow p-6">
+                <SiteForm
+                  site={editingSite}
+                  onSave={handleSaveSite}
+                  onCancel={() => {
+                    setShowSiteForm(false);
+                    setEditingSite(null);
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Allocation Tab */}
+      {activeTab === 'allocation' && (
+        <div className="mt-6">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-6">Contractor Allocation</h2>
+          <SiteAllocation key={sites.length} />
+        </div>
+      )}
+
+      {/* Pay Rates Tab */}
+      {activeTab === 'payrates' && (
+        <div className="mt-6">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-6">Pay Rate Configuration</h2>
+          <PayRateConfiguration />
+        </div>
+      )}
+
+      {/* Timesheets Tab */}
+      {activeTab === 'timesheets' && (
+        <div className="mt-6 space-y-6">
+          {/* Saved Timesheets List - Always Visible */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold mb-4">Saved Timesheets</h3>
+            <TimesheetList onEdit={handleEditTimesheet} />
+          </div>
+
+          {/* Create/Edit Timesheet Section */}
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-semibold text-gray-900">
+                {isEnteringTimesheet ? 'Timesheet Entry' : 'Create New Timesheet'}
+              </h2>
+              {isEnteringTimesheet && (
+                <button
+                  onClick={() => {
+                    setIsEnteringTimesheet(false);
+                    setEditingTimesheet(null);
+                    setSelectedSiteForTimesheet(null);
+                    setTimesheetPeriodStart('');
+                    setTimesheetPeriodEnd('');
+                  }}
+                  className="text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium"
+                >
+                  ← Cancel
+                </button>
+              )}
+            </div>
+
+            {isEnteringTimesheet && selectedSiteForTimesheet && timesheetPeriodStart && timesheetPeriodEnd ? (
+              <TimesheetEntry
+                site={getSites().find(s => s.id === selectedSiteForTimesheet.id)}
+                periodStart={timesheetPeriodStart}
+                periodEnd={timesheetPeriodEnd}
+                contractors={contractors}
+                initialData={editingTimesheet}
+                onQuickAddContractor={setContractors}
+                onSave={(timesheet) => {
+                  handleSaveTimesheet(timesheet);
+                  setSelectedSiteForTimesheet(null);
+                  setTimesheetPeriodStart('');
+                  setTimesheetPeriodEnd('');
+                  setIsEnteringTimesheet(false);
+                  setEditingTimesheet(null);
+                }}
+              />
             ) : (
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="space-y-4">
@@ -616,12 +532,12 @@ function App() {
                         const site = getSites().find(s => s.id === e.target.value);
                         setSelectedSiteForTimesheet(site || null);
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 outline-none font-medium text-slate-900 transition-all shadow-sm"
                     >
-                      <option value="">Choose a site...</option>
-                      {getSites().map(site => (
-                        <option key={site.id} value={site.id}>
-                          {site.siteName} {site.allocatedContractors?.length > 0 ? `(${site.allocatedContractors.length} contractors)` : '(no contractors allocated)'}
+                      <option value="">Choose a Primary Site...</option>
+                      {getSites().filter(s => !s.isSubSite).map(mainSite => (
+                        <option key={mainSite.id} value={mainSite.id} className="font-semibold text-blue-600">
+                          🏢 {mainSite.siteName}
                         </option>
                       ))}
                     </select>
@@ -635,7 +551,7 @@ function App() {
                     <>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-base font-medium text-gray-700 mb-2">
                             Period Start Date
                           </label>
                           <input
@@ -646,11 +562,44 @@ function App() {
                               // Auto-clear end date if cycle changes or if it becomes invalid
                               setTimesheetPeriodEnd('');
                             }}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${(() => {
+                                if (!timesheetPeriodStart || !selectedSiteForTimesheet) return 'border-gray-300';
+                                const selectedDate = parseISO(timesheetPeriodStart);
+                                const conflictingTimesheet = getTimesheets().find(ts => {
+                                  if (ts.siteId !== selectedSiteForTimesheet.id) return false;
+                                  const tsStart = parseISO(ts.periodStart);
+                                  const tsEnd = parseISO(ts.periodEnd);
+                                  return selectedDate >= tsStart && selectedDate <= tsEnd;
+                                });
+                                return conflictingTimesheet ? 'border-green-500 bg-green-50' : 'border-gray-300';
+                              })()
+                              }`}
                           />
+                          {(() => {
+                            if (!timesheetPeriodStart || !selectedSiteForTimesheet) return null;
+                            const selectedDate = parseISO(timesheetPeriodStart);
+                            const conflictingTimesheet = getTimesheets().find(ts => {
+                              if (ts.siteId !== selectedSiteForTimesheet.id) return false;
+                              const tsStart = parseISO(ts.periodStart);
+                              const tsEnd = parseISO(ts.periodEnd);
+                              return selectedDate >= tsStart && selectedDate <= tsEnd;
+                            });
+
+                            if (conflictingTimesheet) {
+                              return (
+                                <p className="mt-1 text-xs text-green-600 font-semibold flex items-center gap-1">
+                                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                  </svg>
+                                  Timesheet exists: {format(parseISO(conflictingTimesheet.periodStart), 'dd MMM')} - {format(parseISO(conflictingTimesheet.periodEnd), 'dd MMM yyyy')}
+                                </p>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-base font-medium text-gray-700 mb-2">
                             Period End Date
                           </label>
                           <input
@@ -703,6 +652,32 @@ function App() {
                                 showToastMessage('Error: End date must be after start date.', 'error');
                                 return;
                               }
+
+                              // Check for any date overlap with existing timesheets
+                              const newStart = parseISO(timesheetPeriodStart);
+                              const newEnd = parseISO(timesheetPeriodEnd);
+
+                              const overlappingTimesheet = getTimesheets().find(ts => {
+                                if (ts.siteId !== selectedSiteForTimesheet.id) return false;
+
+                                const existingStart = parseISO(ts.periodStart);
+                                const existingEnd = parseISO(ts.periodEnd);
+
+                                // Check if there's any overlap between the date ranges
+                                // Overlap exists if: new start is before existing end AND new end is after existing start
+                                return newStart <= existingEnd && newEnd >= existingStart;
+                              });
+
+                              if (overlappingTimesheet) {
+                                const existingStart = format(parseISO(overlappingTimesheet.periodStart), 'dd MMM yyyy');
+                                const existingEnd = format(parseISO(overlappingTimesheet.periodEnd), 'dd MMM yyyy');
+                                showToastMessage(
+                                  `Cannot create timesheet: Dates overlap with existing timesheet (${existingStart} - ${existingEnd}). Please select dates after ${existingEnd}.`,
+                                  'error'
+                                );
+                                return;
+                              }
+
                               setIsEnteringTimesheet(true);
                             }}
                             className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition font-medium shadow-md flex items-center gap-2"
@@ -720,48 +695,47 @@ function App() {
               </div>
             )}
           </div>
-        )}
-
-        {/* Training Pay Tab */}
-        {activeTab === 'training' && (
-          <div className="mt-6">
-            <TrainingEscrowManager />
-          </div>
-        )}
-
-        {/* Payment Summary Tab */}
-        {activeTab === 'payments' && (
-          <div className="mt-6">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6">Payment Summary</h2>
-            <PaymentSummary />
-          </div>
-        )}
-
-        {/* Settings Tab */}
-        {activeTab === 'settings' && (
-          <div className="mt-6">
-            <Settings onLogout={handleLogout} />
-          </div>
-        )}
-
-        {/* Audit Logs Tab */}
-        {activeTab === 'logs' && (
-          <div className="mt-6">
-            <AuditLogViewer />
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <p className="text-center text-gray-500 text-sm">
-            © {new Date().getFullYear()} Contractor Timesheet & Payroll Management System. All rights reserved.
-          </p>
         </div>
-      </footer>
-    </div>
+      )}
+
+      {/* Training Pay Tab */}
+      {activeTab === 'training' && (
+        <div className="mt-6">
+          <TrainingEscrowManager />
+        </div>
+      )}
+
+      {/* Payment Summary Tab */}
+      {activeTab === 'payments' && (
+        <div className="mt-6">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-6">Payment Summary</h2>
+          <PaymentSummary />
+        </div>
+      )}
+
+      {/* Public Holidays Tab */}
+      {activeTab === 'holidays' && (
+        <div className="mt-6">
+          <PublicHolidayManager />
+        </div>
+      )}
+
+      {/* Settings Tab */}
+      {activeTab === 'settings' && (
+        <div className="mt-6">
+          <Settings onLogout={handleLogout} />
+        </div>
+      )}
+
+      {/* Audit Logs Tab */}
+      {activeTab === 'logs' && (
+        <div className="mt-6">
+          <AuditLogViewer logs={[]} /> {/* Ensure logs are passed or handled inside */}
+        </div>
+      )}
+    </Layout>
   );
+
 }
 
 export default App;

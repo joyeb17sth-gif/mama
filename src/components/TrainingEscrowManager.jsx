@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { format, addDays, parseISO, isAfter } from 'date-fns';
 import { getTimesheets, getContractors, getTrainingReleases, saveTrainingReleases, logAction } from '../utils/storage';
 import Toast from './Toast';
 
@@ -6,6 +7,10 @@ const TrainingEscrowManager = () => {
     const [contractors, setContractors] = useState([]);
     const [balances, setBalances] = useState([]);
     const [releases, setReleases] = useState([]);
+    const [manualDueDates, setManualDueDates] = useState(() => {
+        const stored = localStorage.getItem('trainingManualDueDates');
+        return stored ? JSON.parse(stored) : {};
+    });
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
     const [selectedContractor, setSelectedContractor] = useState(null);
@@ -15,6 +20,21 @@ const TrainingEscrowManager = () => {
         loadData();
     }, []);
 
+    useEffect(() => {
+        localStorage.setItem('trainingManualDueDates', JSON.stringify(manualDueDates));
+    }, [manualDueDates]);
+
+    const handleUpdateDueDate = (contractorId, newDate) => {
+        setManualDueDates(prev => ({
+            ...prev,
+            [contractorId]: newDate
+        }));
+        setToastMessage('Due date updated successfully');
+        setShowToast(true);
+        // We need to re-load balances to show the change
+        setTimeout(loadData, 0);
+    };
+
     const loadData = () => {
         const allContractors = getContractors();
         const allTimesheets = getTimesheets();
@@ -22,20 +42,47 @@ const TrainingEscrowManager = () => {
         setReleases(allReleases);
 
         const contractorBalances = allContractors.map(contractor => {
-            // 1. Calculate Total Accumulated
-            const contractorTimesheets = allTimesheets.flatMap(ts => ts.entries)
+            // 1. Calculate Total Accumulated and find training dates
+            const contractorEntries = allTimesheets.flatMap(ts => ts.entries)
                 .filter(entry => entry.contractorId === contractor.id);
 
-            const totalAccumulated = contractorTimesheets.reduce((sum, entry) => {
+            const totalAccumulated = contractorEntries.reduce((sum, entry) => {
                 return sum + (entry.trainingPay || 0);
             }, 0);
 
-            const totalTrainingDays = contractorTimesheets.reduce((sum, entry) => {
-                const days = entry.dailyHours?.filter(d => d.isTraining && d.hours > 0).length || 0;
-                return sum + days;
-            }, 0);
+            // Collect all training dates
+            const trainingDates = [];
+            contractorEntries.forEach(entry => {
+                entry.dailyHours?.forEach(d => {
+                    if (d.isTraining && d.hours > 0) {
+                        trainingDates.push(d.date);
+                    }
+                });
+            });
 
-            const totalTrainingHours = contractorTimesheets.reduce((sum, entry) => {
+            // Sort dates to find the reference point
+            const sortedDates = [...new Set(trainingDates)].sort();
+            const totalTrainingDays = sortedDates.length;
+
+            let completionDate = null;
+            let dueDate = null;
+            let isComplete = totalTrainingDays >= 5;
+
+            // Default to 4 weeks after the FIRST training day, or 5th day if completed
+            if (totalTrainingDays > 0) {
+                // If they completed 5 days, use the 5th day as reference, otherwise use the 1st day
+                const referenceDate = isComplete ? sortedDates[4] : sortedDates[0];
+                completionDate = referenceDate;
+                dueDate = format(addDays(parseISO(referenceDate), 28), 'yyyy-MM-dd');
+            }
+
+            // Apply manual override if exists
+            const manualDate = manualDueDates[contractor.id];
+            if (manualDate) {
+                dueDate = manualDate;
+            }
+
+            const totalTrainingHours = contractorEntries.reduce((sum, entry) => {
                 const hours = entry.dailyHours?.filter(d => d.isTraining).reduce((hSum, d) => hSum + (d.hours || 0), 0) || 0;
                 return sum + hours;
             }, 0);
@@ -53,7 +100,10 @@ const TrainingEscrowManager = () => {
                 totalReleased,
                 currentBalance,
                 totalTrainingDays,
-                totalTrainingHours
+                totalTrainingHours,
+                completionDate,
+                dueDate,
+                isComplete
             };
         });
 
@@ -104,6 +154,7 @@ const TrainingEscrowManager = () => {
             contractorId: selectedContractor.id,
             contractorName: selectedContractor.name, // Added for easier display in history
             amount: amount,
+            hours: selectedContractor.totalTrainingHours, // Added for payslip display
             date: new Date().toISOString(),
             releasedBy: 'Admin',
             period: new Date().toISOString().slice(0, 7)
@@ -184,6 +235,7 @@ const TrainingEscrowManager = () => {
                             <th className="border border-gray-300 px-4 py-3 text-left text-sm font-medium text-gray-700">Contractor</th>
                             <th className="border border-gray-300 px-4 py-3 text-center text-sm font-medium text-gray-700">Training Days</th>
                             <th className="border border-gray-300 px-4 py-3 text-center text-sm font-medium text-gray-700">Total Training Hours</th>
+                            <th className="border border-gray-300 px-4 py-3 text-center text-sm font-medium text-gray-700">Due Release Date</th>
                             <th className="border border-gray-300 px-4 py-3 text-right text-sm font-medium text-gray-700">Total Accumulated</th>
                             <th className="border border-gray-300 px-4 py-3 text-right text-sm font-medium text-gray-700">Total Released</th>
                             <th className="border border-gray-300 px-4 py-3 text-right text-sm font-medium text-gray-700">Current Balance</th>
@@ -205,6 +257,34 @@ const TrainingEscrowManager = () => {
                                 </td>
                                 <td className="border border-gray-300 px-4 py-3 text-center font-medium text-gray-700">
                                     {contractor.totalTrainingHours.toFixed(2)}h
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-center">
+                                    {contractor.totalTrainingHours <= 0 ? (
+                                        <span className="text-xs text-slate-400 italic">No Training Logged</span>
+                                    ) : (
+                                        <div className="flex flex-col items-center gap-1">
+                                            <input
+                                                type="date"
+                                                value={contractor.dueDate || ''}
+                                                onChange={(e) => handleUpdateDueDate(contractor.id, e.target.value)}
+                                                className="text-xs border-none bg-transparent focus:ring-0 cursor-pointer hover:bg-slate-50 rounded px-1 font-bold text-slate-700"
+                                            />
+                                            {contractor.currentBalance <= 0 && contractor.totalAccumulated > 0 ? (
+                                                <span className="text-[10px] font-black uppercase tracking-tighter text-emerald-600">
+                                                    No Due Left
+                                                </span>
+                                            ) : (
+                                                contractor.dueDate && (
+                                                    <span className={`text-[10px] font-black uppercase tracking-tighter ${isAfter(new Date(), parseISO(contractor.dueDate))
+                                                            ? 'text-red-500 animate-pulse'
+                                                            : 'text-red-600'
+                                                        }`}>
+                                                        {isAfter(new Date(), parseISO(contractor.dueDate)) ? 'OVERDUE' : 'DUE SOON'}
+                                                    </span>
+                                                )
+                                            )}
+                                        </div>
+                                    )}
                                 </td>
                                 <td className="border border-gray-300 px-4 py-3 text-right text-gray-600">
                                     ${contractor.totalAccumulated.toFixed(2)}
