@@ -85,8 +85,19 @@ export const savePaymentSummaries = async (summaries) => {
 };
 export const getPaymentSummariesAsync = () => getSingleFromCloud('payment_summaries', 'main_list');
 
-// --- CREDENTIALS ---
+// --- USERS / CREDENTIALS ---
+// Replaces single 'main' credential with user-specific rows (id = username)
+export const saveUserToCloud = async (userProfile) => {
+  // We use the username as the unique ID for the row
+  await saveToCloud('app_credentials', userProfile.username, userProfile);
+};
+
+export const getUserFromCloud = async (username) => {
+  return await getSingleFromCloud('app_credentials', username);
+};
+
 export const saveCredentialsCloud = async (creds) => {
+  // Legacy support or single-user fallback
   await saveToCloud('app_credentials', 'main', creds);
 };
 export const getCredentialsCloud = () => getSingleFromCloud('app_credentials', 'main');

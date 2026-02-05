@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { createInitialCredentials, setAuthenticated } from '../utils/auth';
+import { registerUser, setAuthenticated } from '../utils/auth';
 
 const InitialSetup = ({ onComplete }) => {
     const [formData, setFormData] = useState({
@@ -30,7 +30,7 @@ const InitialSetup = ({ onComplete }) => {
         }
 
         try {
-            createInitialCredentials(
+            await registerUser(
                 formData.username,
                 formData.password,
                 formData.securityQuestion,
