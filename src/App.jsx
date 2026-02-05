@@ -299,8 +299,7 @@ function App() {
   const handleLogout = () => {
     setAuthenticated(false);
     setAuthenticatedState(false);
-    setActiveTab('contractors');
-    localStorage.clear();
+    setActiveTab('dashboard');
   };
 
   const handleSetActiveTab = (tab) => {
