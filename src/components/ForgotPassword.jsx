@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getStoredCredentials, verifySecurityAnswer, updatePassword, setAuthenticated } from '../utils/auth';
+import { getStoredCredentials, getSecurityQuestion, verifySecurityAnswer, updatePassword, setAuthenticated } from '../utils/auth';
 
 const ForgotPassword = ({ onBack, onLogin }) => {
   const [step, setStep] = useState(1); // 1: username, 2: security question, 3: new password
@@ -14,7 +14,7 @@ const ForgotPassword = ({ onBack, onLogin }) => {
     e.preventDefault();
     setError('');
     const creds = getStoredCredentials();
-    
+
     if (username === creds.username) {
       setCredentials(creds);
       setStep(2);
@@ -26,7 +26,7 @@ const ForgotPassword = ({ onBack, onLogin }) => {
   const handleSecurityAnswerSubmit = (e) => {
     e.preventDefault();
     setError('');
-    
+
     if (verifySecurityAnswer(securityAnswer)) {
       setStep(3);
     } else {

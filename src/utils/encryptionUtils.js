@@ -1,6 +1,15 @@
 import CryptoJS from 'crypto-js';
 
-const SECRET_KEY = 'payscleep-secure-key-v1'; // In a real app, this might come from env or user input
+// Get encryption key from environment variable, with fallback for development
+const getSecretKey = () => {
+    const envKey = import.meta.env.VITE_ENCRYPTION_KEY;
+    if (!envKey && import.meta.env.PROD) {
+        console.error('CRITICAL: VITE_ENCRYPTION_KEY is not set in production!');
+    }
+    return envKey || 'payscleep-dev-key-not-for-production';
+};
+
+const SECRET_KEY = getSecretKey();
 
 export const encryptData = (data) => {
     try {
@@ -12,13 +21,13 @@ export const encryptData = (data) => {
 };
 
 export const decryptData = (ciphertext) => {
+    if (!ciphertext) return null;
     try {
         const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
         const decryptedData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
         return decryptedData;
     } catch (e) {
         // Fallback: mostly for migration if data was previously unencrypted
-        // If JSON.parse fails on the raw string, it might be the old plain JSON
         try {
             return JSON.parse(ciphertext);
         } catch (e2) {

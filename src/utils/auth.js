@@ -1,58 +1,126 @@
 import { hashPassword, encryptData, decryptData } from './encryptionUtils';
 
-// Authentication utilities
-const DEFAULT_USERNAME = 'suraj';
-const DEFAULT_PASSWORD_HASH = hashPassword('suraj12345'); // Hash the default
+// Login attempt tracking for rate limiting
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 30000; // 30 seconds
+let loginAttempts = 0;
+let lockoutUntil = null;
 
-// Get stored credentials or use defaults
+// Check if account is locked due to too many failed attempts
+export const isAccountLocked = () => {
+  if (!lockoutUntil) return false;
+  if (Date.now() >= lockoutUntil) {
+    // Lockout expired, reset
+    loginAttempts = 0;
+    lockoutUntil = null;
+    return false;
+  }
+  return true;
+};
+
+// Get remaining lockout time in seconds
+export const getLockoutRemainingSeconds = () => {
+  if (!lockoutUntil) return 0;
+  return Math.max(0, Math.ceil((lockoutUntil - Date.now()) / 1000));
+};
+
+// Record a failed login attempt
+const recordFailedAttempt = () => {
+  loginAttempts++;
+  if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+    lockoutUntil = Date.now() + LOCKOUT_DURATION_MS;
+  }
+};
+
+// Reset login attempts on successful login
+const resetLoginAttempts = () => {
+  loginAttempts = 0;
+  lockoutUntil = null;
+};
+
+// Check if first-run setup is required (no credentials configured)
+export const isFirstRun = () => {
+  const stored = localStorage.getItem('appCredentials');
+  return !stored;
+};
+
+// Get stored credentials
 export const getStoredCredentials = () => {
   const stored = localStorage.getItem('appCredentials');
   if (stored) {
-    // Try to decrypt; if fails (legacy plain JSON), fallback handled by decryptData
     const decrypted = decryptData(stored);
-    // Handle migration: if password doesn't look like a hash (custom logic?)
-    // Actually, decryptData handles the JSON parsing. We assume migration happens on next save.
-    return decrypted || {};
+    return decrypted || null;
   }
-  // Initialize with default credentials
-  const defaultCreds = {
-    username: DEFAULT_USERNAME,
-    password: DEFAULT_PASSWORD_HASH,
-    securityQuestion: 'What is your favorite color?',
-    securityAnswer: 'blue',
-  };
-  saveCredentials(defaultCreds);
-  return defaultCreds;
+  return null;
 };
 
 // Save credentials
 export const saveCredentials = (credentials) => {
-  // Encrypt the entire object
   const encrypted = encryptData(credentials);
   if (encrypted) {
     localStorage.setItem('appCredentials', encrypted);
   }
 };
 
-// Verify login
-export const verifyLogin = (username, password) => {
-  const credentials = getStoredCredentials();
-  const inputHash = hashPassword(password);
-
-  // Legacy check: if stored password is NOT hashed (plain text length < 64?), compare plain text
-  // Then upgrade it? For now, let's just assume we need to match what's stored.
-  // We'll enforce hashing. If the stored password matches the INPUT (plain), it's legacy.
-
-  if (credentials.password === password) {
-    // Legacy match found. Upgrade them silently?
-    // Ideally yes, but let's just return true.
-    // Better: we won't support legacy plain text login in this snippet to keep it simple, 
-    // but since I just overwrote the default logic to use HASH, new visits are fine.
-    // Existing users with plain text in local storage might be locked out if I strictly check hash.
-    return true;
+// Initial setup - create credentials for first time
+export const createInitialCredentials = (username, password, securityQuestion, securityAnswer) => {
+  if (!username || !password || !securityQuestion || !securityAnswer) {
+    throw new Error('All fields are required for initial setup');
   }
 
-  return credentials.username === username && credentials.password === inputHash;
+  if (username.length < 3) {
+    throw new Error('Username must be at least 3 characters');
+  }
+
+  if (password.length < 6) {
+    throw new Error('Password must be at least 6 characters');
+  }
+
+  const credentials = {
+    username: username.trim(),
+    password: hashPassword(password),
+    securityQuestion: securityQuestion.trim(),
+    securityAnswer: securityAnswer.toLowerCase().trim(),
+  };
+
+  saveCredentials(credentials);
+  return true;
+};
+
+// Verify login
+export const verifyLogin = (username, password) => {
+  if (isAccountLocked()) {
+    return { success: false, locked: true, remainingSeconds: getLockoutRemainingSeconds() };
+  }
+
+  const credentials = getStoredCredentials();
+  if (!credentials) {
+    return { success: false, error: 'No credentials configured' };
+  }
+
+  const inputHash = hashPassword(password);
+
+  // Check credentials
+  if (credentials.username === username && credentials.password === inputHash) {
+    resetLoginAttempts();
+    return { success: true };
+  }
+
+  // Legacy plain text password support (for migration)
+  if (credentials.username === username && credentials.password === password) {
+    // Migrate to hashed password
+    credentials.password = inputHash;
+    saveCredentials(credentials);
+    resetLoginAttempts();
+    return { success: true };
+  }
+
+  recordFailedAttempt();
+  return {
+    success: false,
+    error: 'Invalid username or password',
+    attemptsRemaining: Math.max(0, MAX_LOGIN_ATTEMPTS - loginAttempts)
+  };
 };
 
 // Check if user is authenticated
@@ -72,27 +140,49 @@ export const setAuthenticated = (status) => {
 // Verify security answer for password reset
 export const verifySecurityAnswer = (answer) => {
   const credentials = getStoredCredentials();
+  if (!credentials || !credentials.securityAnswer) return false;
   return credentials.securityAnswer.toLowerCase().trim() === answer.toLowerCase().trim();
+};
+
+// Get security question
+export const getSecurityQuestion = () => {
+  const credentials = getStoredCredentials();
+  return credentials?.securityQuestion || null;
 };
 
 // Update password
 export const updatePassword = (newPassword) => {
+  if (!newPassword || newPassword.length < 6) {
+    throw new Error('Password must be at least 6 characters');
+  }
   const credentials = getStoredCredentials();
+  if (!credentials) throw new Error('No credentials found');
+
   credentials.password = hashPassword(newPassword);
   saveCredentials(credentials);
 };
 
 // Update security question and answer
 export const updateSecurityQA = (question, answer) => {
+  if (!question || !answer) {
+    throw new Error('Question and answer are required');
+  }
   const credentials = getStoredCredentials();
-  credentials.securityQuestion = question;
+  if (!credentials) throw new Error('No credentials found');
+
+  credentials.securityQuestion = question.trim();
   credentials.securityAnswer = answer.toLowerCase().trim();
   saveCredentials(credentials);
 };
 
 // Update username
 export const updateUsername = (newUsername) => {
+  if (!newUsername || newUsername.length < 3) {
+    throw new Error('Username must be at least 3 characters');
+  }
   const credentials = getStoredCredentials();
-  credentials.username = newUsername;
+  if (!credentials) throw new Error('No credentials found');
+
+  credentials.username = newUsername.trim();
   saveCredentials(credentials);
 };

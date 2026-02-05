@@ -91,13 +91,12 @@ const Settings = ({ onLogout }) => {
             <button
               onClick={() => {
                 setActiveTab('password');
-              setMessage({ type: '', text: '' });
+                setMessage({ type: '', text: '' });
               }}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'password'
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'password'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               Change Password
             </button>
@@ -106,11 +105,10 @@ const Settings = ({ onLogout }) => {
                 setActiveTab('username');
                 setMessage({ type: '', text: '' });
               }}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'username'
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'username'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               Change Username
             </button>
@@ -119,11 +117,10 @@ const Settings = ({ onLogout }) => {
                 setActiveTab('security');
                 setMessage({ type: '', text: '' });
               }}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'security'
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'security'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               Security Question
             </button>
@@ -133,11 +130,10 @@ const Settings = ({ onLogout }) => {
         {/* Messages */}
         {message.text && (
           <div
-            className={`mb-4 px-4 py-3 rounded-md ${
-              message.type === 'success'
+            className={`mb-4 px-4 py-3 rounded-md ${message.type === 'success'
                 ? 'bg-green-50 border border-green-200 text-green-700'
                 : 'bg-red-50 border border-red-200 text-red-700'
-            }`}
+              }`}
           >
             {message.text}
           </div>
