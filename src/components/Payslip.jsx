@@ -25,10 +25,10 @@ const Payslip = ({ payment, period, contractor, onBack }) => {
                 scale: 2,
                 useCORS: true,
                 letterRendering: true,
-                windowWidth: 1100 // Force a specific width for consistent rendering
+                windowWidth: 1100
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            pagebreak: { mode: ['css', 'legacy'] }
         };
 
         html2pdf().set(opt).from(element).save();
@@ -44,225 +44,179 @@ const Payslip = ({ payment, period, contractor, onBack }) => {
     })();
 
     return (
-        <div className="bg-gray-100 min-h-screen p-4 md:p-8 animate-fade-in print:p-0 print:bg-white">
+        <div className="bg-zinc-50 min-h-screen p-8 pt-24 print:p-0 print:bg-white">
             <style dangerouslySetInnerHTML={{
                 __html: `
                 @media print {
-                    @page {
-                        size: A4;
-                        margin: 0;
-                    }
-                    body {
-                        background: white !important;
-                        -webkit-print-color-adjust: exact;
-                        margin: 0;
-                        padding: 0;
-                    }
-                    .payslip-container {
-                        box-shadow: none !important;
-                        border: none !important;
-                        width: 100% !important;
-                        margin: 0 !important;
-                        padding: 20px !important;
-                        break-inside: avoid;
-                    }
-                    /* Ensure no elements are split across pages */
-                    h1, h2, h3, p, tr, div {
-                        break-inside: avoid;
-                    }
+                    @page { size: A4 portrait; margin: 15mm; }
+                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; }
+                    .print-hidden { display: none !important; }
+                    .payslip-wrapper { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; border: none !important; box-shadow: none !important; }
                 }
             `}} />
 
-            {/* Navigation - Hidden on print */}
-            <div className="max-w-4xl mx-auto mb-6 flex justify-between items-center print:hidden">
-                <button
-                    onClick={onBack}
-                    className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium transition"
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                    Back to Summary
-                </button>
-                <div className="flex flex-col items-end gap-2">
+            {/* Navigation Header - Fixed at top */}
+            <div className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md border-b border-zinc-100 z-50 print-hidden">
+                <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
+                    <button
+                        onClick={onBack}
+                        className="flex items-center gap-2.5 text-zinc-500 hover:text-zinc-900 font-bold transition-all text-sm"
+                    >
+                        <div className="w-8 h-8 rounded-full border border-zinc-100 flex items-center justify-center hover:bg-zinc-50">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                        </div>
+                        Dismiss Preview
+                    </button>
                     <button
                         onClick={handleDownload}
-                        className="px-6 py-2 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 shadow-lg shadow-emerald-100 flex items-center gap-2 transition"
+                        className="px-6 py-3 bg-zinc-900 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-black transition-all flex items-center gap-2.5"
                     >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Download as PDF
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        Download PDF
                     </button>
                 </div>
             </div>
 
-            {/* Payslip Document */}
-            <div ref={payslipRef} className="payslip-container max-w-4xl mx-auto bg-white shadow-2xl rounded-3xl overflow-hidden print:shadow-none print:rounded-none border border-gray-100">
+            {/* Print Container */}
+            <div
+                ref={payslipRef}
+                className="payslip-wrapper max-w-[210mm] mx-auto bg-white p-12 border border-zinc-200 shadow-sm"
+            >
                 {/* Header */}
-                <div className="bg-slate-900 p-8 md:p-12 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div className="flex justify-between items-start mb-8 border-b-2 border-zinc-900 pb-6">
                     <div>
-                        <h1 className="text-3xl font-black tracking-tighter mb-1">PAYSCLEEP</h1>
-                        <p className="text-slate-400 font-medium uppercase tracking-widest text-xs">Payroll Management System</p>
+                        <h1 className="text-3xl font-bold text-zinc-900 uppercase tracking-tighter mb-2">Payslip</h1>
+                        <div className="text-sm font-bold text-zinc-500 uppercase tracking-widest">{periodLabel}</div>
                     </div>
                     <div className="text-right">
-                        <h2 className="text-xl font-bold mb-1">PAY ADVICE</h2>
-                        <p className="text-slate-400 text-sm font-medium">Period: {periodLabel}</p>
+                        <div className="text-lg font-bold text-zinc-900">Payscleep Management</div>
+                        <div className="text-xs text-zinc-500 font-medium mt-1">
+                            Infrastructure Services<br />
+                            ABN: 12 345 678 901
+                        </div>
                     </div>
                 </div>
 
-                <div className="p-8 md:p-12">
-                    {/* Info Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
-                        <div>
-                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Contractor Details</h3>
-                            <div className="space-y-3">
-                                <div className="flex justify-between border-b border-gray-50 pb-2">
-                                    <span className="text-sm text-gray-500 font-medium">Name</span>
-                                    <span className="text-sm font-bold text-gray-900">{contractor.name}</span>
-                                </div>
-                                <div className="flex justify-between border-b border-gray-50 pb-2">
-                                    <span className="text-sm text-gray-500 font-medium">Contractor ID</span>
-                                    <span className="text-sm font-bold text-gray-900">{contractor.contractorId}</span>
-                                </div>
-                                <div className="flex justify-between border-b border-gray-50 pb-2">
-                                    <span className="text-sm text-gray-500 font-medium">Email</span>
-                                    <span className="text-sm font-medium text-gray-900">{contractor.email || 'N/A'}</span>
-                                </div>
+                {/* Employee Info Grid */}
+                <div className="grid grid-cols-2 gap-12 mb-12">
+                    <div>
+                        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4 border-b border-zinc-100 pb-2">Employee Details</h3>
+                        <div className="space-y-2">
+                            <div className="grid grid-cols-3">
+                                <span className="text-xs font-bold text-zinc-500 uppercase text-left">Name</span>
+                                <span className="col-span-2 text-sm font-bold text-zinc-900">{contractor.name}</span>
                             </div>
-                        </div>
-                        <div>
-                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Payment Details</h3>
-                            <div className="space-y-3">
-                                <div className="flex justify-between border-b border-gray-50 pb-2">
-                                    <span className="text-sm text-gray-500 font-medium">Bank</span>
-                                    <span className="text-sm font-bold text-gray-900">{contractor.bankName || 'Common Wealth Bank'}</span>
-                                </div>
-                                <div className="flex justify-between border-b border-gray-50 pb-2">
-                                    <span className="text-sm text-gray-500 font-medium">BSB</span>
-                                    <span className="text-sm font-bold text-gray-900">{contractor.bsb}</span>
-                                </div>
-                                <div className="flex justify-between border-b border-gray-50 pb-2">
-                                    <span className="text-sm text-gray-500 font-medium">Account Number</span>
-                                    <span className="text-sm font-bold text-gray-900">{contractor.accountNumber}</span>
-                                </div>
+                            <div className="grid grid-cols-3">
+                                <span className="text-xs font-bold text-zinc-500 uppercase text-left">ID</span>
+                                <span className="col-span-2 text-sm font-bold text-zinc-900">{contractor.contractorId}</span>
+                            </div>
+                            <div className="grid grid-cols-3">
+                                <span className="text-xs font-bold text-zinc-500 uppercase text-left">Email</span>
+                                <span className="col-span-2 text-sm font-bold text-zinc-900">{contractor.email}</span>
                             </div>
                         </div>
                     </div>
+                    <div>
+                        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4 border-b border-zinc-100 pb-2">Payment Details</h3>
+                        <div className="space-y-2">
+                            <div className="grid grid-cols-3">
+                                <span className="text-xs font-bold text-zinc-500 uppercase text-left">Date</span>
+                                <span className="col-span-2 text-sm font-bold text-zinc-900">{format(new Date(), 'dd MMM yyyy')}</span>
+                            </div>
+                            <div className="grid grid-cols-3">
+                                <span className="text-xs font-bold text-zinc-500 uppercase text-left">Bank</span>
+                                <span className="col-span-2 text-sm font-bold text-zinc-900">{contractor.bsb || '-'}</span>
+                            </div>
+                            <div className="grid grid-cols-3">
+                                <span className="text-xs font-bold text-zinc-500 uppercase text-left">Account</span>
+                                <span className="col-span-2 text-sm font-bold text-zinc-900">****{contractor.accountNumber ? contractor.accountNumber.slice(-4) : '****'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                    {/* Detailed Earnings Section */}
-                    <div className="mb-12">
-                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-6">Detailed Earnings Breakdown</h3>
-                        <div className="overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
-                            <table className="min-w-full divide-y divide-gray-100">
-                                <thead className="bg-gray-50/80">
-                                    <tr>
-                                        <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Site & Description</th>
-                                        <th className="px-6 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Rate</th>
-                                        <th className="px-6 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Hours</th>
-                                        <th className="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Total</th>
+                {/* Earnings Table */}
+                <div className="mb-12">
+                    <h3 className="text-xs font-bold text-zinc-900 uppercase tracking-widest mb-4">Earnings Description</h3>
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="border-b-2 border-zinc-100">
+                                <th className="py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider w-1/2">Description</th>
+                                <th className="py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider text-center">Rate</th>
+                                <th className="py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider text-center">Hours</th>
+                                <th className="py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody className="text-sm text-zinc-900">
+                            {payment.siteBreakdown.map((site, sIdx) => (
+                                <Fragment key={sIdx}>
+                                    <tr className="border-b border-zinc-50 bg-zinc-50/50">
+                                        <td colSpan={4} className="py-2 px-2 font-bold text-xs uppercase tracking-wide">
+                                            {site.siteName}
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {payment.siteBreakdown.map((site, sIdx) => (
-                                        <Fragment key={sIdx}>
-                                            {/* Site Header Row */}
-                                            <tr className="bg-slate-50/30">
-                                                <td colSpan={4} className="px-6 py-3 font-black text-xs text-slate-800 border-l-4 border-slate-900 uppercase tracking-wider">
-                                                    {site.siteName}
-                                                </td>
+                                    {!site.isRelease && site.hoursByType && Object.entries(site.hoursByType).map(([type, hrs], tIdx) => (
+                                        hrs > 0 && (
+                                            <tr key={tIdx} className="border-b border-zinc-50">
+                                                <td className="py-3 pl-6 text-zinc-600 capitalize">{type.replace(/([A-Z])/g, ' $1')} Rate</td>
+                                                <td className="py-3 text-center text-zinc-500">${(site.rates?.[type] || 0).toFixed(2)}</td>
+                                                <td className="py-3 text-center">{hrs.toFixed(2)}</td>
+                                                <td className="py-3 text-right font-bold">${(hrs * (site.rates?.[type] || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                             </tr>
-
-                                            {/* Hourly Breakdown Rows (Skip for releases to avoid double-up) */}
-                                            {!site.isRelease && site.hoursByType && Object.entries(site.hoursByType).map(([type, hrs], tIdx) => (
-                                                hrs > 0 && (
-                                                    <tr key={tIdx} className="hover:bg-gray-50/50 transition">
-                                                        <td className="px-8 py-3 text-sm text-gray-600 capitalize">
-                                                            {type.replace(/([A-Z])/g, ' $1')} Hours
-                                                        </td>
-                                                        <td className="px-6 py-3 text-center text-xs font-bold text-gray-500">
-                                                            ${(site.rates?.[type] || 0).toFixed(2)} / hr
-                                                        </td>
-                                                        <td className="px-6 py-3 text-center text-sm font-bold text-gray-900">
-                                                            {hrs.toFixed(1)}
-                                                        </td>
-                                                        <td className="px-6 py-3 text-right text-sm font-black text-gray-900">
-                                                            ${(hrs * (site.rates?.[type] || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                        </td>
-                                                    </tr>
-                                                )
-                                            ))}
-
-                                            {/* Training Release Row (Included) */}
-                                            {site.isRelease && (
-                                                <tr className="bg-blue-50/10">
-                                                    <td className="px-8 py-3 text-sm text-blue-700 font-bold uppercase tracking-tight">Training Pay (Released)</td>
-                                                    <td className="px-6 py-3 text-center text-xs font-bold text-blue-600">
-                                                        {site.hours > 0 ? `$${(site.pay / site.hours).toFixed(2)} / hr` : '—'}
-                                                    </td>
-                                                    <td className="px-6 py-3 text-center text-sm font-bold text-blue-700">
-                                                        {site.hours > 0 ? site.hours.toFixed(1) : '—'}
-                                                    </td>
-                                                    <td className="px-6 py-3 text-right text-sm font-black text-blue-900">${site.pay.toFixed(2)}</td>
-                                                </tr>
-                                            )}
-                                        </Fragment>
+                                        )
                                     ))}
+                                    {site.isRelease && (
+                                        <tr className="border-b border-zinc-50">
+                                            <td className="py-3 pl-6 text-zinc-600">Training Escrow Release</td>
+                                            <td className="py-3 text-center text-zinc-500">-</td>
+                                            <td className="py-3 text-center">{site.hours > 0 ? site.hours.toFixed(2) : '-'}</td>
+                                            <td className="py-3 text-right font-bold">${site.pay.toFixed(2)}</td>
+                                        </tr>
+                                    )}
+                                </Fragment>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
 
-                                    {/* Subtotal Row */}
-                                    <tr className="bg-slate-900 text-white">
-                                        <td className="px-6 py-4 font-black uppercase text-xs tracking-tighter">Gross Earnings Total</td>
-                                        <td className="px-6 py-4 text-center"></td>
-                                        <td className="px-6 py-4 text-center font-black">{payment.totalHours.toFixed(1)}h Total</td>
-                                        <td className="px-6 py-4 text-right font-black text-lg">${payment.totalPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* Adjustments & Deductions */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
-                        <div>
-                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Adjustments</h3>
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
-                                    <span className="text-sm font-medium text-gray-600">Allowances</span>
-                                    <span className="text-sm font-bold text-green-600">+${payment.totalAllowance.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
-                                    <span className="text-sm font-medium text-gray-600">Other Pay</span>
-                                    <span className="text-sm font-bold text-green-600">+${payment.totalOtherPay.toFixed(2)}</span>
-                                </div>
+                {/* Adjustments & Totals */}
+                <div className="flex justify-end mb-12">
+                    <div className="w-1/2 space-y-3">
+                        {/* Totals Block */}
+                        <div className="space-y-2 border-t border-zinc-100 pt-4">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-zinc-500 font-medium">Gross Earnings</span>
+                                <span className="font-bold text-zinc-900">${payment.totalPay.toFixed(2)}</span>
                             </div>
-                        </div>
-                        <div>
-                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Deductions</h3>
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center bg-rose-50 p-3 rounded-xl border border-rose-100">
-                                    <span className="text-sm font-medium text-rose-700 font-bold">Total Deductions</span>
-                                    <span className="text-sm font-black text-rose-600">-${payment.totalDeduction.toFixed(2)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    {/* Summary Footer */}
-                    <div className="flex flex-col md:flex-row justify-end items-center gap-8 mt-16 pt-12 border-t-2 border-dashed border-gray-100">
-                        <div className="text-center md:text-right">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-2 text-emerald-600">Total Net Payable</p>
-                            <div className="text-6xl font-black text-slate-900 tracking-tighter">
-                                ${payment.totalNetPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            {(payment.totalAllowance > 0 || payment.totalOtherPay > 0) && (
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-zinc-500 font-medium">Allowances & Bonuses</span>
+                                    <span className="font-bold text-zinc-900">+${(payment.totalAllowance + payment.totalOtherPay).toFixed(2)}</span>
+                                </div>
+                            )}
+
+                            {payment.totalDeduction > 0 && (
+                                <div className="flex justify-between text-sm text-rose-600">
+                                    <span className="font-medium">Deductions</span>
+                                    <span className="font-bold">-${payment.totalDeduction.toFixed(2)}</span>
+                                </div>
+                            )}
+
+                            <div className="flex justify-between items-center border-t-2 border-zinc-900 pt-4 mt-4">
+                                <span className="text-base font-bold text-zinc-900 uppercase tracking-widest">Net Pay</span>
+                                <span className="text-3xl font-bold text-zinc-900 tracking-tighter">${payment.totalNetPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    {/* Notice */}
-                    <div className="mt-20 p-6 bg-gray-50 rounded-2xl border border-gray-100">
-                        <p className="text-[10px] text-gray-400 leading-relaxed italic text-center">
-                            This is a computer-generated document. No signature is required. For any discrepancies, please contact the payroll department at info@payscleep.com
-                        </p>
-                    </div>
+                {/* Footer */}
+                <div className="border-t border-zinc-200 pt-8 text-center">
+                    <p className="text-xs text-zinc-400 max-w-lg mx-auto leading-relaxed">
+                        Payment authorized by Payscleep Management. Funds should appear in your nominated account within 1-2 business days.
+                        Questions? Contact support@payscleep.com
+                    </p>
                 </div>
             </div>
         </div>

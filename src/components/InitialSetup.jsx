@@ -47,26 +47,26 @@ const InitialSetup = ({ onComplete }) => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center px-4">
-            <div className="max-w-md w-full bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8">
+            <div className="max-w-md w-full bg-white/95 backdrop-blur-sm rounded-2xl p-8">
                 <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                         <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Payslip Generator</h1>
-                    <p className="text-gray-600 text-sm">Set up your admin account to get started</p>
+                    <h1 className="text-h1 text-gray-900 mb-2">Welcome to Payslip Generator</h1>
+                    <p className="text-gray-600 text-p3">Set up your admin account to get started</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                     {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-medium">
+                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-p3 font-medium">
                             {error}
                         </div>
                     )}
 
                     <div>
-                        <label htmlFor="username" className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                        <label htmlFor="username" className="block text-p3 font-bold text-gray-400 mb-2">
                             Username
                         </label>
                         <input
@@ -85,7 +85,7 @@ const InitialSetup = ({ onComplete }) => {
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="password" className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                            <label htmlFor="password" className="block text-p3 font-bold text-gray-400 mb-2">
                                 Password
                             </label>
                             <input
@@ -101,7 +101,7 @@ const InitialSetup = ({ onComplete }) => {
                             />
                         </div>
                         <div>
-                            <label htmlFor="confirmPassword" className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                            <label htmlFor="confirmPassword" className="block text-p3 font-bold text-gray-400 mb-2">
                                 Confirm
                             </label>
                             <input
@@ -121,7 +121,7 @@ const InitialSetup = ({ onComplete }) => {
                         <p className="text-xs text-gray-500 mb-4">Security question for password recovery:</p>
                         <div className="space-y-4">
                             <div>
-                                <label htmlFor="securityQuestion" className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                <label htmlFor="securityQuestion" className="block text-p3 font-bold text-gray-400 mb-2">
                                     Security Question
                                 </label>
                                 <input
@@ -136,7 +136,7 @@ const InitialSetup = ({ onComplete }) => {
                                 />
                             </div>
                             <div>
-                                <label htmlFor="securityAnswer" className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                <label htmlFor="securityAnswer" className="block text-p3 font-bold text-gray-400 mb-2">
                                     Security Answer
                                 </label>
                                 <input
@@ -156,7 +156,7 @@ const InitialSetup = ({ onComplete }) => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-xl hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition font-bold uppercase tracking-wider text-sm shadow-lg"
+                        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-xl hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition font-bold uppercase tracking-wider text-sm"
                     >
                         {loading ? 'Setting up...' : 'Create Account & Continue'}
                     </button>

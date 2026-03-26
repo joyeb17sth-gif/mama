@@ -56,10 +56,10 @@ const ForgotPassword = ({ onBack, onLogin }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
+      <div className="max-w-md w-full bg-white rounded-lg p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Reset Password</h1>
-          <p className="text-gray-600">Follow the steps to reset your password</p>
+          <h1 className="text-h1 font-bold text-gray-900 mb-2">Reset Password</h1>
+          <p className="text-p3 text-gray-600">Follow the steps to reset your password</p>
         </div>
 
         {/* Step 1: Enter Username */}
@@ -115,10 +115,10 @@ const ForgotPassword = ({ onBack, onLogin }) => {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-p3 font-bold text-gray-700 mb-2">
                 Security Question
               </label>
-              <p className="text-gray-900 font-semibold mb-4">{credentials.securityQuestion}</p>
+              <p className="text-p1 font-bold text-gray-900 mb-4">{credentials.securityQuestion}</p>
               <input
                 type="text"
                 value={securityAnswer}

@@ -46,80 +46,86 @@ const PublicHolidayManager = () => {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in-up">
             {showToast && <Toast message={toastMsg} onClose={() => setShowToast(false)} />}
 
-            <div className="bg-white rounded-3xl shadow-xl p-8 border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center gap-4 mb-8">
-                    <div className="p-3 bg-violet-100 rounded-2xl text-violet-600">
+            <div className="bg-white rounded-[2.5rem] p-10 border border-zinc-100 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary-50 rounded-full blur-3xl -mr-32 -mt-32 opacity-40"></div>
+
+                <div className="flex items-center gap-5 mb-10 relative z-10">
+                    <div className="p-4 bg-zinc-900 rounded-2xl text-white">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Public Holiday Config</h2>
-                        <p className="text-sm text-slate-400 font-medium">Define holidays to automatically apply PH rates in timesheets.</p>
+                        <h2 className="text-h1 text-zinc-900 tracking-tight">Holiday Orchestration</h2>
+                        <p className="text-p3 text-zinc-500 font-medium">Define global protocol for automated holiday rate deployment.</p>
                     </div>
                 </div>
 
-                <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100 mb-8">
-                    <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Holiday Date</label>
+                <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-zinc-50/50 p-8 rounded-[2rem] border border-zinc-100 mb-10 relative z-10">
+                    <div className="space-y-2">
+                        <label className="block text-[11px] font-bold text-zinc-400 ml-1">Calendar Date</label>
                         <input
                             type="date"
                             value={newHoliday.date}
                             onChange={(e) => setNewHoliday({ ...newHoliday, date: e.target.value })}
                             required
-                            className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none font-medium text-slate-700 transition-shadow shadow-sm"
+                            className="w-full px-5 py-4 bg-white border border-transparent rounded-2xl focus:border-zinc-900 outline-none font-bold text-zinc-900 transition-all"
                         />
                     </div>
-                    <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Holiday Name</label>
+                    <div className="space-y-2">
+                        <label className="block text-[11px] font-bold text-zinc-400 ml-1">Event Identifier</label>
                         <input
                             type="text"
                             placeholder="e.g. Christmas Day"
                             value={newHoliday.name}
                             onChange={(e) => setNewHoliday({ ...newHoliday, name: e.target.value })}
                             required
-                            className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none font-medium text-slate-700 transition-shadow shadow-sm"
+                            className="w-full px-5 py-4 bg-white border border-transparent rounded-2xl focus:border-zinc-900 outline-none font-bold text-zinc-900 transition-all"
                         />
                     </div>
-                    <div className="md:pt-5">
+                    <div className="md:pt-6">
                         <button
                             type="submit"
-                            className="w-full h-[46px] bg-violet-600 text-white rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-violet-700 transition shadow-lg shadow-violet-100 active:scale-95"
+                            className="w-full h-[58px] bg-zinc-900 text-white rounded-2xl font-bold text-xs hover:bg-black transition-all hover:-translate-y-1 active:scale-95 active:translate-y-0"
                         >
-                            + Add Holiday
+                            Authorize Holiday
                         </button>
                     </div>
                 </form>
 
-                <div className="space-y-3">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Configured Holidays ({holidays.length})</h3>
+                <div className="space-y-6 relative z-10">
+                    <div className="flex items-center justify-between px-1">
+                        <h3 className="text-p3 font-bold text-zinc-400 tracking-widest">Active Manifest ({holidays.length})</h3>
+                    </div>
+
                     {holidays.length === 0 ? (
-                        <div className="text-center py-12 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-slate-300 font-bold uppercase tracking-widest text-[10px]">
-                            No public holidays configured yet.
+                        <div className="text-center py-20 bg-zinc-50/30 rounded-[2rem] border border-dashed border-zinc-200 text-zinc-300 font-bold text-sm">
+                            Manifest Empty: No protocols defined.
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {holidays.map(h => (
-                                <div key={h.id} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm hover:border-violet-200 transition group translate-y-0 hover:-translate-y-0.5">
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-center bg-violet-50 px-3 py-1.5 rounded-xl border border-violet-100 min-w-[70px]">
-                                            <div className="text-[10px] font-black text-violet-600 uppercase leading-none">{format(parseISO(h.date), 'MMM')}</div>
-                                            <div className="text-lg font-black text-violet-700 leading-tight">{format(parseISO(h.date), 'dd')}</div>
+                                <div key={h.id} className="group flex items-center justify-between p-5 bg-white border border-zinc-100 rounded-2xl hover:border-zinc-900 transition-all translate-y-0 hover:-translate-y-1">
+                                    <div className="flex items-center gap-5">
+                                        <div className="text-center bg-zinc-900 px-4 py-2 rounded-xl border border-zinc-800 min-w-[80px]">
+                                            <div className="text-[10px] font-bold text-zinc-400 leading-none mb-1">{format(parseISO(h.date), 'MMM').toUpperCase()}</div>
+                                            <div className="text-xl font-bold text-white leading-tight">{format(parseISO(h.date), 'dd')}</div>
                                         </div>
                                         <div>
-                                            <div className="text-sm font-bold text-slate-800">{h.name}</div>
-                                            <div className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">{format(parseISO(h.date), 'EEEE, yyyy')}</div>
+                                            <div className="text-sm font-bold text-zinc-900 mb-0.5">{h.name}</div>
+                                            <div className="text-[10px] font-bold text-zinc-400">{format(parseISO(h.date), 'EEEE, yyyy')}</div>
                                         </div>
                                     </div>
                                     <button
                                         onClick={() => handleRemove(h.id)}
-                                        className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition"
+                                        className="w-10 h-10 flex items-center justify-center text-zinc-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                                        title="Revoke Protocol"
                                     >
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                         </svg>
                                     </button>
                                 </div>
@@ -129,18 +135,21 @@ const PublicHolidayManager = () => {
                 </div>
             </div>
 
-            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex gap-3 items-start">
-                <div className="text-amber-500 pt-0.5">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                </div>
-                <div>
-                    <h4 className="text-sm font-bold text-amber-800 uppercase tracking-tight">How this works</h4>
-                    <p className="text-xs text-amber-700 leading-relaxed font-medium mt-1">
-                        Any dates listed here will automatically be treated as Public Holidays across the entire system.
-                        In the timesheet, work logged on these dates will automatically use the **Public Holiday rate** instead of the normal weekday/weekend rates.
-                    </p>
+            <div className="bg-primary-600 bg-gradient-to-br from-primary-600 to-primary-700 rounded-[2rem] p-8 text-white relative overflow-hidden">
+                <div className="absolute bottom-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl -mb-32 -mr-32 opacity-20"></div>
+                <div className="flex gap-5 items-start relative z-10">
+                    <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shrink-0 border border-white/30">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div className="space-y-2">
+                        <h4 className="text-p1 font-bold tracking-tight">Protocol Logic</h4>
+                        <p className="text-p3 text-primary-50/80 leading-relaxed font-medium">
+                            Configured dates trigger automatic <strong className="text-white">Holiday Rate Protocols</strong> system-wide.
+                            Terminal deployments on these nodes will bypass standard coefficients in favor of global holiday parameters.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

@@ -68,10 +68,10 @@ const PayslipForm = ({ employees, onGenerate, companyInfo }) => {
     <div className="space-y-6">
       {/* Company Information Section */}
       <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold mb-4">Company Information</h3>
+        <h3 className="text-p1 font-bold mb-4">Company Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-p3 font-bold text-gray-700 mb-1">
               Company Name *
             </label>
             <input
@@ -84,7 +84,7 @@ const PayslipForm = ({ employees, onGenerate, companyInfo }) => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-p3 font-bold text-gray-700 mb-1">
               Phone
             </label>
             <input
@@ -96,7 +96,7 @@ const PayslipForm = ({ employees, onGenerate, companyInfo }) => {
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-p3 font-bold text-gray-700 mb-1">
               Address
             </label>
             <input
@@ -108,7 +108,7 @@ const PayslipForm = ({ employees, onGenerate, companyInfo }) => {
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-p3 font-bold text-gray-700 mb-1">
               Email
             </label>
             <input
@@ -124,11 +124,11 @@ const PayslipForm = ({ employees, onGenerate, companyInfo }) => {
 
       {/* Payslip Form */}
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow space-y-4">
-        <h3 className="text-lg font-semibold mb-4">Generate Payslip</h3>
+        <h3 className="text-p1 font-bold mb-4">Generate Payslip</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-p3 font-bold text-gray-700 mb-1">
               Select Employee *
             </label>
             <select
@@ -159,7 +159,7 @@ const PayslipForm = ({ employees, onGenerate, companyInfo }) => {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-p3 font-bold text-gray-700 mb-1">
               Month *
             </label>
             <select
@@ -178,7 +178,7 @@ const PayslipForm = ({ employees, onGenerate, companyInfo }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-p3 font-bold text-gray-700 mb-1">
               Year *
             </label>
             <select
@@ -197,7 +197,7 @@ const PayslipForm = ({ employees, onGenerate, companyInfo }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-p3 font-bold text-gray-700 mb-1">
               Basic Salary *
             </label>
             <input
@@ -213,7 +213,7 @@ const PayslipForm = ({ employees, onGenerate, companyInfo }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-p3 font-bold text-gray-700 mb-1">
               Total Allowances
             </label>
             <input
@@ -228,7 +228,7 @@ const PayslipForm = ({ employees, onGenerate, companyInfo }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-p3 font-bold text-gray-700 mb-1">
               Total Deductions
             </label>
             <input

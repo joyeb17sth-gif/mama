@@ -105,17 +105,17 @@ const Login = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 transition-all duration-300">
+      <div className="max-w-md w-full bg-white rounded-2xl p-8 transition-all duration-300">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          <h1 className="text-h1 text-gray-900 mb-2">
             {isLoginMode ? 'Welcome Back' : 'Create Account'}
           </h1>
-          <p className="text-gray-600 text-sm">
+          <p className="text-gray-600 text-p3">
             {isLoginMode ? 'Please login to continue' : 'Set up your profile to get started'}
           </p>
         </div>
@@ -123,9 +123,9 @@ const Login = ({ onLogin }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Error / Success Messages */}
           {(error || successMsg) && (
-            <div className={`px-4 py-3 rounded-xl text-sm font-medium ${successMsg ? 'bg-green-50 border border-green-200 text-green-700' :
-                isLocked ? 'bg-yellow-50 border border-yellow-200 text-yellow-700' :
-                  'bg-red-50 border border-red-200 text-red-700'
+            <div className={`px-4 py-3 rounded-xl text-p3 font-medium ${successMsg ? 'bg-green-50 border border-green-200 text-green-700' :
+              isLocked ? 'bg-yellow-50 border border-yellow-200 text-yellow-700' :
+                'bg-red-50 border border-red-200 text-red-700'
               }`}>
               {isLocked && (
                 <div className="flex items-center gap-2">
@@ -142,7 +142,7 @@ const Login = ({ onLogin }) => {
 
           {/* Username Field */}
           <div>
-            <label htmlFor="username" className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+            <label className="block text-p3 font-bold text-gray-400 mb-2">
               Username
             </label>
             <input
@@ -160,7 +160,7 @@ const Login = ({ onLogin }) => {
 
           {/* Password Field */}
           <div>
-            <label htmlFor="password" className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+            <label className="block text-p3 font-bold text-gray-400 mb-2">
               Password
             </label>
             <input
@@ -180,7 +180,7 @@ const Login = ({ onLogin }) => {
           {!isLoginMode && (
             <div className="space-y-4 animate-fadeIn">
               <div>
-                <label htmlFor="confirmPassword" className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                <label className="block text-p3 font-bold text-gray-400 mb-2">
                   Confirm Password
                 </label>
                 <input
@@ -225,7 +225,7 @@ const Login = ({ onLogin }) => {
           <button
             type="submit"
             disabled={loading || isLocked}
-            className={`w-full text-white py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition font-bold uppercase tracking-wider text-sm shadow-lg mt-4 
+            className={`w-full text-white py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition font-bold uppercase tracking-wider text-sm mt-4 
             ${isLoginMode ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700' : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700'}`}
           >
             {loading ? (isLoginMode ? 'Logging in...' : 'Creating Account...') : isLocked ? `Locked (${lockoutSeconds}s)` : (isLoginMode ? 'Login' : 'Create Account')}
@@ -234,7 +234,7 @@ const Login = ({ onLogin }) => {
 
         <div className="mt-6 flex flex-col gap-3 text-center">
           {/* Toggle Login/Signup */}
-          <div className="text-sm text-gray-600">
+          <div className="text-p3 text-gray-600">
             {isLoginMode ? "Don't have an account? " : "Already have an account? "}
             <button
               onClick={toggleMode}

@@ -27,7 +27,7 @@ const EmployeeForm = ({ employee, onSave, onCancel }) => {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-p3 font-bold text-gray-700 mb-1">
             Full Name *
           </label>
           <input
@@ -41,7 +41,7 @@ const EmployeeForm = ({ employee, onSave, onCancel }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-p3 font-bold text-gray-700 mb-1">
             Employee ID *
           </label>
           <input
@@ -55,7 +55,7 @@ const EmployeeForm = ({ employee, onSave, onCancel }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-p3 font-bold text-gray-700 mb-1">
             Designation *
           </label>
           <input
@@ -69,7 +69,7 @@ const EmployeeForm = ({ employee, onSave, onCancel }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-p3 font-bold text-gray-700 mb-1">
             Department *
           </label>
           <input
@@ -83,7 +83,7 @@ const EmployeeForm = ({ employee, onSave, onCancel }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-p3 font-bold text-gray-700 mb-1">
             Email
           </label>
           <input
@@ -96,7 +96,7 @@ const EmployeeForm = ({ employee, onSave, onCancel }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-p3 font-bold text-gray-700 mb-1">
             Phone
           </label>
           <input
@@ -110,7 +110,7 @@ const EmployeeForm = ({ employee, onSave, onCancel }) => {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-p3 font-bold text-gray-700 mb-1">
           Address
         </label>
         <textarea

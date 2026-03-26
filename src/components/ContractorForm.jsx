@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import Dropdown from './Dropdown';
 import { getSites } from '../utils/storage';
 
 const ContractorForm = ({ contractor, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     name: contractor?.name || '',
+    phone: contractor?.phone || '',
+    email: contractor?.email || '',
     contractorId: contractor?.contractorId || '',
     bsb: contractor?.bsb || '',
     accountNumber: contractor?.accountNumber || '',
@@ -56,194 +59,219 @@ const ContractorForm = ({ contractor, onSave, onCancel }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 font-inter">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Full Name *
-          </label>
-          <input
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Contractor ID *
-          </label>
-          <input
-            type="text"
-            name="contractorId"
-            value={formData.contractorId}
-            onChange={handleChange}
-            required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            BSB *
-          </label>
-          <input
-            type="text"
-            name="bsb"
-            value={formData.bsb}
-            onChange={handleChange}
-            required
-            pattern="[0-9]{6}"
-            placeholder="000000"
-            className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Account Number *
-          </label>
-          <input
-            type="text"
-            name="accountNumber"
-            value={formData.accountNumber}
-            onChange={handleChange}
-            required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Account Name *
-          </label>
-          <input
-            type="text"
-            name="accountName"
-            value={formData.accountName}
-            onChange={handleChange}
-            required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Status *
-          </label>
-          <select
-            name="status"
-            value={formData.status}
-            onChange={handleChange}
-            required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-
-        <div className="flex items-center mt-2">
-          <input
-            type="checkbox"
-            name="isReferred"
-            id="isReferred"
-            checked={formData.isReferred}
-            onChange={handleChange}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
-          />
-          <label htmlFor="isReferred" className="ml-2 block text-sm text-slate-700 font-medium">
-            Referral Check (Referred by someone)
-          </label>
-        </div>
-
-        {formData.isReferred && (
-          <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Referral Person Name *
+    <form onSubmit={handleSubmit} className="space-y-8 font-sans animate-fade-in-up">
+      <div className="bg-white p-8 rounded-2xl border border-zinc-100">
+        <h3 className="text-p1 text-zinc-900 mb-6 font-bold">Personal Details</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block mb-2">
+              Full Name <span className="text-primary-600">*</span>
             </label>
             <input
               type="text"
-              name="referralName"
-              value={formData.referralName}
+              name="name"
+              value={formData.name}
               onChange={handleChange}
-              required={formData.isReferred}
-              placeholder="Who referred this contractor?"
-              className="w-full px-3 py-2 border border-blue-200 bg-blue-50/30 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+              placeholder="e.g. John Doe"
+              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900 placeholder-zinc-400"
             />
           </div>
-        )}
+
+          <div>
+            <label className="block mb-2">
+              Email Address
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="email@example.com"
+              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900 placeholder-zinc-400"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              placeholder="+977 ..."
+              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900 placeholder-zinc-400"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2">
+              Contractor ID <span className="text-primary-600">*</span>
+            </label>
+            <input
+              type="text"
+              name="contractorId"
+              value={formData.contractorId}
+              onChange={handleChange}
+              required
+              placeholder="ID-001"
+              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900 placeholder-zinc-400 font-mono"
+            />
+          </div>
+        </div>
       </div>
 
-      <div className="mt-8 pt-6 border-t border-slate-100">
-        <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-widest mb-4">Custom Pay Rates Override</h3>
-        <p className="text-xs text-slate-400 font-medium mb-6">Set specific rates for this contractor that override site defaults.</p>
+      <div className="bg-white p-8 rounded-2xl border border-zinc-100">
+        <h3 className="text-p1 text-zinc-900 mb-6 font-bold">Financial Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <label className="block mb-2">
+              BSB <span className="text-primary-600">*</span>
+            </label>
+            <input
+              type="text"
+              name="bsb"
+              value={formData.bsb}
+              onChange={handleChange}
+              required
+              pattern="[0-9]{6}"
+              placeholder="000000"
+              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900 placeholder-zinc-400 font-mono tracking-widest"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2">
+              Account Number <span className="text-primary-600">*</span>
+            </label>
+            <input
+              type="text"
+              name="accountNumber"
+              value={formData.accountNumber}
+              onChange={handleChange}
+              required
+              placeholder="00000000"
+              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900 placeholder-zinc-400 font-mono tracking-widest"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2">
+              Account Name <span className="text-primary-600">*</span>
+            </label>
+            <input
+              type="text"
+              name="accountName"
+              value={formData.accountName}
+              onChange={handleChange}
+              required
+              placeholder="Account Holder Name"
+              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900 placeholder-zinc-400"
+            />
+          </div>
+        </div>
+
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block mb-2">
+              Status <span className="text-primary-600">*</span>
+            </label>
+            <Dropdown
+              value={formData.status}
+              onChange={(val) => setFormData({ ...formData, status: val })}
+              options={[
+                { value: 'active', label: 'Active Protocol' },
+                { value: 'inactive', label: 'Suspended Status' }
+              ]}
+            />
+          </div>
+
+          <div className="flex flex-col justify-end">
+            <div className="flex items-center p-3.5 bg-zinc-50 border border-zinc-200 rounded-xl cursor-pointer hover:bg-zinc-100 transition-colors">
+              <input
+                type="checkbox"
+                name="isReferred"
+                id="isReferred"
+                checked={formData.isReferred}
+                onChange={handleChange}
+                className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-zinc-300 rounded transition-all cursor-pointer"
+              />
+              <label htmlFor="isReferred" className="ml-3 block text-sm text-zinc-700 font-semibold cursor-pointer select-none">
+                Has Referral Source?
+              </label>
+            </div>
+
+            {formData.isReferred && (
+              <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                <label className="block text-p3 text-primary-600 uppercase tracking-widest mb-2 font-bold">
+                  Referral Name <span className="text-primary-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="referralName"
+                  value={formData.referralName}
+                  onChange={handleChange}
+                  required={formData.isReferred}
+                  placeholder="Who referred this contractor?"
+                  className="w-full px-4 py-3 border border-primary-200 bg-primary-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-all font-medium text-primary-900 placeholder-primary-300"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white p-8 rounded-2xl border border-zinc-100 relative">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-50/50 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none rounded-2xl"></div>
+
+        <h3 className="text-p1 text-zinc-900 mb-2 relative z-10 font-bold">Custom Pay Rates</h3>
+        <p className="text-p3 text-zinc-500 font-medium mb-6 relative z-10">Set specific rates for this contractor that override site defaults.</p>
 
         {/* Add Entry Card */}
-        <div className="bg-slate-50 p-6 rounded-3xl border-2 border-slate-100 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+        <div className="bg-zinc-50/50 p-6 rounded-2xl border border-zinc-200 mb-6 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5 items-end">
             <div className="lg:col-span-1">
-              <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Select Site</label>
-              <select
+              <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Select Site</label>
+              <Dropdown
                 value={newRateSiteId}
-                onChange={(e) => setNewRateSiteId(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 font-medium text-slate-700"
-              >
-                <option value="">Choose Site...</option>
-                {availableSites
-                  .filter(s => !s.isSubSite) // Get all main sites
-                  .filter(mainSite => {
-                    // Show if main site isn't added OR if it has any sub-site not yet added
-                    const mainNotAdded = !formData.customRates.some(r => r.siteId === mainSite.id);
-                    const hasAvailableSubSites = availableSites.some(s =>
-                      s.isSubSite && s.parentSiteId === mainSite.id && !formData.customRates.some(r => r.siteId === s.id)
-                    );
-                    return mainNotAdded || hasAvailableSubSites;
-                  })
-                  .map(mainSite => {
+                onChange={(val) => setNewRateSiteId(val)}
+                options={availableSites
+                  .filter(s => !s.isSubSite)
+                  .reduce((acc, mainSite) => {
                     const isMainAdded = formData.customRates.some(r => r.siteId === mainSite.id);
-                    return (
-                      <React.Fragment key={mainSite.id}>
-                        <option
-                          value={mainSite.id}
-                          disabled={isMainAdded}
-                          className={isMainAdded ? "text-slate-300" : "font-semibold text-blue-600 bg-blue-50"}
-                        >
-                          🏢 {mainSite.siteName} (Primary) {isMainAdded ? '- Already Added' : ''}
-                        </option>
-                        {availableSites
-                          .filter(s => s.isSubSite && s.parentSiteId === mainSite.id)
-                          .map(subSite => {
-                            const isSubAdded = formData.customRates.some(r => r.siteId === subSite.id);
-                            return (
-                              <option
-                                key={subSite.id}
-                                value={subSite.id}
-                                disabled={isSubAdded}
-                                className={`pl-4 ${isSubAdded ? 'text-slate-300' : ''}`}
-                              >
-                                &nbsp;&nbsp;&nbsp;↳ {subSite.siteName} {isSubAdded ? '- Already Added' : ''}
-                              </option>
-                            );
-                          })}
-                      </React.Fragment>
-                    );
-                  })}
-              </select>
+                    acc.push({
+                      value: mainSite.id,
+                      label: `${mainSite.siteName} ${isMainAdded ? '(Active)' : ''}`,
+                      disabled: isMainAdded
+                    });
+
+                    const subs = availableSites.filter(s => s.isSubSite && s.parentSiteId === mainSite.id);
+                    subs.forEach(sub => {
+                      const isSubAdded = formData.customRates.some(r => r.siteId === sub.id);
+                      acc.push({
+                        value: sub.id,
+                        label: `↳ ${sub.siteName} ${isSubAdded ? '(Active)' : ''}`,
+                        disabled: isSubAdded
+                      });
+                    });
+                    return acc;
+                  }, [])
+                }
+                placeholder="Choose Site..."
+              />
             </div>
             {['weekday', 'saturday', 'sunday', 'publicHoliday'].map(type => (
               <div key={type}>
-                <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">{type}</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 font-medium">$</span>
+                <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">{type}</label>
+                <div className="relative group/input">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-300 font-bold group-focus-within/input:text-primary-500 transition-colors">$</span>
                   <input
                     type="number"
                     value={newRates[type]}
                     onChange={(e) => setNewRates({ ...newRates, [type]: parseFloat(e.target.value) || 0 })}
-                    className="w-full pl-6 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 font-medium text-slate-700"
+                    className="w-full pl-6 pr-3 py-2.5 bg-white border border-zinc-200 rounded-xl focus:ring-2 focus:ring-primary-100 focus:border-primary-500 font-semibold text-zinc-900 transition-all"
                   />
                 </div>
               </div>
@@ -253,54 +281,72 @@ const ContractorForm = ({ contractor, onSave, onCancel }) => {
             type="button"
             onClick={handleAddCustomRate}
             disabled={!newRateSiteId}
-            className="mt-6 w-full lg:w-auto px-8 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition disabled:opacity-50 shadow-lg shadow-indigo-100"
+            className="mt-6 w-full lg:w-auto px-6 py-3 bg-zinc-900 text-white rounded-xl font-semibold hover:bg-zinc-800 transition disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
           >
-            + Add Custom Rate Override
+            + Add Rate Override
           </button>
         </div>
 
         {/* List of overrides */}
-        <div className="space-y-3">
-          {formData.customRates.map(rate => (
-            <div key={rate.siteId} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm hover:border-indigo-100 transition group">
-              <div>
-                <div className="text-xs font-semibold text-indigo-600 uppercase tracking-tighter">{rate.siteName}</div>
-                <div className="flex gap-4 mt-1">
-                  <span className="text-[10px] font-medium text-slate-400">Regular: <b className="text-slate-800">${rate.weekday}</b></span>
-                  <span className="text-[10px] font-medium text-slate-400">Sat: <b className="text-slate-800">${rate.saturday}</b></span>
-                  <span className="text-[10px] font-medium text-slate-400">Sun: <b className="text-slate-800">${rate.sunday}</b></span>
-                  <span className="text-[10px] font-medium text-slate-400">PH: <b className="text-slate-800">${rate.publicHoliday}</b></span>
-                </div>
+        <div className="space-y-3 relative z-10">
+          {formData.customRates.length > 0 && (
+            <div className="grid grid-cols-5 gap-4 px-4 py-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+              <div className="col-span-1">Site</div>
+              <div className="col-span-3 grid grid-cols-4 gap-4 text-center">
+                <span>Mon-Fri</span>
+                <span>Sat</span>
+                <span>Sun</span>
+                <span>PH</span>
               </div>
-              <button
-                type="button"
-                onClick={() => removeCustomRate(rate.siteId)}
-                className="p-2 opacity-0 group-hover:opacity-100 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-              </button>
+              <div className="col-span-1 text-right">Action</div>
+            </div>
+          )}
+          {formData.customRates.map(rate => (
+            <div key={rate.siteId} className="grid grid-cols-5 gap-4 items-center p-4 bg-white border border-zinc-100 rounded-xl hover:border-primary-200 transition-all group">
+              <div className="col-span-1">
+                <div className="text-sm font-bold text-zinc-900 truncate" title={rate.siteName}>{rate.siteName}</div>
+              </div>
+              <div className="col-span-3 grid grid-cols-4 gap-4">
+                <div className="text-center"><span className="text-xs font-semibold text-zinc-700 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">${rate.weekday}</span></div>
+                <div className="text-center"><span className="text-xs font-semibold text-zinc-700 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">${rate.saturday}</span></div>
+                <div className="text-center"><span className="text-xs font-semibold text-zinc-700 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">${rate.sunday}</span></div>
+                <div className="text-center"><span className="text-xs font-semibold text-zinc-700 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">${rate.publicHoliday}</span></div>
+              </div>
+              <div className="col-span-1 text-right">
+                <button
+                  type="button"
+                  onClick={() => removeCustomRate(rate.siteId)}
+                  className="p-2 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                  title="Remove Override"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+              </div>
             </div>
           ))}
           {formData.customRates.length === 0 && (
-            <div className="text-center py-10 border-2 border-dashed border-slate-100 rounded-3xl text-slate-300 font-medium uppercase tracking-widest text-[10px]">No overrides set. Default site rates will be used.</div>
+            <div className="text-center py-12 border border-dashed border-zinc-200 rounded-2xl bg-zinc-50/30">
+              <div className="mb-2 text-4xl opacity-20">🏷️</div>
+              <div className="text-zinc-500 font-medium text-sm">No specific rate overrides configured</div>
+              <div className="text-zinc-400 text-xs mt-1">Default site rates will be applied automatically</div>
+            </div>
           )}
         </div>
       </div>
 
-
-      <div className="flex justify-end space-x-3 pt-4">
+      <div className="flex justify-end space-x-4 pt-6">
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition"
+          className="px-6 py-3 text-zinc-600 bg-white border border-zinc-200 rounded-xl font-semibold hover:bg-zinc-50 hover:border-zinc-300 transition"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition"
+          className="px-8 py-3 text-white bg-primary-600 rounded-xl font-semibold hover:bg-primary-700 hover:-translate-y-0.5 transition-all"
         >
-          {contractor ? 'Update' : 'Add'} Contractor
+          {contractor ? 'Update Changes' : 'Create Contractor'}
         </button>
       </div>
     </form>

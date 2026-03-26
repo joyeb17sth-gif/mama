@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Dropdown from './Dropdown';
 import { getAuditLogs } from '../utils/storage';
 
 const AuditLogViewer = () => {
@@ -66,27 +67,29 @@ const AuditLogViewer = () => {
     };
 
     return (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg p-6">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-semibold text-gray-900">Audit Trail</h2>
+                <h2 className="text-h1 text-gray-900">Audit Trail</h2>
                 <div>
-                    <select
+                    <Dropdown
                         value={filterType}
-                        onChange={(e) => setFilterType(e.target.value)}
-                        className="border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        <option value="all">All Actions</option>
-                        <option value="CREATE_CONTRACTOR">Create Contractor</option>
-                        <option value="UPDATE_CONTRACTOR">Update Contractor</option>
-                        <option value="DELETE_CONTRACTOR">Delete Contractor</option>
-                        <option value="CREATE_SITE">Create Site</option>
-                        <option value="UPDATE_SITE">Update Site</option>
-                        <option value="DELETE_SITE">Delete Site</option>
-                        <option value="SAVE_TIMESHEET">Save Timesheet</option>
-                        <option value="UPDATE_TIMESHEET">Update Timesheet</option>
-                        <option value="DELETE_TIMESHEET">Delete Timesheet</option>
-                        <option value="RELEASE_TRAINING_PAY">Release Training Pay</option>
-                    </select>
+                        onChange={(val) => setFilterType(val)}
+                        options={[
+                            { value: 'all', label: 'All Operations' },
+                            { value: 'CREATE_CONTRACTOR', label: 'Add Contractor' },
+                            { value: 'UPDATE_CONTRACTOR', label: 'Update Contractor' },
+                            { value: 'DELETE_CONTRACTOR', label: 'Delete Contractor' },
+                            { value: 'CREATE_SITE', label: 'Create Site' },
+                            { value: 'UPDATE_SITE', label: 'Update Site' },
+                            { value: 'DELETE_SITE', label: 'Delete Site' },
+                            { value: 'SAVE_TIMESHEET', label: 'Save Timesheet' },
+                            { value: 'UPDATE_TIMESHEET', label: 'Update Timesheet' },
+                            { value: 'DELETE_TIMESHEET', label: 'Delete Timesheet' },
+                            { value: 'RELEASE_TRAINING_PAY', label: 'Release Training Pay' }
+                        ]}
+                        variant="compact"
+                        className="w-56"
+                    />
                     <button
                         onClick={loadLogs}
                         className="ml-2 text-sm text-blue-600 hover:text-blue-800"
@@ -99,7 +102,7 @@ const AuditLogViewer = () => {
             <div className="overflow-x-auto">
                 <table className="min-w-full border border-gray-300">
                     <thead className="bg-gray-50">
-                        <tr className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                        <tr className="text-p3 font-bold uppercase tracking-widest text-gray-400">
                             <th className="px-6 py-3 text-left">Timestamp</th>
                             <th className="px-6 py-3 text-left">User</th>
                             <th className="px-6 py-3 text-left">Action</th>
@@ -109,10 +112,10 @@ const AuditLogViewer = () => {
                     <tbody className="bg-white divide-y divide-gray-200">
                         {filteredLogs.reverse().map(log => (
                             <tr key={log.id} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-6 py-4 whitespace-nowrap text-p3 text-gray-500">
                                     {new Date(log.timestamp).toLocaleString()}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                                <td className="px-6 py-4 whitespace-nowrap text-p3 text-gray-900 font-medium">
                                     {log.user}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -120,7 +123,7 @@ const AuditLogViewer = () => {
                                         {log.action.replace(/_/g, ' ')}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 text-sm text-gray-600">
+                                <td className="px-6 py-4 text-p3 text-gray-600">
                                     {formatLogDetails(log)}
                                 </td>
                             </tr>

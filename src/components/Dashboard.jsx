@@ -152,56 +152,47 @@ const Dashboard = () => {
         loadAllData();
     };
 
-    const handleExportPayroll = () => {
-        // Re-calculating breakdown format for the export tool
-        const exportData = consolidatedPayroll.map(p => ({
-            contractorId: p.id,
-            totalHours: p.totalHours,
-            totalPay: p.totalPay,
-            siteBreakdown: [{ siteName: p.sites, hours: p.totalHours, pay: p.totalPay }] // Simplified breakdown
-        }));
-        exportPaymentSummaryToCSV(exportData, contractors);
-    };
-
     return (
-        <div className="space-y-8 pb-12">
+        <div className="space-y-8 pb-12 animate-fade-in-up">
             {showToast && <Toast message={toastMessage} onClose={() => setShowToast(false)} />}
 
             {/* Release Modal */}
             {selectedContractor && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in">
-                    <div className="bg-white rounded-2xl p-8 w-[400px] shadow-2xl transform transition-all">
-                        <h3 className="text-xl font-medium text-gray-900 mb-2">Release Training Pay</h3>
-                        <p className="text-gray-500 mb-6 font-medium">Contractor: <span className="text-gray-900">{selectedContractor.name}</span></p>
-                        <div className="bg-blue-50 p-4 rounded-xl mb-6">
-                            <span className="block text-sm font-medium text-blue-600 uppercase tracking-widest mb-1">Available Balance</span>
-                            <span className="text-2xl font-semibold text-blue-700">${selectedContractor.balance.toFixed(2)}</span>
+                <div className="fixed inset-0 bg-zinc-900/40 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl p-8 w-[400px] border border-zinc-100 transform transition-all">
+                        <h3 className="text-h2 text-zinc-900 mb-2">Release Training Escrow</h3>
+                        <p className="text-zinc-500 mb-6 text-sm">Transfer funds to <span className="text-zinc-900 font-semibold">{selectedContractor.name}</span></p>
+
+                        <div className="bg-primary-50 p-5 rounded-xl mb-6 border border-primary-100">
+                            <span className="block text-xs font-bold text-primary-600 mb-1">Available Balance</span>
+                            <span className="text-3xl font-bold text-primary-700 tracking-tight">${selectedContractor.balance.toFixed(2)}</span>
                         </div>
+
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-400 uppercase tracking-widest mb-2">Amount to Release</label>
+                                <label className="block text-xs font-bold text-zinc-400 mb-2">Amount to Release</label>
                                 <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold">$</span>
                                     <input
                                         type="number"
                                         value={releaseAmount}
                                         onChange={(e) => setReleaseAmount(e.target.value)}
-                                        className="w-full pl-8 pr-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none font-medium text-gray-900"
+                                        className="w-full pl-8 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:border-primary-500 focus:bg-white focus:ring-2 focus:ring-primary-100 outline-none font-bold text-zinc-900 transition-all"
                                     />
                                 </div>
                             </div>
                             <div className="flex gap-3 pt-4">
                                 <button
                                     onClick={() => setSelectedContractor(null)}
-                                    className="flex-1 px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium hover:bg-gray-200 transition"
+                                    className="flex-1 px-4 py-3 bg-white border border-zinc-200 text-zinc-600 rounded-xl font-semibold hover:bg-zinc-50 transition"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={confirmRelease}
-                                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 shadow-lg shadow-blue-200 transition"
+                                    className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition hover:-translate-y-0.5"
                                 >
-                                    Confirm
+                                    Confirm Transfer
                                 </button>
                             </div>
                         </div>
@@ -210,180 +201,164 @@ const Dashboard = () => {
             )}
 
             {/* Top Section: Budget Tracker */}
-            <div className="grid grid-cols-1 gap-8">
-                {/* Site-Level Budget Tracker (Visual Warnings) */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
-                        <div>
-                            <h3 className="text-xl font-medium text-gray-900">Site Budget Control</h3>
-                            <p className="text-sm text-gray-500 font-medium">Visual warnings for hour and payable limits</p>
-                        </div>
-                        <div className="relative">
-                            <input
-                                type="text"
-                                placeholder="Quick Filter Sites..."
-                                value={siteSearch}
-                                onChange={(e) => setSiteSearch(e.target.value)}
-                                className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none w-64 shadow-inner"
-                            />
-                            <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                        </div>
+            <div>
+                {/* Header for Section */}
+                <div className="flex flex-col md:flex-row justify-between items-end mb-4 px-1">
+                    <div>
+                        <h3 className="text-p1 text-zinc-900">Project Performance</h3>
+                        <p className="text-sm text-zinc-500 mt-1">Real-time budget tracking across all active sites</p>
                     </div>
-                    <div className="p-6 h-[400px] overflow-y-auto custom-scrollbar">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {(consolidatedSiteBudgets || []).filter(s => s?.siteName?.toLowerCase().includes(siteSearch.toLowerCase())).map(site => {
-                                const isOverBudget = !site?.status?.withinBudget;
-                                return (
-                                    <div key={site.id} className={`p-5 rounded-2xl border-2 transition-all duration-300 ${isOverBudget ? 'border-red-100 bg-red-50/30' : 'border-slate-100 bg-white hover:border-blue-100 hover:shadow-md'}`}>
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div>
-                                                <h4 className="font-bold text-slate-800 text-lg leading-tight uppercase tracking-tighter">🏢 {site.siteName || 'Unnamed Site'}</h4>
-                                                <div className="flex gap-2 mt-0.5">
-                                                    <span className="text-xs font-black uppercase tracking-widest text-slate-400">{site.payrollCycle || '---'} Cycle</span>
-                                                    <span className="text-xs font-black uppercase tracking-widest text-blue-400">• PROJECT GROUP</span>
-                                                </div>
-                                            </div>
-                                            {isOverBudget && (
-                                                <span className="flex items-center gap-1.5 px-3 py-1 bg-rose-600 text-white rounded-full text-xs font-bold uppercase animate-pulse shadow-lg shadow-rose-100">
-                                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
-                                                    LIMIT BREACHED
-                                                </span>
-                                            )}
+                    <div className="relative mt-4 md:mt-0">
+                        <input
+                            type="text"
+                            placeholder="Filter sites..."
+                            value={siteSearch}
+                            onChange={(e) => setSiteSearch(e.target.value)}
+                            className="pl-9 pr-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-50 outline-none w-64 transition-all text-zinc-700 placeholder-zinc-400"
+                        />
+                        <svg className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    </div>
+                </div>
+
+                {/* Site Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {(consolidatedSiteBudgets || []).filter(s => s?.siteName?.toLowerCase().includes(siteSearch.toLowerCase())).map(site => {
+                        const isOverBudget = !site?.status?.withinBudget;
+                        return (
+                            <div key={site.id} className={`group relative p-6 rounded-xl border transition-all duration-300 ${isOverBudget ? 'border-rose-200 bg-rose-50/50' : 'border-zinc-200 bg-white hover:border-primary-300'}`}>
+                                <div className="flex justify-between items-start mb-5">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <div className={`w-2 h-2 rounded-full ${isOverBudget ? 'bg-rose-500' : 'bg-emerald-400'}`}></div>
+                                            <span className="text-[10px] font-bold text-zinc-400">{site.payrollCycle || '---'}</span>
                                         </div>
+                                        <h4 className="text-p1 text-zinc-900 tracking-tight truncate max-w-[200px]" title={site.siteName}>{site.siteName || 'Unnamed Site'}</h4>
+                                    </div>
+                                    {isOverBudget && (
+                                        <span className="absolute top-4 right-4 flex items-center gap-1 px-2 py-1 bg-white border border-rose-100 text-rose-600 rounded-md text-[10px] font-bold">
+                                            Warning
+                                        </span>
+                                    )}
+                                </div>
 
-                                        {/* Nested Sub-sites List */}
-                                        {(site.subSitesData || []).length > 0 && (
-                                            <div className="mb-4 bg-slate-50/50 rounded-xl p-3 border border-slate-100/50">
-                                                <div className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Connected Sites</div>
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    <div className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[9px] font-bold text-slate-600 shadow-sm flex items-center gap-1">
-                                                        <span className="w-1 h-1 rounded-full bg-blue-400"></span>
-                                                        Primary
-                                                    </div>
-                                                    {(site.subSitesData || []).map(ss => (
-                                                        <div key={ss.id} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[9px] font-bold text-slate-500 shadow-sm flex items-center gap-1">
-                                                            <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                                                            {ss.siteName || 'Subsite'}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <div className="space-y-4 pt-1">
-                                            <div className="space-y-1.5">
-                                                <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                                    <span>Consolidated Hours</span>
-                                                    <span className={site?.status?.hoursOver > 0 ? 'text-rose-600' : 'text-slate-900'}>
-                                                        {(site.totalHours || 0).toFixed(1)} / {site.combinedBudgetHours || '0'}h
-                                                    </span>
-                                                </div>
-                                                <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                                                    <div
-                                                        className={`h-full transition-all duration-1000 ${site?.status?.hoursOver > 0 ? 'bg-rose-500' : 'bg-emerald-500'}`}
-                                                        style={{ width: `${Math.min(((site.totalHours || 0) / (site.combinedBudgetHours || 1)) * 100, 100)}%` }}
-                                                    ></div>
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-1.5">
-                                                <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                                    <span>Consolidated Budget</span>
-                                                    <span className={site?.status?.amountOver > 0 ? 'text-rose-600' : 'text-slate-900'}>
-                                                        ${(site.totalCost || 0).toLocaleString()} / ${site.combinedBudgetAmount?.toLocaleString() || '0'}
-                                                    </span>
-                                                </div>
-                                                <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                                                    <div
-                                                        className={`h-full transition-all duration-1000 ${site?.status?.amountOver > 0 ? 'bg-rose-600 shadow-lg' : 'bg-blue-500'}`}
-                                                        style={{ width: `${Math.min(((site.totalCost || 0) / (site.combinedBudgetAmount || 1)) * 100, 100)}%` }}
-                                                    ></div>
-                                                </div>
-                                            </div>
+                                {/* Metrics */}
+                                <div className="space-y-4">
+                                    {/* Hours Meter */}
+                                    <div className="space-y-1.5">
+                                        <div className="flex justify-between text-p3 font-medium text-zinc-500">
+                                            <span>Hours Usage</span>
+                                            <span className={`font-bold tabular-nums ${site?.status?.hoursOver > 0 ? 'text-rose-600' : 'text-zinc-900'}`}>
+                                                {(site.totalHours || 0).toFixed(1)} <span className="text-zinc-300">/</span> {site.combinedBudgetHours || '0'}
+                                            </span>
+                                        </div>
+                                        <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-1000 ${site?.status?.hoursOver > 0 ? 'bg-rose-500' : 'bg-zinc-800'}`}
+                                                style={{ width: `${Math.min(((site.totalHours || 0) / (site.combinedBudgetHours || 1)) * 100, 100)}%` }}
+                                            ></div>
                                         </div>
                                     </div>
-                                );
-                            })}
-                        </div>
-                    </div>
+
+                                    {/* Budget Meter */}
+                                    <div className="space-y-1.5">
+                                        <div className="flex justify-between text-[11px] font-medium text-zinc-500">
+                                            <span>Budget Usage</span>
+                                            <span className={`font-bold tabular-nums ${site?.status?.amountOver > 0 ? 'text-rose-600' : 'text-zinc-900'}`}>
+                                                ${(site.totalCost || 0).toLocaleString()} <span className="text-zinc-300">/</span> ${site.combinedBudgetAmount?.toLocaleString() || '0'}
+                                            </span>
+                                        </div>
+                                        <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-1000 ${site?.status?.amountOver > 0 ? 'bg-rose-500' : 'bg-primary-600'}`}
+                                                style={{ width: `${Math.min(((site.totalCost || 0) / (site.combinedBudgetAmount || 1)) * 100, 100)}%` }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Subsite Badges */}
+                                {(site.subSitesData || []).length > 0 && (
+                                    <div className="mt-5 pt-4 border-t border-zinc-100/60 flex flex-wrap gap-1.5">
+                                        {(site.subSitesData || []).map(ss => (
+                                            <span key={ss.id} className="px-1.5 py-0.5 bg-zinc-50 border border-zinc-100 rounded text-[9px] font-semibold text-zinc-500">
+                                                {ss.siteName}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
 
             {/* Dashboard Alerts */}
             {contractors.some(c => getTrainingBalance(c.id).balance > 0) && (
-                <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-xl mb-8 flex items-start gap-3">
-                    <div className="p-2 bg-amber-100 rounded-lg mt-1">
-                        <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div className="flex-1">
-                        <p className="text-sm font-semibold text-amber-800">Pending Training Release</p>
-                        <div className="mt-1 space-y-1">
-                            {contractors
-                                .filter(c => getTrainingBalance(c.id).balance > 0)
-                                .map(c => (
-                                    <div key={c.id} className="text-xs text-amber-700 flex justify-between max-w-sm">
-                                        <span>• {c.name}</span>
-                                        <span className="font-bold">${getTrainingBalance(c.id).balance.toFixed(2)}</span>
-                                    </div>
-                                ))
-                            }
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 p-4 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="p-2 bg-white/60 rounded-lg backdrop-blur-sm border border-amber-100">
+                            <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-amber-900">Training Releases Pending</h4>
+                            <p className="text-sm text-amber-700/80">There are contractors eligible for escrow release.</p>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Training Pay & Payroll Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
                 {/* Training Pay Oversight */}
                 {contractors.some(c => getTrainingBalance(c.id).balance > 0) ? (
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-                        <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                    <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden flex flex-col h-[500px]">
+                        <div className="px-6 py-4 border-b border-zinc-100 flex justify-between items-center bg-white sticky top-0 z-10">
                             <div>
-                                <h3 className="text-xl font-medium text-gray-900">Training Oversight</h3>
-                                <p className="text-sm text-gray-500 font-medium">Manage pending escrow balances</p>
+                                <h3 className="text-p2 text-zinc-900">Training Escrow</h3>
                             </div>
-                            <div className="px-3 py-1 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-semibold uppercase tracking-widest">
-                                Action Required
-                            </div>
+                            <span className="flex h-2 w-2 relative">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                            </span>
                         </div>
-                        <div className="overflow-x-auto h-[400px] custom-scrollbar">
-                            <table className="min-w-full">
-                                <thead className="bg-gray-50/50 text-[10px] font-semibold uppercase tracking-widest text-gray-400 sticky top-0 z-10">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                            <table className="min-w-full w-full">
+                                <thead className="bg-zinc-50 border-b border-zinc-100 sticky top-0 z-10">
                                     <tr>
-                                        <th className="px-6 py-4 text-left">Contractor</th>
-                                        <th className="px-6 py-4 text-center">Tenure (Days)</th>
-                                        <th className="px-6 py-4 text-right">Balance</th>
-                                        <th className="px-6 py-4 text-center">Management</th>
+                                        <th className="px-6 py-3 text-left text-p3 font-bold text-zinc-400">Contractor</th>
+                                        <th className="px-6 py-3 text-center text-p3 font-bold text-zinc-400">Balance</th>
+                                        <th className="px-6 py-3 text-right text-p3 font-bold text-zinc-400">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-50">
+                                <tbody className="divide-y divide-zinc-50">
                                     {contractors
                                         .filter(c => getTrainingBalance(c.id).balance > 0)
                                         .map(c => {
                                             const training = getTrainingBalance(c.id);
                                             return (
-                                                <tr key={c.id} className="group hover:bg-gray-50/50 transition">
+                                                <tr key={c.id} className="group hover:bg-zinc-50/50 transition-colors">
                                                     <td className="px-6 py-4">
-                                                        <div className="font-medium text-gray-900">{c.name}</div>
-                                                        <div className="text-[10px] font-medium text-gray-400">ID: {c.contractorId}</div>
+                                                        <div className="font-bold text-sm text-zinc-900">{c.name}</div>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <div className="w-full bg-zinc-100 rounded-full h-1.5 w-16">
+                                                                <div className={`h-1.5 rounded-full ${training.days >= 5 ? 'bg-emerald-400' : 'bg-amber-400'}`} style={{ width: `${Math.min((training.days / 5) * 100, 100)}%` }}></div>
+                                                            </div>
+                                                            <span className="text-[10px] font-medium text-zinc-400">{training.days}/5 Days</span>
+                                                        </div>
                                                     </td>
                                                     <td className="px-6 py-4 text-center">
-                                                        <span className={`px-2 py-1 rounded text-xs font-medium ${training.days >= 5 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                                                            {training.days} / 5
+                                                        <span className="inline-block px-2.5 py-1 bg-amber-50 text-amber-700 rounded-md font-bold text-sm border border-amber-100">
+                                                            ${training.balance.toFixed(2)}
                                                         </span>
                                                     </td>
-                                                    <td className="px-6 py-4 text-right font-semibold text-amber-600">
-                                                        ${training.balance.toFixed(2)}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center">
+                                                    <td className="px-6 py-4 text-right">
                                                         <button
                                                             onClick={() => handleReleaseClick(c)}
-                                                            className="px-4 py-2 rounded-xl text-xs font-semibold uppercase tracking-widest transition bg-blue-600 text-white shadow-lg shadow-blue-100 hover:scale-105 active:scale-95"
+                                                            className="text-p3 font-bold text-primary-600 hover:text-primary-700 bg-primary-50 hover:bg-primary-100 px-3 py-1.5 rounded-lg transition-colors border border-primary-100"
                                                         >
-                                                            Manual Release
+                                                            Release
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -396,58 +371,53 @@ const Dashboard = () => {
                 ) : null}
 
                 {/* Contractor Earnings Overview */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-                    <div className="p-6 border-b border-gray-50 flex flex-col sm:flex-row justify-between items-center bg-gray-50/50 gap-4">
-                        <div>
-                            <h3 className="text-xl font-medium text-gray-900">Contractor Earnings</h3>
-                            <p className="text-sm text-gray-500 font-medium">Total earnings per person overview</p>
-                        </div>
-                        <div className="relative">
+                <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden flex flex-col h-[500px]">
+                    <div className="px-6 py-4 border-b border-zinc-100 flex flex-col md:flex-row justify-between items-center bg-white gap-3 sticky top-0 z-10">
+                        <h3 className="text-p2 text-zinc-900">Period Earnings</h3>
+                        <div className="relative w-full md:w-auto">
                             <input
                                 type="text"
-                                placeholder="Search Contractors..."
+                                placeholder="Search..."
                                 value={payrollSearch}
                                 onChange={(e) => setPayrollSearch(e.target.value)}
-                                className="pl-10 pr-4 py-2 border border-gray-200 bg-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none w-64 shadow-inner"
+                                className="pl-8 pr-3 py-1.5 border border-zinc-200 bg-zinc-50/50 rounded-lg text-xs focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none w-full md:w-48 transition-all"
                             />
-                            <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                            <svg className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                         </div>
                     </div>
-                    <div className="overflow-x-auto h-[400px] custom-scrollbar">
-                        <table className="min-w-full">
-                            <thead className="bg-gray-50/50 text-[10px] font-semibold uppercase tracking-widest text-gray-400 sticky top-0 z-10">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar">
+                        <table className="min-w-full w-full">
+                            <thead className="bg-zinc-50 border-b border-zinc-100 sticky top-0 z-10">
                                 <tr>
-                                    <th className="px-6 py-4 text-left">Contractor Name</th>
-                                    <th className="px-6 py-4 text-center">Total Hours</th>
-                                    <th className="px-6 py-4 text-right">Total Earnings</th>
-                                    <th className="px-6 py-4 text-center">Action</th>
+                                    <th className="px-6 py-3 text-left text-p3 font-bold text-zinc-400">Name</th>
+                                    <th className="px-6 py-3 text-center text-p3 font-bold text-zinc-400">Hours</th>
+                                    <th className="px-6 py-3 text-right text-p3 font-bold text-zinc-400">Payable</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-50">
+                            <tbody className="divide-y divide-zinc-50">
                                 {consolidatedPayroll
                                     .filter(p => p.name.toLowerCase().includes(payrollSearch.toLowerCase()))
                                     .map(p => (
-                                        <tr key={p.id} className="hover:bg-gray-50/50 transition">
+                                        <tr key={p.id} className="group hover:bg-zinc-50/50 transition-colors">
                                             <td className="px-6 py-4">
-                                                <div className="font-medium text-gray-900 text-base">{p.name}</div>
-                                                <div className="text-xs font-medium text-gray-400 font-mono">{p.contractorId}</div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center font-medium text-gray-700">{p.totalHours.toFixed(1)}h</td>
-                                            <td className="px-6 py-4 text-right">
-                                                <span className="inline-block px-3 py-1 bg-green-50 text-green-700 rounded-md font-bold text-sm">
-                                                    ${p.totalPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                </span>
+                                                <div className="font-semibold text-sm text-zinc-900 group-hover:text-primary-700 transition-colors">{p.name}</div>
+                                                <div className="text-[10px] font-medium text-zinc-400 font-mono mt-0.5">{p.sites}</div>
                                             </td>
                                             <td className="px-6 py-4 text-center">
-                                                <button className="text-blue-600 hover:text-blue-800 text-xs font-bold uppercase tracking-wider">
-                                                    View Details
-                                                </button>
+                                                <span className="text-sm font-medium text-zinc-600 tabular-nums">{p.totalHours.toFixed(1)}h</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <span className="inline-block font-mono font-bold text-sm text-emerald-600">
+                                                    ${p.totalPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                </span>
                                             </td>
                                         </tr>
                                     ))}
                                 {consolidatedPayroll.length === 0 && (
                                     <tr>
-                                        <td colSpan="4" className="text-center py-20 text-gray-400 font-medium">No earnings data available</td>
+                                        <td colSpan="3" className="text-center py-20 text-zinc-400 text-sm">
+                                            No active timesheets found for this period
+                                        </td>
                                     </tr>
                                 )}
                             </tbody>
@@ -456,59 +426,70 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Excel-style Management Interface */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-                <div className="p-6 border-b border-gray-50 bg-gray-50/50 flex justify-between items-center">
+            {/* Main Data Grid */}
+            <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+                <div className="px-6 py-5 border-b border-zinc-100 flex justify-between items-center bg-white">
                     <div>
-                        <h3 className="text-xl font-medium text-gray-900">Quick-Entry Management Grid</h3>
-                        <p className="text-sm text-gray-500 font-medium">Fast filtering & high-density data list</p>
+                        <h3 className="text-p2 text-zinc-900">Contractor Directory</h3>
+                        <p className="text-xs text-zinc-500 mt-1">Full roster management</p>
                     </div>
-                    <div className="flex gap-4">
-                        <div className="relative">
-                            <input
-                                type="text"
-                                placeholder="Search Contractors..."
-                                value={contractorSearch}
-                                onChange={(e) => setContractorSearch(e.target.value)}
-                                className="pl-10 pr-4 py-2 border border-gray-100 bg-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none w-80 font-medium shadow-inner"
-                            />
-                            <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                        </div>
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Filter roster..."
+                            value={contractorSearch}
+                            onChange={(e) => setContractorSearch(e.target.value)}
+                            className="pl-9 pr-4 py-2 border border-zinc-200 rounded-lg text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none w-64 transition-all"
+                        />
+                        <svg className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     </div>
                 </div>
-                <div className="overflow-x-auto min-h-[300px]">
-                    <table className="min-w-full border-collapse">
+                <div className="overflow-x-auto">
+                    <table className="min-w-full text-left">
                         <thead>
-                            <tr className="bg-gray-100/50 border-b border-gray-200 text-left text-[10px] font-semibold uppercase tracking-widest text-gray-500">
-                                <th className="px-4 py-2 border-r border-gray-200">ID</th>
-                                <th className="px-4 py-2 border-r border-gray-200">Name</th>
-                                <th className="px-4 py-2 border-r border-gray-200">Status</th>
-                                <th className="px-4 py-2 border-r border-gray-200">BSB</th>
-                                <th className="px-4 py-2 border-r border-gray-200">Account</th>
-                                <th className="px-4 py-2 border-r border-gray-200">Primary Phone</th>
-                                <th className="px-4 py-2 border-r border-gray-200">Referred By</th>
-                                <th className="px-4 py-2">Email Control</th>
+                            <tr className="bg-zinc-50/50 border-b border-zinc-200">
+                                <th className="px-6 py-3 text-p3 font-bold text-zinc-400">ID</th>
+                                <th className="px-6 py-3 text-p3 font-bold text-zinc-400">Name</th>
+                                <th className="px-6 py-3 text-p3 font-bold text-zinc-400">Status</th>
+                                <th className="px-6 py-3 text-p3 font-bold text-zinc-400">Contact</th>
+                                <th className="px-6 py-3 text-p3 font-bold text-zinc-400">Bank Details</th>
+                                <th className="px-6 py-3 text-p3 font-bold text-zinc-400 text-right">Reference</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-zinc-50">
                             {contractors.filter(c => c.name.toLowerCase().includes(contractorSearch.toLowerCase())).map(c => (
-                                <tr key={c.id} className="text-xs hover:bg-blue-50/30 group transition-colors">
-                                    <td className="px-4 py-2 border-r border-gray-100 font-mono font-medium text-gray-500">{c.contractorId}</td>
-                                    <td className="px-4 py-2 border-r border-gray-100 font-semibold text-gray-900 group-hover:text-blue-600">{c.name}</td>
-                                    <td className="px-4 py-2 border-r border-gray-100">
-                                        <span className={`px-2 py-0.5 rounded-full font-semibold uppercase text-[9px] ${c.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                            {c.status}
+                                <tr key={c.id} className="hover:bg-zinc-50/80 transition-colors group">
+                                    <td className="px-6 py-3.5 text-xs font-mono text-zinc-400">{c.contractorId}</td>
+                                    <td className="px-6 py-3.5">
+                                        <div className="font-semibold text-sm text-zinc-900 group-hover:text-primary-600 transition-colors">{c.name}</div>
+                                        <div className="text-[10px] text-zinc-400">{c.email}</div>
+                                    </td>
+                                    <td className="px-6 py-3.5">
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${c.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
+                                            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${c.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+                                            {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-2 border-r border-gray-100 text-gray-600 font-medium">{c.bsb || '---'}</td>
-                                    <td className="px-4 py-2 border-r border-gray-100 text-gray-600 font-medium font-mono">{c.accountNumber || '---'}</td>
-                                    <td className="px-4 py-2 border-r border-gray-100 text-gray-600 font-medium">{c.phone || '---'}</td>
-                                    <td className="px-4 py-2 border-r border-gray-100 text-gray-700 font-medium bg-blue-50/50">{c.referralName || '---'}</td>
-                                    <td className="px-4 py-2 text-gray-400 font-medium truncate max-w-[150px] italic">{c.email || 'no-email@system'}</td>
+                                    <td className="px-6 py-3.5 text-xs text-zinc-600 font-medium">{c.phone || '---'}</td>
+                                    <td className="px-6 py-3.5">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-bold text-zinc-400">BSB: <span className="text-zinc-600 font-mono">{c.bsb || '---'}</span></span>
+                                            <span className="text-[10px] font-bold text-zinc-400">ACC: <span className="text-zinc-600 font-mono">{c.accountNumber || '---'}</span></span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-3.5 text-right">
+                                        <span className="inline-block px-2 py-1 bg-zinc-100 text-zinc-500 rounded text-[10px] font-semibold">
+                                            {c.referralName || 'Direct'}
+                                        </span>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
+                </div>
+                {/* Footer / Pagination hint */}
+                <div className="px-6 py-3 border-t border-zinc-100 bg-zinc-50 text-right">
+                    <span className="text-[10px] font-medium text-zinc-400">Showing {contractors.length} records</span>
                 </div>
             </div>
         </div>

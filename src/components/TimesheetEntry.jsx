@@ -4,6 +4,7 @@ import { checkBudgetStatus, calculateTimesheetPay } from '../utils/payrollCalcul
 import { getPayRates, getTimesheets, savePayRates, saveSites, getSites, saveContractors, getContractors, logAction, getPublicHolidays } from '../utils/storage';
 import ContractorForm from './ContractorForm';
 import Toast from './Toast';
+import Dropdown from './Dropdown';
 
 const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors, onSave, onQuickAddContractor, initialData = null }) => {
   const [site, setSite] = useState(initialSite);
@@ -131,13 +132,13 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
 
         const allZero = Object.values(rates).every(r => r === 0);
         if (allZero) {
-          setToastMsg('⚠️ Warning: Pay rates for this site are set to $0. Please configure rates in the Pay Rates tab.');
+          setToastMsg('Operational Alert: Pay rates for this site are currently $0. Configuration required.');
           setShowToast(true);
         }
       } else {
         const defaultRates = { weekday: 0, saturday: 0, sunday: 0, publicHoliday: 0 };
         setPayRates(defaultRates);
-        setToastMsg('⚠️ Warning: No pay rates configured for this site. Please set rates in the Pay Rates tab before saving.');
+        setToastMsg('Status Critical: No pay rates configured for this terminal. Configuration mandated before data entry.');
         setShowToast(true);
       }
 
@@ -322,7 +323,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
 
     if (!hasRates) {
       const targetSite = allSites.find(s => s.id === targetSiteId);
-      setToastMsg(`⚠️ Please adjust pay rates for ${targetSite?.siteName || 'this site'} before entering hours.`);
+      setToastMsg(`Rate Conflict: Please adjust pay rates for ${targetSite?.siteName || 'this site'} prior to initializing hours.`);
       setShowToast(true);
       return;
     }
@@ -478,7 +479,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-white rounded-lg p-6">
       {showToast && (
         <Toast
           message={toastMsg || `Timesheet updated for ${site.siteName}!`}
@@ -489,127 +490,191 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
 
       {/* Budget Status Banner */}
       {budgetStatus && (!budgetStatus.withinBudget) && (
-        <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <span className="text-red-500 text-xl">⚠️</span>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Budget Limit Exceeded</h3>
-              <div className="mt-2 text-sm text-red-700">
-                <ul className="list-disc pl-5 space-y-1">
-                  {budgetStatus.hoursOver > 0 && (
-                    <li>Hours: {totalStats.hours.toFixed(2)} / {totalStats.budgetedHours} (Over by {budgetStatus.hoursOver.toFixed(2)})</li>
-                  )}
-                  {budgetStatus.amountOver > 0 && (
-                    <li>Cost: ${totalStats.pay.toFixed(2)} / ${totalStats.budgetedAmount} (Over by ${budgetStatus.amountOver.toFixed(2)})</li>
-                  )}
-                </ul>
+        <div className="mb-10 bg-rose-50/50 border border-rose-100 rounded-[2.5rem] p-8 backdrop-blur-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-rose-500">
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
               </div>
+              <div>
+                <h3 className="text-p1 font-bold text-rose-900 tracking-tight">Terminal Alert: Budget Violation</h3>
+                <p className="text-xs text-rose-500 font-bold mt-1">Resource expenditure beyond authorized limits.</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              {budgetStatus.hoursOver > 0 && (
+                <div className="bg-white/80 border border-rose-100 px-4 py-3 rounded-2xl flex flex-col">
+                  <span className="text-[9px] font-bold text-rose-300 leading-none mb-1">Hours Overflow</span>
+                  <span className="text-sm font-bold text-rose-600">+{budgetStatus.hoursOver.toFixed(1)} hrs</span>
+                </div>
+              )}
+              {budgetStatus.amountOver > 0 && (
+                <div className="bg-white/80 border border-rose-100 px-4 py-3 rounded-2xl flex flex-col">
+                  <span className="text-[9px] font-bold text-rose-300 leading-none mb-1">Financial Load Over</span>
+                  <span className="text-sm font-bold text-rose-600">${budgetStatus.amountOver.toFixed(2)}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Budget Info Bar */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
-        <div>
-          <span className="block text-xs font-medium text-gray-500 uppercase">Total Hours</span>
-          <span className={`text-xl font-medium ${budgetStatus?.hoursOver > 0 ? 'text-red-600' : 'text-gray-900'}`}>
-            {totalStats.hours.toFixed(2)}
-            {totalStats.budgetedHours > 0 && <span className="text-sm font-normal text-gray-500"> / {totalStats.budgetedHours}</span>}
-          </span>
-        </div>
-        <div>
-          <span className="block text-xs font-medium text-gray-500 uppercase">Total Cost</span>
-          <span className={`text-xl font-medium ${budgetStatus?.amountOver > 0 ? 'text-red-600' : 'text-green-600'}`}>
-            ${totalStats.pay.toFixed(2)}
-            {totalStats.budgetedAmount > 0 && <span className="text-sm font-normal text-gray-500"> / ${totalStats.budgetedAmount}</span>}
-          </span>
-        </div>
-        <div>
-          <span className="block text-xs font-medium text-gray-500 uppercase">Status</span>
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${!budgetStatus || budgetStatus.withinBudget ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-            {!budgetStatus || budgetStatus.withinBudget ? 'Within Budget' : 'Over Budget'}
-          </span>
-        </div>
-      </div>
-
-      <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h3 className="text-lg font-medium text-gray-900">
-            {site.siteName}
-          </h3>
-          <p className="text-xs text-gray-500 font-medium">{periodStart} to {periodEnd}</p>
-
-          {/* Compact Rates Display with Larger Text */}
-          <div className="flex flex-wrap gap-2 mt-2">
-            {/* Primary Site Rates */}
-            <span className="text-sm bg-indigo-100 px-3 py-1 rounded-md font-semibold text-indigo-700 uppercase tracking-tight">
-              Primary: Wk ${payRates.weekday}/h | Sat ${payRates.saturday}/h | Sun ${payRates.sunday}/h | PH ${payRates.publicHoliday}/h
+      {/* Premium Statistics Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white rounded-2xl border border-zinc-100 p-6 flex items-center justify-between group transition-all hover:border-primary-100">
+          <div>
+            <span className="block text-[11px] font-bold text-zinc-400 mb-1">Cumulative Hours</span>
+            <span className={`text-h2 font-bold tracking-tight ${budgetStatus?.hoursOver > 0 ? 'text-rose-600' : 'text-zinc-900 group-hover:text-primary-600'}`}>
+              {totalStats.hours.toFixed(2)}
+              {totalStats.budgetedHours > 0 && <span className="text-xs font-bold text-zinc-300 ml-1.5">/ {totalStats.budgetedHours}</span>}
             </span>
-
-            {/* Subsite Rates */}
-            {subSites.map(subSite => {
-              const allRates = getPayRates();
-              const subSiteRates = allRates.find(r => r.siteId === subSite.id) || { weekday: 0, saturday: 0, sunday: 0, publicHoliday: 0 };
-              return (
-                <span key={subSite.id} className="text-sm bg-slate-100 px-3 py-1 rounded-md font-semibold text-slate-700 uppercase tracking-tight">
-                  {subSite.siteName}: Wk ${subSiteRates.weekday}/h | Sat ${subSiteRates.saturday}/h | Sun ${subSiteRates.sunday}/h | PH ${subSiteRates.publicHoliday}/h
-                </span>
-              );
-            })}
+          </div>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${budgetStatus?.hoursOver > 0 ? 'bg-rose-50 text-rose-600' : 'bg-zinc-50 text-zinc-400 group-hover:bg-primary-50 group-hover:text-primary-600'}`}>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="bg-white rounded-2xl border border-zinc-100 p-6 flex items-center justify-between group transition-all hover:border-emerald-100">
+          <div>
+            <span className="block text-[11px] font-bold text-zinc-400 mb-1">Financial Load</span>
+            <span className={`text-h2 font-bold tracking-tight ${budgetStatus?.amountOver > 0 ? 'text-rose-600' : 'text-emerald-600 group-hover:text-emerald-500'}`}>
+              ${totalStats.pay.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              {totalStats.budgetedAmount > 0 && <span className="text-xs font-bold text-zinc-300 ml-1.5">/ ${totalStats.budgetedAmount}</span>}
+            </span>
+          </div>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${budgetStatus?.amountOver > 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-50 group-hover:text-emerald-500'}`}>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-zinc-100 p-6 flex items-center justify-between group transition-all">
+          <div>
+            <span className="block text-[11px] font-bold text-zinc-400 mb-1">Site Health</span>
+            <div className="flex items-center gap-2">
+              <span className={`w-2.5 h-2.5 rounded-full ${!budgetStatus || budgetStatus.withinBudget ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500 animate-pulse'}`}></span>
+              <span className={`text-lg font-bold tracking-tight ${!budgetStatus || budgetStatus.withinBudget ? 'text-emerald-700' : 'text-rose-700'}`}>
+                {!budgetStatus || budgetStatus.withinBudget ? 'Verified' : 'Over Budget'}
+              </span>
+            </div>
+          </div>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${!budgetStatus || budgetStatus.withinBudget ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={!budgetStatus || budgetStatus.withinBudget ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"} />
+            </svg>
+          </div>
+        </div>
+
+        <div className="bg-zinc-900 rounded-2xl p-6 flex items-center justify-between group transition-all">
+          <div className="flex flex-col gap-1">
+            <span className="block text-[11px] font-bold text-zinc-500">Active Workforce</span>
+            <span className="text-2xl font-bold text-white tracking-tight">{entries.length} Workers</span>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-white">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-8 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 p-2">
+        <div className="space-y-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <h3 className="text-h1 font-bold text-zinc-900 tracking-tight">{site.siteName}</h3>
+              <div className="px-2.5 py-1 bg-primary-50 text-primary-600 rounded-xl text-[10px] font-bold border border-primary-100">Active Site</div>
+            </div>
+            <p className="text-sm text-zinc-400 font-bold flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              {formatDateDisplay(periodStart)} — {formatDateDisplay(periodEnd)}
+            </p>
+          </div>
+
+          {/* Compact Rates Visualization */}
+          <div className="flex flex-wrap gap-2.5">
+            {/* Primary Site Rates */}
+            <div className="bg-white border border-zinc-100 rounded-2xl px-4 py-3 flex items-center gap-4">
+              <div className="w-1.5 h-6 bg-primary-500 rounded-full"></div>
+              <div className="flex gap-4">
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-bold text-zinc-300 leading-none mb-1">Weekday</span>
+                  <span className="text-xs font-bold text-zinc-900">${payRates.weekday}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-bold text-zinc-300 leading-none mb-1">Saturday</span>
+                  <span className="text-xs font-bold text-zinc-900">${payRates.saturday}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-bold text-zinc-300 leading-none mb-1">Sunday</span>
+                  <span className="text-xs font-bold text-zinc-900">${payRates.sunday}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Subsite Aggregate Display */}
+            {subSites.length > 0 && (
+              <div className="flex -space-x-3 hover:space-x-1 transition-all">
+                {subSites.map(subSite => {
+                  const allRates = getPayRates();
+                  const subSiteRates = allRates.find(r => r.siteId === subSite.id) || { weekday: 0 };
+                  return (
+                    <div key={subSite.id} className="w-10 h-10 rounded-2xl bg-white border-2 border-zinc-50 flex items-center justify-center text-[10px] font-bold text-zinc-400 cursor-help hover:bg-zinc-900 hover:text-white hover:border-zinc-900 transition-all" title={`${subSite.siteName}: $${subSiteRates.weekday}/hr`}>
+                      {subSite.siteName[0].toUpperCase()}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3 w-full xl:w-auto">
           <button
             onClick={() => handleOpenRateModal(site.id)}
-            className="px-3 py-1.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition flex items-center gap-1.5 text-xs font-semibold uppercase tracking-tight"
+            className="flex-1 xl:flex-none px-5 py-3 bg-white text-zinc-600 border border-zinc-100 rounded-2xl hover:bg-zinc-50 transition-all flex items-center justify-center gap-2.5 text-[11px] font-bold hover:-translate-y-0.5 active:translate-y-0"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            Adjust Rates
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            Rates
           </button>
           <button
             onClick={() => setShowNewContractorModal(true)}
-            className="px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center gap-1.5 text-xs font-semibold uppercase tracking-tight"
+            className="flex-1 xl:flex-none px-5 py-3 bg-white text-zinc-600 border border-zinc-100 rounded-2xl hover:bg-zinc-50 transition-all flex items-center justify-center gap-2.5 text-[11px] font-bold hover:-translate-y-0.5 active:translate-y-0"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-            Add Contractor
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            Onboard
           </button>
           <button
             onClick={() => setShowStaffModal(true)}
-            className="px-3 py-1.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-lg hover:bg-rose-100 transition flex items-center gap-1.5 text-xs font-semibold uppercase tracking-tight"
+            className="flex-1 xl:flex-none px-5 py-3 bg-white text-zinc-600 border border-zinc-100 rounded-2xl hover:bg-zinc-50 transition-all flex items-center justify-center gap-2.5 text-[11px] font-bold hover:-translate-y-0.5 active:translate-y-0"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2" /></svg>
-            Allocate Existing
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2" /></svg>
+            Allocate
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition flex items-center gap-2 text-xs font-semibold uppercase tracking-widest shadow-lg shadow-emerald-100"
+            className="flex-1 xl:flex-none px-8 py-3 bg-primary-600 text-white rounded-2xl hover:bg-primary-700 transition-all flex items-center justify-center gap-3 text-[11px] font-bold hover:-translate-y-1 active:translate-y-0"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
-            Save Timesheet
+            Publish Entry
           </button>
         </div>
       </div>
 
-      <div className="overflow-auto border border-gray-100 rounded-xl max-h-[70vh] custom-scrollbar relative">
+      <div className="overflow-auto rounded-[2rem] border border-zinc-100 max-h-[75vh] custom-scrollbar relative bg-white">
         <table className="min-w-full border-collapse table-fixed md:table-auto">
-          <thead className="bg-slate-800 sticky top-0 z-30">
-            <tr>
-              <th className="px-2 py-3 text-left text-[10px] font-semibold text-slate-300 uppercase tracking-widest sticky left-0 top-0 bg-slate-800 z-40 w-[180px] shadow-[2px_0_5px_rgba(0,0,0,0.1)]">Employee & Location</th>
+          <thead className="bg-zinc-900 sticky top-0 z-[60]">
+            <tr className="divide-x divide-zinc-800">
+              <th className="px-6 py-5 text-left text-p3 font-bold text-zinc-400 sticky left-0 top-0 bg-zinc-900 z-[70] w-[220px]">Employee Profile</th>
               {dates.map(date => {
                 const isPH = publicHolidays.includes(date.date);
                 const holidayName = getPublicHolidays().find(h => h.date === date.date)?.name;
                 return (
                   <th
                     key={date.date}
-                    className={`px-1 py-3 text-center text-[10px] font-semibold uppercase tracking-widest min-w-[80px] border-l border-slate-700 ${isPH ? 'bg-violet-900/50 text-violet-200' : 'text-slate-300'}`}
+                    className={`px-1 py-5 text-center text-[11px] font-bold min-w-[90px] ${isPH ? 'bg-primary-900/50 text-primary-200' : 'text-zinc-400'}`}
                     title={isPH ? `Global Holiday: ${holidayName}` : ''}
                   >
                     {formatDateDisplay(date.date)}
-                    {isPH && <div className="text-[7px] text-violet-400 font-bold block">PH</div>}
+                    {isPH && <div className="text-[8px] text-primary-400 font-bold block mt-1">PH</div>}
                   </th>
                 );
               })}
@@ -618,20 +683,20 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                 const showExtraCol = entries.some(e => e.extraHours > 0 || e.isExtraMode);
                 return (
                   <>
-                    {showLumpSum && <th className="px-3 py-3 text-center text-[10px] font-semibold text-amber-300 uppercase tracking-widest border-l border-slate-700 bg-slate-900/50">Lump Sum</th>}
-                    {showExtraCol && <th className="px-3 py-3 text-center text-[10px] font-semibold text-blue-300 uppercase tracking-widest border-l border-slate-700 bg-slate-900/50">Extra Hrs</th>}
+                    {showLumpSum && <th className="px-3 py-5 text-center text-[11px] font-bold text-amber-500 bg-amber-500/5 min-w-[120px]">Escrow Release</th>}
+                    {showExtraCol && <th className="px-3 py-5 text-center text-[11px] font-bold text-primary-400 bg-primary-400/5 min-w-[100px]">Extra Hours</th>}
                   </>
                 );
               })()}
-              <th className="px-3 py-3 text-center text-[10px] font-semibold text-slate-300 uppercase tracking-widest border-l border-slate-700">Allow.</th>
-              <th className="px-3 py-3 text-center text-[10px] font-semibold text-slate-300 uppercase tracking-widest border-l border-slate-700">Other</th>
-              <th className="px-3 py-3 text-center text-[10px] font-semibold text-rose-300 uppercase tracking-widest border-l border-slate-700">Deduct.</th>
-              <th className="px-3 py-3 text-center text-[10px] font-semibold text-slate-300 uppercase tracking-widest border-l border-slate-700">Total Pay</th>
-              <th className="px-3 py-3 text-center text-[10px] font-semibold text-emerald-300 uppercase tracking-widest border-l border-slate-700 bg-emerald-900/10">Net Pay</th>
-              <th className="px-3 py-3 text-center text-[10px] font-semibold text-amber-300 uppercase tracking-widest border-l border-slate-700">Held (T)</th>
+              <th className="px-3 py-5 text-center text-[11px] font-bold text-zinc-500 min-w-[80px]">Allow.</th>
+              <th className="px-3 py-5 text-center text-[11px] font-bold text-zinc-500 min-w-[80px]">Other</th>
+              <th className="px-3 py-5 text-center text-[11px] font-bold text-rose-500 bg-rose-500/5 min-w-[90px]">Deductions</th>
+              <th className="px-3 py-5 text-center text-p3 font-bold text-zinc-400 min-w-[110px]">Gross Pay</th>
+              <th className="px-3 py-5 text-center text-[11px] font-bold text-emerald-500 bg-emerald-500/10 min-w-[120px] sticky right-0 z-[70] bg-zinc-900">Net Settlement</th>
+              <th className="px-3 py-5 text-center text-[11px] font-bold text-amber-500 min-w-[90px]">Escrow (T)</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-transparent">
+          <tbody className="divide-y divide-zinc-50">
             {(() => {
               const showLumpSum = site.isTrainingSite || entries.some(e => e.manualLumpSumHours !== null);
               const relevantSites = [site, ...subSites];
@@ -640,7 +705,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
               if (entries.length === 0 && relevantSites.every(s => !(s.allocatedContractors?.length > 0))) {
                 return (
                   <tr>
-                    <td colSpan={totalCols + 1} className="py-20 text-center text-gray-400 font-medium uppercase tracking-widest text-xs italic">
+                    <td colSpan={totalCols + 1} className="py-20 text-center text-zinc-400 font-medium text-xs italic">
                       No staff assigned. Use the dropdowns below or buttons above to add workers.
                     </td>
                   </tr>
@@ -669,48 +734,46 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                 return (
                   <Fragment key={currentSite.id}>
                     {/* Site Header Row */}
-                    <tr className="bg-slate-100/80">
+                    <tr className="bg-zinc-50/80 group/site">
                       {/* FIXED LEFT: Site Title */}
-                      <td className="px-3 py-2 border-y border-slate-200 sticky left-0 z-20 bg-slate-100">
-                        <div className="flex items-center gap-2 min-w-[350px]">
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${isPrimary ? 'bg-blue-600 text-white' : 'bg-slate-500 text-white'}`}>
-                            {isPrimary ? 'PRIMARY' : 'SUB-SITE'}
-                          </span>
-                          <span className="text-xs font-bold text-slate-800 uppercase tracking-widest whitespace-nowrap">{currentSite.siteName}</span>
+                      <td className="px-6 py-4 border-y border-zinc-100 sticky left-0 z-[50] bg-zinc-50">
+                        <div className="flex items-center gap-3 min-w-[380px]">
+                          <div className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${isPrimary ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-500 border-zinc-200'}`}>
+                            {isPrimary ? 'Terminal' : 'Sub-Hub'}
+                          </div>
+                          <span className="text-xs font-bold text-zinc-900 whitespace-nowrap">{currentSite.siteName}</span>
                         </div>
                       </td>
 
                       {/* SPACER: Middle Columns */}
-                      <td colSpan={totalCols - 1} className="border-y border-slate-200 bg-slate-100"></td>
+                      <td colSpan={totalCols - 1} className="border-y border-zinc-100 bg-zinc-50/50"></td>
 
                       {/* FIXED RIGHT: Actions */}
-                      <td className="px-3 py-2 border-y border-slate-200 sticky right-0 z-20 bg-slate-100">
-                        <div className="flex items-center justify-end gap-2">
-                          <select
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                handleQuickAddStaff(e.target.value, null, currentSite.id);
-                                e.target.value = '';
+                      <td className="px-6 py-4 border-y border-zinc-100 sticky right-0 z-[50] bg-zinc-50 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          <Dropdown
+                            value=""
+                            onChange={(val) => {
+                              if (val) {
+                                handleQuickAddStaff(val, null, currentSite.id);
                               }
                             }}
-                            className="text-[9px] font-bold bg-white border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-500 cursor-pointer shadow-sm text-slate-600 w-36"
-                            value=""
-                          >
-                            <option value="">+ Add {isPrimary ? 'Staff' : 'Worker'}...</option>
-                            {contractors
+                            options={contractors
                               .filter(c => c.status === 'active')
                               .filter(c => !siteEntries.some(e => e.contractorId === c.id))
-                              .map(c => (
-                                <option key={c.id} value={c.id}>{c.name}</option>
-                              ))
+                              .map(c => ({ value: c.id, label: c.name }))
                             }
-                          </select>
+                            placeholder="+ Deploy Resource..."
+                            variant="compact"
+                            showSelected={false}
+                            className="w-48"
+                          />
                           <button
                             onClick={() => handleOpenRateModal(currentSite.id)}
-                            className="p-1 hover:text-blue-500 text-slate-400 transition-colors"
+                            className="p-2 bg-white border border-zinc-200 text-zinc-400 rounded-xl hover:text-zinc-900 hover:border-zinc-900 transition-all"
                             title="Adjust Site Rates"
                           >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.012 -2.574c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.065-2.572c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.012 -2.574c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.065-2.572c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                           </button>
                         </div>
                       </td>
@@ -725,56 +788,54 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                       const effectiveRates = getEffectiveRates(entry.contractorId, entry.siteId);
                       const calculation = calculateTimesheetPay(entry, effectiveRates, publicHolidays);
                       const isManual = entry.manualLumpSumHours !== null;
-                      const isLastInSite = index === siteEntries.length - 1;
-                      const groupColor = getGroupColor(entry.contractorId);
-
                       return (
                         <tr
                           key={`${entry.contractorId}-${entry.siteId}`}
-                          className="hover:bg-slate-50 transition group"
+                          className="hover:bg-zinc-50/50 transition-colors group/row border-b border-zinc-50"
                         >
-                          <td className="px-2 py-3 sticky left-0 group-hover:bg-slate-50 z-20 border-r border-slate-100 min-w-[180px] shadow-[2px_0_5px_rgba(0,0,0,0.02)] bg-white">
-                            <div className="flex flex-col">
-                              <div className="flex items-center justify-between gap-1.5">
-                                <div className="font-black text-slate-800 text-sm tracking-tight">{entry.contractorName}</div>
+                          <td className="px-6 py-4 sticky left-0 group-hover/row:bg-zinc-50 z-[40] border-r border-zinc-100 min-w-[220px] bg-white transition-colors">
+                            <div className="flex flex-col gap-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="font-bold text-zinc-900 text-sm tracking-tight group-hover/row:text-primary-600 transition-colors">{entry.contractorName}</div>
                                 <button
                                   onClick={() => handleRemoveEntry(entry.contractorId, entry.siteId)}
-                                  className="text-rose-400 hover:text-rose-600 transition"
-                                  title="Remove from site"
+                                  className="w-6 h-6 flex items-center justify-center rounded-lg text-zinc-300 hover:text-rose-600 hover:bg-rose-50 transition-all opacity-0 group-hover/row:opacity-100"
+                                  title="De-allocate Resource"
                                 >
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
                                 </button>
                               </div>
 
                               {effectiveRates.isCustom && (
-                                <div className="mt-1 flex items-center gap-1">
-                                  <span className="h-1 w-1 rounded-full bg-indigo-500"></span>
-                                  <span className="text-[8px] text-indigo-500 font-bold uppercase tracking-widest">
-                                    Custom Rate (${effectiveRates.weekday}/${effectiveRates.saturday}/${effectiveRates.sunday})
-                                  </span>
+                                <div className="flex items-center gap-1.5">
+                                  <div className="px-1.5 py-0.5 bg-primary-50 text-primary-600 rounded text-[8px] font-bold border border-primary-100/50">Custom Override</div>
                                 </div>
                               )}
 
-                              <div className="flex items-center gap-2 mt-2 pt-2">
-                                <label className="flex items-center gap-1 cursor-pointer group/mode">
-                                  <input
-                                    type="checkbox"
-                                    checked={isManual}
-                                    onChange={(e) => handleLumpSumToggle(entry.contractorId, e.target.checked, entry.siteId)}
-                                    className="h-2.5 w-2.5 rounded text-blue-600 focus:ring-blue-500"
-                                  />
-                                  <span className="text-[8px] font-semibold text-gray-400 group-hover/mode:text-blue-500 uppercase tracking-tight">Manual</span>
+                              <div className="flex items-center gap-3">
+                                <label className="flex items-center gap-1.5 cursor-pointer group/mode">
+                                  <div className="relative flex items-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={isManual}
+                                      onChange={(e) => handleLumpSumToggle(entry.contractorId, e.target.checked, entry.siteId)}
+                                      className="peer h-3.5 w-3.5 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900 transition-all cursor-pointer"
+                                    />
+                                  </div>
+                                  <span className="text-[10px] font-bold text-zinc-400 peer-checked:text-zinc-900 transition-colors">Manual</span>
                                 </label>
-                                <label className="flex items-center gap-1 cursor-pointer group/extra">
-                                  <input
-                                    type="checkbox"
-                                    checked={entry.isExtraMode}
-                                    onChange={(e) => {
-                                      setEntries(entries.map(ent => (ent.contractorId === entry.contractorId && ent.siteId === entry.siteId) ? { ...ent, isExtraMode: e.target.checked } : ent));
-                                    }}
-                                    className="h-2.5 w-2.5 rounded text-indigo-600 focus:ring-indigo-500"
-                                  />
-                                  <span className="text-[8px] font-semibold text-gray-400 group-hover/extra:text-indigo-500 uppercase tracking-tight">Extra</span>
+                                <label className="flex items-center gap-1.5 cursor-pointer group/extra">
+                                  <div className="relative flex items-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={entry.isExtraMode}
+                                      onChange={(e) => {
+                                        setEntries(entries.map(ent => (ent.contractorId === entry.contractorId && ent.siteId === entry.siteId) ? { ...ent, isExtraMode: e.target.checked } : ent));
+                                      }}
+                                      className="peer h-3.5 w-3.5 rounded border-zinc-300 text-primary-600 focus:ring-primary-100 transition-all cursor-pointer"
+                                    />
+                                  </div>
+                                  <span className="text-[10px] font-bold text-zinc-400 peer-checked:text-primary-600 transition-colors">Extra</span>
                                 </label>
                               </div>
                             </div>
@@ -787,47 +848,46 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                             return (
                               <td
                                 key={date.date}
-                                className={`px-1 py-2 ${isManual ? 'bg-gray-50/50' : ''} ${isPH ? 'bg-violet-50/30' : ''}`}
+                                className={`px-1 py-4 transition-colors ${isManual ? 'bg-zinc-50/30' : ''} ${isPH ? 'bg-primary-50/20' : ''}`}
                               >
-                                <input
-                                  type="number"
-                                  value={dayEntry?.hours || ''}
-                                  onChange={(e) => handleHoursChange(entry.contractorId, date.date, e.target.value, entry.siteId)}
-                                  disabled={isManual}
-                                  className={`w-full text-center py-1 text-sm font-semibold outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 rounded disabled:opacity-30 ${isPH ? 'text-violet-700' : 'text-gray-700 bg-transparent'}`}
-                                  placeholder="0"
-                                />
-                                <div className="flex justify-center mt-1 gap-1.5 min-h-[12px]">
-                                  {(site?.isTrainingSite || allSites.find(s => s.id === entry.siteId)?.isTrainingSite) && (
-                                    <label className={`flex items-center gap-0.5 cursor-pointer ${dayEntry?.isTraining ? 'text-amber-600' : 'text-gray-300'} transition-colors hover:text-amber-500`}>
-                                      <input
-                                        type="checkbox"
-                                        checked={dayEntry?.isTraining || false}
-                                        onChange={() => handleTrainingToggle(entry.contractorId, date.date, entry.siteId)}
+                                <div className="flex flex-col items-center gap-1.5">
+                                  <input
+                                    type="number"
+                                    value={dayEntry?.hours || ''}
+                                    onChange={(e) => handleHoursChange(entry.contractorId, date.date, e.target.value, entry.siteId)}
+                                    disabled={isManual}
+                                    className={`w-full text-center py-1.5 text-sm font-bold outline-none focus:ring-2 focus:ring-zinc-900/5 rounded-xl disabled:opacity-20 transition-all ${isPH ? 'text-primary-700' : 'text-zinc-900 bg-transparent hover:bg-zinc-50/50 focus:bg-white'}`}
+                                    placeholder="0"
+                                  />
+                                  <div className="flex items-center justify-center gap-2 min-h-[14px]">
+                                    {(site?.isTrainingSite || allSites.find(s => s.id === entry.siteId)?.isTrainingSite) && (
+                                      <button
+                                        onClick={() => !isManual && handleTrainingToggle(entry.contractorId, date.date, entry.siteId)}
+                                        className={`flex items-center justify-center w-3.5 h-3.5 rounded border transition-all ${dayEntry?.isTraining ? 'bg-amber-500 border-amber-600 text-white' : 'bg-transparent border-zinc-200 text-zinc-300 hover:border-amber-400'}`}
                                         disabled={isManual}
-                                        className="h-2.5 w-2.5 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
-                                      />
-                                      <span className="text-[8px] font-black tracking-tighter">T</span>
-                                    </label>
-                                  )}
-                                  {isPH && <span className="text-[8px] font-black text-violet-500/50">PH</span>}
+                                      >
+                                        <span className="text-[7px] font-bold">T</span>
+                                      </button>
+                                    )}
+                                    {isPH && <span className="text-[8px] font-bold text-primary-400/60 tracking-tighter">PH</span>}
+                                  </div>
                                 </div>
                               </td>
                             );
                           })}
 
                           {showLumpSum && (
-                            <td className="px-1 py-1 min-w-[140px] bg-amber-50/10">
+                            <td className="px-2 py-4 min-w-[150px] bg-amber-50/5">
                               {isManual && (
-                                <div className="grid grid-cols-2 gap-1 p-1">
+                                <div className="grid grid-cols-2 gap-2 p-1">
                                   {['weekday', 'saturday', 'sunday', 'publicHoliday'].map(type => (
-                                    <div key={type} className="flex flex-col">
-                                      <div className="text-[7px] font-semibold uppercase text-amber-500/70 text-center mb-0.5">{type.substring(0, 3)}</div>
+                                    <div key={type} className="flex flex-col gap-0.5">
+                                      <div className="text-[7px] font-bold uppercase text-amber-500/70 text-center tracking-widest">{type.substring(0, 3)}</div>
                                       <input
                                         type="number"
                                         value={entry.manualLumpSumHours[type] || ''}
                                         onChange={(e) => handleLumpSumChange(entry.contractorId, type, e.target.value, entry.siteId)}
-                                        className="w-full text-[10px] text-center font-medium text-amber-900 bg-white border border-amber-100 rounded outline-none py-0.5"
+                                        className="w-full text-[10px] text-center font-bold text-amber-900 bg-white border border-amber-100 rounded-lg outline-none py-1.5 focus:ring-2 focus:ring-amber-200"
                                         placeholder="0"
                                       />
                                     </div>
@@ -838,43 +898,51 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                           )}
 
                           {entries.some(e => e.extraHours > 0 || e.isExtraMode) && (
-                            <td className="px-2 py-2 bg-indigo-50/20">
+                            <td className="px-3 py-4 bg-primary-50/10">
                               {(entry.isExtraMode || entry.extraHours > 0) ? (
                                 <input
                                   type="number"
                                   value={entry.extraHours || ''}
                                   onChange={(e) => handleExtraHoursChange(entry.contractorId, e.target.value, entry.siteId)}
-                                  className="w-full text-center py-1 text-sm font-semibold text-indigo-700 bg-white border border-indigo-200 rounded outline-none"
+                                  className="w-full text-center py-1.5 text-sm font-bold text-primary-600 bg-white border border-primary-100 rounded-xl outline-none focus:ring-2 focus:ring-primary-100"
                                   placeholder="+ Hrs"
                                 />
                               ) : (
-                                <div className="text-[9px] text-gray-300 font-medium text-center">—</div>
+                                <div className="text-[10px] text-zinc-300 font-bold text-center tracking-widest">—</div>
                               )}
                             </td>
                           )}
 
-                          <td className="px-1 py-1">
+                          <td className="px-2 py-4">
                             <div className="relative">
-                              <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] text-gray-400">$</span>
-                              <input type="number" value={entry.allowance || ''} onChange={(e) => handlePaymentFieldChange(entry.contractorId, 'allowance', e.target.value, entry.siteId)} className="w-full pl-3 py-1 text-xs text-slate-600 outline-none rounded bg-slate-50 focus:bg-white" placeholder="0" />
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-300">$</span>
+                              <input type="number" value={entry.allowance || ''} onChange={(e) => handlePaymentFieldChange(entry.contractorId, 'allowance', e.target.value, entry.siteId)} className="w-full pl-5 pr-2 py-2 text-[11px] font-bold text-zinc-600 outline-none rounded-xl bg-zinc-50 border-transparent border focus:bg-white focus:border-zinc-200 transition-all" placeholder="0" />
                             </div>
                           </td>
-                          <td className="px-1 py-1">
+                          <td className="px-2 py-4">
                             <div className="relative">
-                              <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] text-gray-400">$</span>
-                              <input type="number" value={entry.otherPay || ''} onChange={(e) => handlePaymentFieldChange(entry.contractorId, 'otherPay', e.target.value, entry.siteId)} className="w-full pl-3 py-1 text-xs text-slate-600 outline-none rounded bg-slate-50 focus:bg-white" placeholder="0" />
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-300">$</span>
+                              <input type="number" value={entry.otherPay || ''} onChange={(e) => handlePaymentFieldChange(entry.contractorId, 'otherPay', e.target.value, entry.siteId)} className="w-full pl-5 pr-2 py-2 text-[11px] font-bold text-zinc-600 outline-none rounded-xl bg-zinc-50 border-transparent border focus:bg-white focus:border-zinc-200 transition-all" placeholder="0" />
                             </div>
                           </td>
-                          <td className="px-1 py-1">
+                          <td className="px-2 py-4">
                             <div className="relative">
-                              <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] text-rose-400">-</span>
-                              <input type="number" value={entry.deduction || ''} onChange={(e) => handlePaymentFieldChange(entry.contractorId, 'deduction', e.target.value, entry.siteId)} className="w-full pl-3 text-rose-500 py-1 text-xs bg-slate-50 focus:bg-white outline-none rounded" placeholder="0" />
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-rose-300">-</span>
+                              <input type="number" value={entry.deduction || ''} onChange={(e) => handlePaymentFieldChange(entry.contractorId, 'deduction', e.target.value, entry.siteId)} className="w-full pl-5 pr-2 py-2 text-[11px] font-bold text-rose-500 bg-rose-50/5 border-transparent border outline-none rounded-xl focus:bg-white focus:border-rose-100 transition-all" placeholder="0" />
                             </div>
                           </td>
-                          <td className="px-3 py-3 text-center font-medium text-xs text-slate-500">${calculation.totalPay.toFixed(2)}</td>
-                          <td className="px-3 py-3 text-center font-semibold text-sm text-emerald-600 bg-emerald-50/20">${calculation.netPay.toFixed(2)}</td>
-                          <td className="px-3 py-3 text-center font-semibold text-[10px] text-amber-500 tracking-tighter">
-                            {calculation.trainingPay > 0 ? `$${calculation.trainingPay.toFixed(2)}` : '—'}
+                          <td className="px-4 py-4 text-center font-bold text-xs text-zinc-400 tracking-tight">${calculation.totalPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                          <td className="px-4 py-4 text-center sticky right-0 z-[40] bg-emerald-50/50">
+                            <span className="font-bold text-sm text-emerald-600">${calculation.netPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            {calculation.trainingPay > 0 ? (
+                              <span className="px-2 py-1 bg-amber-50 text-amber-600 rounded-lg font-bold text-[10px] tracking-tight border border-amber-100">
+                                ${calculation.trainingPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold text-zinc-200 tracking-widest">—</span>
+                            )}
                           </td>
                         </tr>
                       );
@@ -888,161 +956,225 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
       </div>
 
       {/* MODALS */}
-      {showRateModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 border border-slate-100 animate-in zoom-in-95 duration-300">
-            <h4 className="text-xl font-semibold text-slate-900 uppercase tracking-tighter mb-1">Adjust Rates: {rateModalSite?.siteName}</h4>
-            <p className="text-xs text-slate-400 font-medium mb-6">Updates apply to current sessions and future records.</p>
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              {['weekday', 'saturday', 'sunday', 'publicHoliday'].map(type => (
-                <div key={type}>
-                  <label className="block text-[10px] font-semibold text-slate-300 uppercase tracking-widest mb-1.5">{type}</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">$</span>
-                    <input
-                      type="number"
-                      value={tempRates[type]}
-                      onChange={(e) => setTempRates({ ...tempRates, [type]: parseFloat(e.target.value) || 0 })}
-                      className="w-full pl-6 pr-3 py-2.5 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-blue-500 bg-white transition-all outline-none font-semibold text-slate-700"
-                    />
+      {
+        showRateModal && (
+          <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-md flex items-center justify-center z-[200] p-4 animate-in fade-in duration-300">
+            <div className="bg-white rounded-[2.5rem] w-full max-w-md overflow-hidden border border-zinc-100 flex flex-col animate-in zoom-in-95 duration-300">
+              {/* Header */}
+              <div className="p-8 border-b border-zinc-50 bg-gradient-to-br from-zinc-50 to-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50"></div>
+                <div className="relative z-10">
+                  <h3 className="text-2xl font-bold text-zinc-900 tracking-tight">Financial Calibration</h3>
+                  <p className="text-sm text-zinc-500 font-medium">Adjusting rates for {rateModalSite?.siteName}</p>
+                </div>
+              </div>
+
+              <div className="p-8">
+                <div className="grid grid-cols-2 gap-5 mb-8">
+                  {['weekday', 'saturday', 'sunday', 'publicHoliday'].map(type => (
+                    <div key={type}>
+                      <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 ml-1">{type}</label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-zinc-400 text-sm">$</span>
+                        <input
+                          type="number"
+                          value={tempRates[type]}
+                          onChange={(e) => setTempRates({ ...tempRates, [type]: parseFloat(e.target.value) || 0 })}
+                          className="w-full pl-8 pr-4 py-3 bg-zinc-50 border border-transparent rounded-2xl focus:bg-white focus:border-zinc-900 transition-all outline-none font-bold text-zinc-900"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={handleUpdateRates}
+                    className="w-full py-4 bg-zinc-900 text-white font-bold uppercase tracking-[0.2em] text-[10px] rounded-2xl hover:bg-black transition-all hover:-translate-y-0.5"
+                  >
+                    Verify & Apply Rates
+                  </button>
+                  <button
+                    onClick={() => setShowRateModal(false)}
+                    className="w-full py-3 text-zinc-400 font-bold uppercase tracking-[0.2em] text-[10px] hover:text-zinc-600 transition-all"
+                  >
+                    Discard Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {
+        showNewContractorModal && (
+          <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-md flex items-center justify-center z-[200] p-4 animate-in fade-in duration-300">
+            <div className="bg-white rounded-[2.5rem] w-full max-w-2xl max-h-[90vh] overflow-hidden border border-zinc-100 flex flex-col animate-in slide-in-from-bottom-8 duration-500">
+              {/* Header */}
+              <div className="p-8 border-b border-zinc-50 bg-gradient-to-br from-zinc-50 to-white relative overflow-hidden flex justify-between items-center">
+                <div className="relative z-10">
+                  <div className="px-3 py-1 bg-primary-50 text-primary-600 rounded-lg text-[9px] font-bold uppercase tracking-widest border border-primary-100/50 mb-2 inline-block">Direct Onboarding</div>
+                  <h3 className="text-3xl font-bold text-zinc-900 tracking-tight">Fast-Track Hire</h3>
+                  <p className="text-zinc-500 font-medium pb-2">Initialize immediate resource allocation for this hub.</p>
+                </div>
+                <button
+                  onClick={() => setShowNewContractorModal(false)}
+                  className="w-12 h-12 flex items-center justify-center bg-zinc-50 rounded-2xl text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-all border border-zinc-100"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+
+              <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
+                <ContractorForm onSave={handleQuickCreateContractor} onCancel={() => setShowNewContractorModal(false)} />
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {
+        showStaffModal && (
+          <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-in fade-in duration-300">
+            <div className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden border border-zinc-100 flex flex-col animate-in zoom-in-95 duration-300 max-h-[85vh]">
+              {/* Header */}
+              <div className="p-8 border-b border-zinc-50 bg-gradient-to-br from-zinc-50 to-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50"></div>
+                <div className="relative z-10">
+                  <h3 className="text-2xl font-bold text-zinc-900 tracking-tight">Workforce Orchestration</h3>
+                  <p className="text-sm text-zinc-500 font-medium">Manage deployment for {site.siteName}</p>
+                </div>
+              </div>
+
+              <div className="p-8 overflow-y-auto custom-scrollbar flex-1 space-y-8">
+                {/* CURRENT STAFF */}
+                <div className="space-y-4">
+                  <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-[0.2em] flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                    Stationed Personnel
+                  </div>
+                  <div className="space-y-3">
+                    {contractors
+                      .filter(c => site.allocatedContractors?.includes(c.id))
+                      .map(c => {
+                        const contractorSubSites = allSites.filter(s => s.isSubSite && s.parentSiteId === site.id && s.allocatedContractors?.includes(c.id));
+                        const availableSubSites = subSites.filter(ss => !contractorSubSites.some(css => css.id === ss.id));
+
+                        return (
+                          <div key={c.id} className="p-5 bg-zinc-50/50 rounded-3xl border border-zinc-100 space-y-4 transition-all hover:bg-white group/worker">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-2xl bg-zinc-900 text-white flex items-center justify-center font-bold text-xs">
+                                  {c.name[0]}
+                                </div>
+                                <div>
+                                  <div className="font-bold text-zinc-900 text-sm uppercase tracking-tight">{c.name}</div>
+                                  <div className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest mt-0.5">{c.contractorId}</div>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handleQuickRemoveStaff(c.id, site.id)}
+                                className="w-10 h-10 flex items-center justify-center bg-white text-rose-500 rounded-2xl border border-zinc-100 hover:bg-rose-500 hover:text-white hover:border-rose-500 transition-all active:scale-95"
+                                title="Revoke Assignment"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              </button>
+                            </div>
+
+                            {/* SUB-SITE MANAGEMENT */}
+                            <div className="pt-4 border-t border-zinc-100">
+                              <div className="text-[9px] font-bold text-zinc-300 uppercase tracking-widest mb-3">Allocated Hubs</div>
+                              <div className="flex flex-wrap gap-2 mb-4">
+                                {contractorSubSites.map(ss => (
+                                  <div key={ss.id} className="bg-white px-3 py-1.5 rounded-xl border border-zinc-100 text-[10px] font-bold text-zinc-600 flex items-center gap-2 group/hub">
+                                    {ss.siteName}
+                                    <button onClick={() => handleQuickRemoveStaff(c.id, ss.id)} className="text-zinc-300 hover:text-rose-500 transition-colors">
+                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
+                                  </div>
+                                ))}
+                                {contractorSubSites.length === 0 && <span className="text-[10px] text-zinc-300 font-bold italic">Hub-Locked</span>}
+                              </div>
+
+                              {availableSubSites.length > 0 && (
+                                <div className="relative">
+                                  <select
+                                    onChange={(e) => {
+                                      handleQuickAddStaff(c.id, null, e.target.value);
+                                      e.target.value = '';
+                                    }}
+                                    className="appearance-none w-full text-[9px] font-bold bg-white border border-zinc-100 rounded-xl px-4 py-2.5 outline-none focus:border-zinc-900 transition-all cursor-pointer text-zinc-500 hover:bg-zinc-50"
+                                  >
+                                    <option value="">Move to Alternate Hub...</option>
+                                    {availableSubSites.map(ss => (
+                                      <option key={ss.id} value={ss.id}>{ss.siteName}</option>
+                                    ))}
+                                  </select>
+                                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-300">
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    {contractors.filter(c => site.allocatedContractors?.includes(c.id)).length === 0 && (
+                      <div className="text-center py-10 bg-zinc-50/50 rounded-3xl border border-dashed border-zinc-200 text-zinc-300 text-[10px] font-bold">Station Empty</div>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-            <div className="flex flex-col gap-3">
-              <button onClick={handleUpdateRates} className="w-full py-4 bg-slate-900 text-white font-semibold uppercase tracking-widest rounded-2xl shadow-xl shadow-slate-200 hover:scale-[1.02] transition active:scale-95">Confirm Rates</button>
-              <button onClick={() => setShowRateModal(false)} className="w-full py-3 text-slate-400 font-semibold uppercase tracking-widest hover:text-slate-600 transition">Discard Changes</button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {showNewContractorModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-8 border border-slate-100 animate-in slide-in-from-bottom-8 duration-300 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h4 className="text-2xl font-semibold text-slate-900 uppercase tracking-tighter">Fast-Track Hire</h4>
-                <p className="text-sm text-slate-400 font-medium">Onboard a new worker directly to this site.</p>
-              </div>
-              <button onClick={() => setShowNewContractorModal(false)} className="p-2 bg-slate-50 rounded-full text-slate-400 hover:text-slate-600 transition">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            <ContractorForm onSave={handleQuickCreateContractor} onCancel={() => setShowNewContractorModal(false)} />
-          </div>
-        </div>
-      )}
-
-      {showStaffModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 border border-slate-100 animate-in zoom-in-95 duration-300 flex flex-col max-h-[85vh]">
-            <h4 className="text-xl font-semibold text-slate-900 uppercase tracking-tighter mb-1">Manage Workforce</h4>
-            <p className="text-xs text-slate-400 font-medium mb-6 italic">Assign or un-assign staff members instantly.</p>
-
-            <div className="overflow-y-auto pr-3 space-y-6 flex-1 custom-scrollbar">
-              {/* CURRENT STAFF */}
-              <div>
-                <div className="text-[10px] font-semibold text-emerald-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  Current Site Staff
-                </div>
-                <div className="space-y-2">
-                  {contractors
-                    .filter(c => site.allocatedContractors?.includes(c.id))
-                    .map(c => {
-                      const contractorSubSites = allSites.filter(s => s.isSubSite && s.parentSiteId === site.id && s.allocatedContractors?.includes(c.id));
-                      const availableSubSites = subSites.filter(ss => !contractorSubSites.some(css => css.id === ss.id));
-
-                      return (
-                        <div key={c.id} className="p-4 bg-emerald-50/30 rounded-2xl border border-emerald-100 space-y-3">
-                          <div className="flex items-center justify-between">
+                {/* AVAILABLE STAFF */}
+                <div className="space-y-4">
+                  <div className="text-[10px] font-bold text-primary-500 flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-primary-500"></div>
+                    Pending Deployment
+                  </div>
+                  <div className="space-y-2">
+                    {contractors
+                      .filter(c => c.status === 'active' && !site.allocatedContractors?.includes(c.id))
+                      .map(c => (
+                        <div key={c.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-zinc-100 hover:border-primary-100 transition-all group/avail">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-zinc-100 text-zinc-400 flex items-center justify-center font-bold text-[10px] group-hover/avail:bg-primary-50 group-hover/avail:text-primary-600 transition-colors">
+                              {c.name[0]}
+                            </div>
                             <div>
-                              <div className="font-bold text-slate-800 text-sm uppercase tracking-tight">{c.name}</div>
-                              <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest mt-0.5">ID: {c.contractorId}</div>
+                              <div className="font-bold text-zinc-900 text-sm tracking-tight">{c.name}</div>
+                              <div className="text-[9px] text-zinc-400 font-bold mt-0.5">{c.contractorId}</div>
                             </div>
-                            <button
-                              onClick={() => handleQuickRemoveStaff(c.id, site.id)}
-                              className="p-2 bg-white text-rose-500 rounded-full shadow-sm border border-rose-100 hover:bg-rose-500 hover:text-white hover:border-rose-500 transition active:scale-90"
-                              title="Remove from Primary Site"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </button>
                           </div>
-
-                          {/* SUB-SITE MANAGEMENT INSIDE MODAL */}
-                          <div className="pt-3 border-t border-emerald-100/50">
-                            <div className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-2">Allocated Sub-sites</div>
-                            <div className="flex flex-wrap gap-1.5 mb-2">
-                              {contractorSubSites.map(ss => (
-                                <div key={ss.id} className="bg-white px-2 py-1 rounded-lg border border-emerald-200 text-[10px] font-bold text-emerald-700 flex items-center gap-1.5">
-                                  {ss.siteName}
-                                  <button onClick={() => handleQuickRemoveStaff(c.id, ss.id)} className="text-rose-500 hover:text-rose-700 font-black px-1">×</button>
-                                </div>
-                              ))}
-                              {contractorSubSites.length === 0 && <span className="text-[10px] text-slate-400 italic">No sub-sites assigned</span>}
-                            </div>
-
-                            {availableSubSites.length > 0 && (
-                              <select
-                                onChange={(e) => {
-                                  handleQuickAddStaff(c.id, null, e.target.value);
-                                  e.target.value = '';
-                                }}
-                                className="w-full text-[9px] font-bold bg-white/50 border border-emerald-100 rounded-lg px-2 py-1 outline-none focus:border-emerald-400"
-                              >
-                                <option value="">+ Allocate to Sub-site...</option>
-                                {availableSubSites.map(ss => (
-                                  <option key={ss.id} value={ss.id}>{ss.siteName}</option>
-                                ))}
-                              </select>
-                            )}
-                          </div>
+                          <button
+                            onClick={() => handleQuickAddStaff(c.id)}
+                            className="w-9 h-9 flex items-center justify-center bg-zinc-50 text-zinc-400 rounded-xl hover:bg-primary-600 hover:text-white transition-all active:scale-95"
+                            title="Assign to Site"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                          </button>
                         </div>
-                      );
-                    })}
-                  {contractors.filter(c => site.allocatedContractors?.includes(c.id)).length === 0 && (
-                    <div className="text-center py-4 text-slate-300 text-xs font-medium uppercase tracking-widest">No staff assigned</div>
-                  )}
+                      ))}
+                    {contractors.filter(c => c.status === 'active' && !site.allocatedContractors?.includes(c.id)).length === 0 && (
+                      <div className="text-center py-10 bg-zinc-50/50 rounded-3xl border border-dashed border-zinc-200 text-zinc-300 text-[10px] font-bold">Workforce Exhausted</div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* AVAILABLE STAFF */}
-              <div>
-                <div className="text-[10px] font-semibold text-blue-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-                  Available for Assignment
-                </div>
-                <div className="space-y-2">
-                  {contractors
-                    .filter(c => c.status === 'active' && !site.allocatedContractors?.includes(c.id))
-                    .map(c => (
-                      <div key={c.id} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-2xl border border-transparent hover:border-blue-100 hover:bg-blue-50/30 transition group">
-                        <div>
-                          <div className="font-medium text-slate-700 text-sm uppercase tracking-tight">{c.name}</div>
-                          <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest mt-0.5">ID: {c.contractorId}</div>
-                        </div>
-                        <button
-                          onClick={() => handleQuickAddStaff(c.id)}
-                          className="p-2 bg-white text-blue-600 rounded-full shadow-sm border border-slate-100 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition active:scale-90"
-                          title="Add to site"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                        </button>
-                      </div>
-                    ))}
-                  {contractors.filter(c => c.status === 'active' && !site.allocatedContractors?.includes(c.id)).length === 0 && (
-                    <div className="text-center py-4 text-slate-300 text-xs font-medium uppercase tracking-widest">All staff assigned</div>
-                  )}
-                </div>
+              <div className="p-8 bg-zinc-50 border-t border-zinc-100">
+                <button
+                  onClick={() => setShowStaffModal(false)}
+                  className="w-full py-4 bg-zinc-900 text-white font-bold text-[11px] rounded-2xl hover:bg-black transition-all hover:-translate-y-0.5"
+                >
+                  Confirm Deployment Plan
+                </button>
               </div>
             </div>
-
-            <button onClick={() => setShowStaffModal(false)} className="mt-8 w-full py-4 bg-slate-900 text-white font-semibold uppercase tracking-widest rounded-2xl shadow-xl shadow-slate-100 hover:bg-black transition active:scale-95">Complete Allocation</button>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 };
 

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import Dropdown from './Dropdown';
 import { getSites } from '../utils/storage';
 
 const SiteForm = ({ site, onSave, onCancel }) => {
@@ -78,162 +79,182 @@ const SiteForm = ({ site, onSave, onCancel }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Site Name *
-          </label>
-          <input
-            type="text"
-            name="siteName"
-            value={formData.siteName}
-            onChange={handleChange}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Client Name
-          </label>
-          <input
-            type="text"
-            name="clientName"
-            value={formData.clientName}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Payroll Cycle *
-          </label>
-          <select
-            name="payrollCycle"
-            value={formData.payrollCycle}
-            onChange={handleChange}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="weekly">Weekly</option>
-            <option value="fortnightly">Fortnightly</option>
-            <option value="custom">Custom</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Cleaning Type *
-          </label>
-          <select
-            name="cleaningType"
-            value={formData.cleaningType}
-            onChange={handleChange}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="housekeeping">Housekeeping</option>
-            <option value="cleaning">Cleaning</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Budgeted Hours (per cycle)
-          </label>
-          <input
-            type="number"
-            name="budgetedHours"
-            value={formData.budgetedHours}
-            onChange={handleChange}
-            min="0"
-            step="0.5"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Budgeted Amount (per cycle)
-          </label>
-          <input
-            type="number"
-            name="budgetedAmount"
-            value={formData.budgetedAmount}
-            onChange={handleChange}
-            min="0"
-            step="0.01"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            name="isTrainingSite"
-            checked={formData.isTrainingSite}
-            onChange={handleChange}
-            disabled={formData.cleaningType !== 'housekeeping'}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-          />
-          <label className={`ml-2 block text-sm ${formData.cleaningType !== 'housekeeping' ? 'text-gray-400' : 'text-gray-700'}`}>
-            Training Site (Housekeeping only - enables training pay management)
-          </label>
-        </div>
-
-        <div className="md:col-span-2 p-4 bg-blue-50/50 rounded-xl border border-blue-100 flex flex-col md:flex-row gap-6">
-          <div className="flex items-center min-w-[200px]">
-            <input
-              type="checkbox"
-              name="isSubSite"
-              id="isSubSite"
-              checked={formData.isSubSite}
-              onChange={handleChange}
-              className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded-lg"
-            />
-            <label htmlFor="isSubSite" className="ml-3 block text-sm font-bold text-indigo-900 uppercase tracking-tight">
-              Mark as Sub-Site
+    <form onSubmit={handleSubmit} className="space-y-8 animate-fade-in-up font-sans">
+      <div className="bg-white p-8 rounded-2xl border border-zinc-100">
+        <h3 className="text-p1 font-bold text-zinc-900 mb-6">Site Details</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block mb-2">
+              Site Name <span className="text-primary-600">*</span>
             </label>
+            <input
+              type="text"
+              name="siteName"
+              value={formData.siteName}
+              onChange={handleChange}
+              required
+              placeholder="e.g. City Hotel"
+              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900 placeholder-zinc-400"
+            />
           </div>
 
-          {formData.isSubSite && (
-            <div className="flex-1 animate-in fade-in slide-in-from-left-2 duration-200">
-              <label className="block text-xs font-black text-indigo-400 uppercase tracking-widest mb-2">
-                Select Parent Site *
-              </label>
-              <select
-                name="parentSiteId"
-                value={formData.parentSiteId}
-                onChange={handleChange}
-                required={formData.isSubSite}
-                className="w-full px-4 py-2 bg-white border-2 border-indigo-100 rounded-xl focus:border-indigo-500 outline-none font-bold text-indigo-900 transition-all shadow-sm"
-              >
-                <option value="">-- Choose a Main Site --</option>
-                {allSites.map(s => (
-                  <option key={s.id} value={s.id}>{s.siteName}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div>
+            <label className="block mb-2">
+              Client Name
+            </label>
+            <input
+              type="text"
+              name="clientName"
+              value={formData.clientName}
+              onChange={handleChange}
+              placeholder="Client Company Name"
+              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900 placeholder-zinc-400"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2">
+              Payroll Cycle <span className="text-primary-600">*</span>
+            </label>
+            <Dropdown
+              value={formData.payrollCycle}
+              onChange={(val) => setFormData({ ...formData, payrollCycle: val })}
+              options={[
+                { value: 'weekly', label: 'Weekly Cycle' },
+                { value: 'fortnightly', label: 'Fortnightly Cycle' },
+                { value: 'custom', label: 'Custom Protocol' }
+              ]}
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2">
+              Cleaning Type <span className="text-primary-600">*</span>
+            </label>
+            <Dropdown
+              value={formData.cleaningType}
+              onChange={(val) => {
+                const e = { target: { name: 'cleaningType', value: val } };
+                handleChange(e);
+              }}
+              options={[
+                { value: 'housekeeping', label: 'Housekeeping Operations' },
+                { value: 'cleaning', label: 'Commercial Cleaning' }
+              ]}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="flex justify-end space-x-3 pt-4">
+      <div className="bg-white p-8 rounded-2xl border border-zinc-100 relative">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-zinc-50 rounded-full mix-blend-multiply filter blur-3xl -mr-32 -mt-32 pointer-events-none opacity-50 overflow-hidden rounded-2xl"></div>
+        <h3 className="text-p1 font-bold text-zinc-900 mb-6 relative z-10">Budget & Configuration</h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+          <div>
+            <label className="block mb-2">
+              Budgeted Hours (per cycle)
+            </label>
+            <div className="relative group/input">
+              <input
+                type="number"
+                name="budgetedHours"
+                value={formData.budgetedHours}
+                onChange={handleChange}
+                min="0"
+                step="0.5"
+                className="w-full pl-4 pr-12 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900"
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-xs pointer-events-none">HRS</span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block mb-2">
+              Budgeted Amount (per cycle)
+            </label>
+            <div className="relative group/input">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold group-focus-within/input:text-primary-500 transition-colors pointer-events-none">$</span>
+              <input
+                type="number"
+                name="budgetedAmount"
+                value={formData.budgetedAmount}
+                onChange={handleChange}
+                min="0"
+                step="0.01"
+                className="w-full pl-8 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 space-y-4 relative z-10">
+          <div className="flex items-center p-4 bg-zinc-50/80 border border-zinc-200 rounded-xl hover:bg-white transition-all cursor-pointer group">
+            <input
+              type="checkbox"
+              name="isTrainingSite"
+              id="isTrainingSite"
+              checked={formData.isTrainingSite}
+              onChange={handleChange}
+              disabled={formData.cleaningType !== 'housekeeping'}
+              className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-zinc-300 rounded transition-all cursor-pointer disabled:opacity-50"
+            />
+            <div className="ml-3">
+              <label htmlFor="isTrainingSite" className={`block text-p3 font-bold ${formData.cleaningType !== 'housekeeping' ? 'text-zinc-400' : 'text-zinc-800'} cursor-pointer`}>
+                Enable Training Mode
+              </label>
+              <p className="text-xs text-zinc-500">Allows management of training pay escrow (Housekeeping only)</p>
+            </div>
+          </div>
+
+          <div className={`p-5 rounded-xl border transition-all duration-300 ${formData.isSubSite ? 'bg-primary-50/40 border-primary-200' : 'bg-transparent border-transparent'}`}>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                name="isSubSite"
+                id="isSubSite"
+                checked={formData.isSubSite}
+                onChange={handleChange}
+                className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-zinc-300 rounded-lg transition-all cursor-pointer"
+              />
+              <label htmlFor="isSubSite" className="ml-3 block text-p3 font-bold text-zinc-900 cursor-pointer select-none">
+                Mark as Sub-Site (Nested Project)
+              </label>
+            </div>
+
+            {formData.isSubSite && (
+              <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300 pl-8">
+                <label className="block mb-2">
+                  Select Parent Site <span className="text-primary-600">*</span>
+                </label>
+                <Dropdown
+                  value={formData.parentSiteId}
+                  onChange={(val) => {
+                    const e = { target: { name: 'parentSiteId', value: val } };
+                    handleChange(e);
+                  }}
+                  options={allSites.map(s => ({ value: s.id, label: s.siteName }))}
+                  placeholder="-- Choose Terminal Master --"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-4 pt-4">
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition"
+          className="px-6 py-3 text-zinc-600 bg-white border border-zinc-200 rounded-xl font-semibold hover:bg-zinc-50 hover:border-zinc-300 transition"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition"
+          className="px-8 py-3 text-white bg-primary-600 rounded-xl font-semibold hover:bg-primary-700 hover:-translate-y-0.5 transition-all"
         >
-          {site ? 'Update' : 'Add'} Site
+          {site ? 'Update Changes' : 'Create Site'}
         </button>
       </div>
     </form>
