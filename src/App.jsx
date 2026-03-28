@@ -30,6 +30,7 @@ import AuditLogViewer from './components/AuditLogViewer';
 import Login from './components/Login';
 import Dropdown from './components/Dropdown';
 import ForgotPassword from './components/ForgotPassword';
+import UserManagement from './components/UserManagement';
 
 import PublicHolidayManager from './components/PublicHolidayManager';
 import InitialSetup from './components/InitialSetup';
@@ -355,7 +356,8 @@ function App() {
         onLogout={handleLogout}
         isSyncing={isSyncing}
         syncData={syncData}
-        userProfile={{ name: getStoredCredentials()?.username || 'Admin User', role: 'Administrator' }}
+        userProfile={{ name: getStoredCredentials()?.username || 'Admin User', role: (getStoredCredentials()?.username?.toLowerCase() === 'sital') ? 'Main Admin' : 'Staff Admin' }}
+        isAdmin={(getStoredCredentials()?.username?.toLowerCase() === 'sital')}
       >
         <div className="print:hidden">
           {showToast && (
@@ -761,6 +763,13 @@ function App() {
         {activeTab === 'logs' && (
           <div className="mt-6">
             <AuditLogViewer />
+          </div>
+        )}
+
+        {/* User Management Tab (Main Admin Only) */}
+        {activeTab === 'users' && getStoredCredentials()?.username?.toLowerCase() === 'sital' && (
+          <div className="mt-6">
+            <UserManagement />
           </div>
         )}
       </Layout>

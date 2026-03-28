@@ -7,7 +7,8 @@ const Layout = ({
     onLogout,
     isSyncing,
     syncData,
-    userProfile = { name: 'Admin User', role: 'Administrator' }
+    userProfile = { name: 'Admin User', role: 'Staff Admin' },
+    isAdmin = false
 }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -63,10 +64,17 @@ const Layout = ({
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
             )
         },
-
     ];
 
-    const activeNavItem = navItems.find(item => item.id === activeTab) || navItems[0];
+    const adminItems = [
+        {
+            id: 'users', label: 'User Management', icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+            )
+        },
+    ];
+
+    const activeNavItem = [...navItems, ...adminItems].find(item => item.id === activeTab) || navItems[0];
 
     return (
         <div className="flex h-screen bg-[#FBFBFB] font-sans text-zinc-900 overflow-hidden">
@@ -124,6 +132,36 @@ const Layout = ({
                                 )}
                             </button>
                         ))}
+
+                        {isAdmin && (
+                            <>
+                                <div className="text-p3 font-bold text-zinc-400 px-3 mb-3 mt-8 uppercase tracking-widest">
+                                    Management
+                                </div>
+                                {adminItems.map((item) => (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => {
+                                            setActiveTab(item.id);
+                                            setIsMobileMenuOpen(false);
+                                        }}
+                                        className={`w-full flex items-center px-3 py-2.5 text-p3 font-bold rounded-lg transition-all duration-200 group relative
+                                            ${activeTab === item.id
+                                                ? 'bg-zinc-900 text-white'
+                                                : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900'
+                                            }`}
+                                    >
+                                        <span className={`mr-3 transition-colors ${activeTab === item.id ? 'text-zinc-100' : 'text-zinc-400 group-hover:text-zinc-500'}`}>
+                                            {item.icon}
+                                        </span>
+                                        {item.label}
+                                        {activeTab === item.id && (
+                                            <span className="absolute right-2 w-1.5 h-1.5 rounded-full bg-zinc-100"></span>
+                                        )}
+                                    </button>
+                                ))}
+                            </>
+                        )}
                     </div>
 
                     {/* User Profile / Bottom Actions */}
