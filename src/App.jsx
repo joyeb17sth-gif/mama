@@ -325,8 +325,6 @@ function App() {
         onComplete={() => {
           setShowInitialSetup(false);
           setAuthenticatedState(true);
-          setContractors(getContractors());
-          setSites(getSites());
           syncData();
         }}
       />

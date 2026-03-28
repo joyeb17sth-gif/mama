@@ -64,7 +64,7 @@ const ForgotPassword = ({ onBack, onLogin }) => {
     }
 
     try {
-        await updatePassword(newPassword);
+        await updatePassword(newPassword, credentials);
         setAuthenticated(true);
         onLogin();
     } catch (err) {

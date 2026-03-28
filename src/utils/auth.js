@@ -1,5 +1,6 @@
 import { hashPassword, encryptData, decryptData } from './encryptionUtils';
-import { saveUserToCloud, getUserFromCloud } from './storage';
+import { saveUserToCloud } from './storage';
+import { supabase } from './supabaseClient';
 
 // Login attempt tracking for rate limiting
 const MAX_LOGIN_ATTEMPTS = 5;
@@ -209,11 +210,11 @@ export const getSecurityQuestion = () => {
 };
 
 // Update password
-export const updatePassword = async (newPassword) => {
+export const updatePassword = async (newPassword, passedCredentials = null) => {
   if (!newPassword || newPassword.length < 6) {
     throw new Error('Password must be at least 6 characters');
   }
-  const credentials = getStoredCredentials();
+  const credentials = passedCredentials || getStoredCredentials();
   if (!credentials) throw new Error('No credentials found');
 
   credentials.password = hashPassword(newPassword);
@@ -245,4 +246,32 @@ export const updateSecurityQA = async (question, answer) => {
   credentials.securityAnswer = answer.toLowerCase().trim();
   saveCredentials(credentials);
   await saveUserToCloud(credentials);
+};
+
+// Fetch user profile from Cloud (for forgotten passwords)
+export const getUserFromCloud = async (username) => {
+  if (!username) return null;
+  const usernameLower = username.toLowerCase().trim();
+  try {
+    const { data, error } = await supabase
+      .from('app_credentials')
+      .select('data');
+      
+    if (error) throw error;
+    if (!data || data.length === 0) return null;
+    
+    // Find the record matching the username
+    for (const row of data) {
+      if (row.data) {
+        const decrypted = decryptData(row.data);
+        if (decrypted && decrypted.username && decrypted.username.toLowerCase() === usernameLower) {
+          return decrypted;
+        }
+      }
+    }
+    return null;
+  } catch (err) {
+    console.error("Error fetching user from cloud:", err.message);
+    throw err;
+  }
 };
