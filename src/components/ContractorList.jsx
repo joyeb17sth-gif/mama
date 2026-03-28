@@ -47,6 +47,11 @@ const ContractorList = ({ contractors, onEdit, onDelete }) => {
                       <div className="text-xs text-zinc-500 font-medium">
                         {contractor.email || 'No email'}{contractor.phone ? ` • ${contractor.phone}` : ''}
                       </div>
+                      {contractor.role && (
+                        <div className="text-[10px] text-primary-600 font-bold uppercase tracking-widest mt-1">
+                          {contractor.role}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </td>

@@ -195,10 +195,10 @@ const PayRateConfiguration = () => {
                 setSelectedSite(site || null);
               }}
               options={sites.filter(s => !s.isSubSite).reduce((acc, mainSite) => {
-                acc.push({ value: mainSite.id, label: `${mainSite.siteName} (Terminal One)` });
                 const subs = sites.filter(s => s.isSubSite && s.parentSiteId === mainSite.id);
-                subs.forEach(sub => {
-                  acc.push({ value: sub.id, label: `↳ Sub-Node: ${sub.siteName}` });
+                acc.push({ value: mainSite.id, label: `${mainSite.siteName} (Terminal One)`, isParent: subs.length > 0 });
+                subs.forEach((sub, idx) => {
+                  acc.push({ value: sub.id, label: `Sub-Node: ${sub.siteName}`, isSubItem: true, isLastSubItem: idx === subs.length - 1 });
                 });
                 return acc;
               }, [])}

@@ -8,6 +8,7 @@ const ContractorForm = ({ contractor, onSave, onCancel }) => {
     phone: contractor?.phone || '',
     email: contractor?.email || '',
     contractorId: contractor?.contractorId || '',
+    role: contractor?.role || '',
     bsb: contractor?.bsb || '',
     accountNumber: contractor?.accountNumber || '',
     accountName: contractor?.accountName || '',
@@ -16,6 +17,10 @@ const ContractorForm = ({ contractor, onSave, onCancel }) => {
     referralName: contractor?.referralName || '',
     customRates: contractor?.customRates || [],
   });
+
+  const [phonePrefix, setPhonePrefix] = useState(
+    contractor?.phone?.startsWith('+61') ? '+61' : '+977'
+  );
 
   const [newRateSiteId, setNewRateSiteId] = useState('');
   const [newRates, setNewRates] = useState({ weekday: 0, saturday: 0, sunday: 0, publicHoliday: 0 });
@@ -93,22 +98,51 @@ const ContractorForm = ({ contractor, onSave, onCancel }) => {
           </div>
 
           <div>
-            <label className="block mb-2">
+            <label className="block mb-2 text-p3 font-bold text-zinc-400 uppercase tracking-widest">
               Phone Number
             </label>
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              placeholder="+977 ..."
-              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900 placeholder-zinc-400"
-            />
+            <div className="relative flex">
+              <select
+                value={phonePrefix}
+                onChange={(e) => {
+                  const newPrefix = e.target.value;
+                  setPhonePrefix(newPrefix);
+                  // Optionally update formData if there's already a number
+                  if (formData.phone) {
+                    const cleanNum = formData.phone.replace(/^\+\d+\s?/, '');
+                    setFormData({ ...formData, phone: `${newPrefix} ${cleanNum}` });
+                  }
+                }}
+                className="absolute left-0 top-0 h-full pl-4 pr-2 bg-zinc-100/50 border-r border-zinc-200 rounded-l-xl text-sm font-bold text-zinc-600 outline-none hover:bg-zinc-200 transition-colors cursor-pointer appearance-none"
+                style={{ width: '85px' }}
+              >
+                <option value="+977">NP +977</option>
+                <option value="+61">AU +61</option>
+              </select>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone.startsWith(phonePrefix) ? formData.phone.replace(phonePrefix, '').trim() : formData.phone}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, ''); // keep only digits
+                  setFormData({
+                    ...formData,
+                    phone: `${phonePrefix} ${val}`
+                  });
+                }}
+                placeholder="000000000"
+                className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900 placeholder-zinc-400"
+                style={{ paddingLeft: '95px' }}
+              />
+              <div className="absolute left-[70px] top-1/2 -translate-y-1/2 pointer-events-none">
+                <svg className="w-3 h-3 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+              </div>
+            </div>
           </div>
 
           <div>
             <label className="block mb-2">
-              Contractor ID <span className="text-primary-600">*</span>
+              Code <span className="text-primary-600">*</span>
             </label>
             <input
               type="text"
@@ -116,8 +150,22 @@ const ContractorForm = ({ contractor, onSave, onCancel }) => {
               value={formData.contractorId}
               onChange={handleChange}
               required
-              placeholder="ID-001"
+              placeholder="CODE-001"
               className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900 placeholder-zinc-400 font-mono"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block mb-2">
+              Contractor Roles
+            </label>
+            <input
+              type="text"
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              placeholder="e.g. Housekeeping, Supervisor, General Cleaner"
+              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900 placeholder-zinc-400"
             />
           </div>
         </div>
@@ -230,7 +278,7 @@ const ContractorForm = ({ contractor, onSave, onCancel }) => {
         <p className="text-p3 text-zinc-500 font-medium mb-6 relative z-10">Set specific rates for this contractor that override site defaults.</p>
 
         {/* Add Entry Card */}
-        <div className="bg-zinc-50/50 p-6 rounded-2xl border border-zinc-200 mb-6 relative z-10">
+        <div className="bg-zinc-50/50 p-6 rounded-2xl border border-zinc-200 mb-6 relative z-50">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5 items-end">
             <div className="lg:col-span-1">
               <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Select Site</label>
@@ -241,19 +289,23 @@ const ContractorForm = ({ contractor, onSave, onCancel }) => {
                   .filter(s => !s.isSubSite)
                   .reduce((acc, mainSite) => {
                     const isMainAdded = formData.customRates.some(r => r.siteId === mainSite.id);
+                    const subs = availableSites.filter(s => s.isSubSite && s.parentSiteId === mainSite.id);
+
                     acc.push({
                       value: mainSite.id,
                       label: `${mainSite.siteName} ${isMainAdded ? '(Active)' : ''}`,
-                      disabled: isMainAdded
+                      disabled: isMainAdded,
+                      isParent: subs.length > 0
                     });
 
-                    const subs = availableSites.filter(s => s.isSubSite && s.parentSiteId === mainSite.id);
-                    subs.forEach(sub => {
+                    subs.forEach((sub, idx) => {
                       const isSubAdded = formData.customRates.some(r => r.siteId === sub.id);
                       acc.push({
                         value: sub.id,
-                        label: `↳ ${sub.siteName} ${isSubAdded ? '(Active)' : ''}`,
-                        disabled: isSubAdded
+                        label: `${sub.siteName} ${isSubAdded ? '(Active)' : ''}`,
+                        disabled: isSubAdded,
+                        isSubItem: true,
+                        isLastSubItem: idx === subs.length - 1
                       });
                     });
                     return acc;

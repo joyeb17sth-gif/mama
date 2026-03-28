@@ -89,10 +89,10 @@ const Layout = ({
                     <div className="flex items-center mx-6 h-20">
                         <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center text-white font-bold">
-                                P
+                                S
                             </div>
                             <h1 className="text-p1 font-bold tracking-tight text-zinc-900">
-                                Payscleep
+                                SitalPayslip
                             </h1>
                         </div>
                     </div>

@@ -6,7 +6,7 @@ const getSecretKey = () => {
     if (!envKey && import.meta.env.PROD) {
         console.error('CRITICAL: VITE_ENCRYPTION_KEY is not set in production!');
     }
-    return envKey || 'payscleep-dev-key-not-for-production';
+    return envKey || 'sitalpayslip-dev-key-not-for-production';
 };
 
 const SECRET_KEY = getSecretKey();

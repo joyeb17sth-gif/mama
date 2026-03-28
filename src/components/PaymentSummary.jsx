@@ -497,7 +497,7 @@ const PaymentSummary = () => {
     return (
       <Payslip
         payment={selectedPayslip}
-        period={selectedPeriod}
+        period={categorizedPeriods.find(p => p.value === selectedPeriod)?.label || selectedPeriod}
         contractor={contractors.find(c => c.id === selectedPayslip.contractorId)}
         onBack={() => setSelectedPayslip(null)}
       />

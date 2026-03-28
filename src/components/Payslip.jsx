@@ -34,14 +34,7 @@ const Payslip = ({ payment, period, contractor, onBack }) => {
         html2pdf().set(opt).from(element).save();
     };
 
-    const periodLabel = (() => {
-        try {
-            const sDate = parseISO(period);
-            return format(sDate, 'MMMM yyyy');
-        } catch (e) {
-            return period;
-        }
-    })();
+    const periodLabel = period; // Expecting the exact string from PaymentSummary
 
     return (
         <div className="bg-zinc-50 min-h-screen p-8 pt-24 print:p-0 print:bg-white">
@@ -89,7 +82,7 @@ const Payslip = ({ payment, period, contractor, onBack }) => {
                         <div className="text-sm font-bold text-zinc-500 uppercase tracking-widest">{periodLabel}</div>
                     </div>
                     <div className="text-right">
-                        <div className="text-lg font-bold text-zinc-900">Payscleep Management</div>
+                        <div className="text-lg font-bold text-zinc-900">SitalPayslip</div>
                         <div className="text-xs text-zinc-500 font-medium mt-1">
                             Infrastructure Services<br />
                             ABN: 12 345 678 901
@@ -109,6 +102,10 @@ const Payslip = ({ payment, period, contractor, onBack }) => {
                             <div className="grid grid-cols-3">
                                 <span className="text-xs font-bold text-zinc-500 uppercase text-left">ID</span>
                                 <span className="col-span-2 text-sm font-bold text-zinc-900">{contractor.contractorId}</span>
+                            </div>
+                            <div className="grid grid-cols-3">
+                                <span className="text-xs font-bold text-zinc-500 uppercase text-left">Role</span>
+                                <span className="col-span-2 text-sm font-bold text-zinc-900">{contractor.role || 'Contractor'}</span>
                             </div>
                             <div className="grid grid-cols-3">
                                 <span className="text-xs font-bold text-zinc-500 uppercase text-left">Email</span>
@@ -214,8 +211,8 @@ const Payslip = ({ payment, period, contractor, onBack }) => {
                 {/* Footer */}
                 <div className="border-t border-zinc-200 pt-8 text-center">
                     <p className="text-xs text-zinc-400 max-w-lg mx-auto leading-relaxed">
-                        Payment authorized by Payscleep Management. Funds should appear in your nominated account within 1-2 business days.
-                        Questions? Contact support@payscleep.com
+                        Payment authorized by SitalPayslip. Funds should appear in your nominated account within 1-2 business days.
+                        Questions? Contact support@sitalpayslip.com
                     </p>
                 </div>
             </div>

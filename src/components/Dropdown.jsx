@@ -69,27 +69,39 @@ const Dropdown = ({
                 <div className={listClasses}>
                     <div className="max-h-64 overflow-y-auto custom-scrollbar">
                         {options.length > 0 ? (
-                            options.map((option) => (
+                            options.map((option) => {
+                                const isSelected = value === option.value && showSelected;
+                                return (
                                 <button
                                     key={option.value}
                                     type="button"
+                                    disabled={option.disabled}
                                     onClick={() => {
-                                        onChange(option.value);
-                                        setIsOpen(false);
+                                        if(!option.disabled) {
+                                            onChange(option.value);
+                                            setIsOpen(false);
+                                        }
                                     }}
-                                    className={`w-full text-left px-5 py-3 text-sm font-bold transition-all flex items-center justify-between whitespace-nowrap ${value === option.value && showSelected
-                                        ? 'bg-zinc-900 text-white'
-                                        : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
-                                        } ${variant === 'compact' ? 'text-[11px] px-4 py-2' : ''}`}
+                                    className={`w-full text-left py-3 transition-all flex items-center justify-between whitespace-nowrap relative
+                                        ${option.disabled ? 'opacity-50 cursor-not-allowed bg-zinc-50' : isSelected ? 'bg-zinc-900 text-white' : 'text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900'} 
+                                        ${variant === 'compact' ? 'text-[11px] py-2' : 'text-sm'} 
+                                        ${option.isSubItem ? `pl-[2.75rem] pr-5 font-semibold ${isSelected ? '' : 'text-zinc-600'}` : 'px-5 font-bold'} 
+                                        ${option.isParent ? 'bg-zinc-50/80 border-t border-zinc-100' : ''}`}
                                 >
-                                    <span>{option.label}</span>
-                                    {value === option.value && showSelected && (
-                                        <svg className="w-4 h-4 text-white ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    {option.isSubItem && (
+                                        <div className={`absolute left-[1.25rem] top-0 w-[2px] ${isSelected ? 'bg-zinc-700' : 'bg-zinc-200'} ${option.isLastSubItem ? 'bottom-1/2' : 'bottom-0'}`}></div>
+                                    )}
+                                    {option.isSubItem && (
+                                        <div className={`absolute left-[1.25rem] top-1/2 w-4 h-[2px] ${isSelected ? 'bg-zinc-700' : 'bg-zinc-200'} rounded-r-full`}></div>
+                                    )}
+                                    <span className="relative z-10 truncate">{option.label}</span>
+                                    {isSelected && (
+                                        <svg className={`w-4 h-4 ml-2 shrink-0 ${isSelected ? 'text-white' : 'text-zinc-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
                                         </svg>
                                     )}
                                 </button>
-                            ))
+                            )})
                         ) : (
                             <div className="px-6 py-8 text-center text-zinc-400 italic font-bold">
                                 No items available

@@ -286,16 +286,19 @@ const SiteAllocation = () => {
                                       .filter(s => !s.isSubSite)
                                       .reduce((acc, mainSite) => {
                                         const isMainAllocated = contractorSites.some(cs => cs.siteId === mainSite.id);
-                                        if (!isMainAllocated) {
-                                          acc.push({ value: mainSite.id, label: mainSite.siteName });
+                                        const subSites = sites.filter(s => s.isSubSite && s.parentSiteId === mainSite.id);
+                                        const validSubSites = subSites.filter(sub => !contractorSites.some(cs => cs.siteId === sub.id));
+                                        
+                                        if (!isMainAllocated || validSubSites.length > 0) {
+                                          if (!isMainAllocated) {
+                                            acc.push({ value: mainSite.id, label: mainSite.siteName, isParent: validSubSites.length > 0 });
+                                          } else {
+                                            acc.push({ value: mainSite.id, label: mainSite.siteName, disabled: true, isParent: validSubSites.length > 0 });
+                                          }
                                         }
 
-                                        const subSites = sites.filter(s => s.isSubSite && s.parentSiteId === mainSite.id);
-                                        subSites.forEach(sub => {
-                                          const isSubAllocated = contractorSites.some(cs => cs.siteId === sub.id);
-                                          if (!isSubAllocated) {
-                                            acc.push({ value: sub.id, label: `↳ ${sub.siteName}` });
-                                          }
+                                        validSubSites.forEach((sub, idx) => {
+                                          acc.push({ value: sub.id, label: sub.siteName, isSubItem: true, isLastSubItem: idx === validSubSites.length - 1 });
                                         });
 
                                         return acc;
@@ -378,10 +381,10 @@ const SiteAllocation = () => {
                 setSelectedSite(site || null);
               }}
               options={sites.filter(s => !s.isSubSite).reduce((acc, mainSite) => {
-                acc.push({ value: mainSite.id, label: `${mainSite.siteName} (Terminal Master)` });
                 const subs = sites.filter(s => s.isSubSite && s.parentSiteId === mainSite.id);
-                subs.forEach(sub => {
-                  acc.push({ value: sub.id, label: `↳ ${sub.siteName}` });
+                acc.push({ value: mainSite.id, label: `${mainSite.siteName} (Terminal Master)`, isParent: subs.length > 0 });
+                subs.forEach((sub, idx) => {
+                  acc.push({ value: sub.id, label: sub.siteName, isSubItem: true, isLastSubItem: idx === subs.length - 1 });
                 });
                 return acc;
               }, [])}
