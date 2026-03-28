@@ -356,8 +356,8 @@ function App() {
         onLogout={handleLogout}
         isSyncing={isSyncing}
         syncData={syncData}
-        userProfile={{ name: getStoredCredentials()?.username || 'Admin User', role: (getStoredCredentials()?.username?.toLowerCase() === 'sital') ? 'Main Admin' : 'Staff Admin' }}
-        isAdmin={(getStoredCredentials()?.username?.toLowerCase() === 'sital')}
+        userProfile={{ name: getStoredCredentials()?.username || 'Admin User', role: (getStoredCredentials()?.username?.toLowerCase() === 'joyeb') ? 'Main Admin' : 'Staff Admin' }}
+        isAdmin={(getStoredCredentials()?.username?.toLowerCase() === 'joyeb')}
       >
         <div className="print:hidden">
           {showToast && (
@@ -767,7 +767,7 @@ function App() {
         )}
 
         {/* User Management Tab (Main Admin Only) */}
-        {activeTab === 'users' && getStoredCredentials()?.username?.toLowerCase() === 'sital' && (
+        {activeTab === 'users' && getStoredCredentials()?.username?.toLowerCase() === 'joyeb' && (
           <div className="mt-6">
             <UserManagement />
           </div>
