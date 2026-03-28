@@ -12,7 +12,7 @@ import {
   logAction
 } from './utils/storage';
 import { encryptData } from './utils/encryptionUtils';
-import { isAuthenticated, setAuthenticated, isFirstRun } from './utils/auth';
+import { isAuthenticated, setAuthenticated, isFirstRun, getStoredCredentials } from './utils/auth';
 
 // Components
 import Dashboard from './components/Dashboard';
@@ -117,8 +117,13 @@ function App() {
       setContractors(getContractors());
       setSites(getSites());
       syncData();
+      
+      const interval = setInterval(() => {
+          syncData();
+      }, 30000);
+      return () => clearInterval(interval);
     }
-  }, []);
+  }, [authenticated]);
 
   // Contractor handlers
   const handleAddContractor = () => {
@@ -350,7 +355,7 @@ function App() {
         onLogout={handleLogout}
         isSyncing={isSyncing}
         syncData={syncData}
-        userProfile={{ name: 'Admin User', role: 'Administrator' }}
+        userProfile={{ name: getStoredCredentials()?.username || 'Admin User', role: 'Administrator' }}
       >
         <div className="print:hidden">
           {showToast && (
