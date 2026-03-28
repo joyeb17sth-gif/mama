@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getStoredCredentials, getSecurityQuestion, verifySecurityAnswer, updatePassword, setAuthenticated } from '../utils/auth';
+import { getStoredCredentials, verifySecurityAnswer, updatePassword, setAuthenticated, getUserFromCloud } from '../utils/auth';
 
 const ForgotPassword = ({ onBack, onLogin }) => {
   const [step, setStep] = useState(1); // 1: username, 2: security question, 3: new password
@@ -10,16 +10,30 @@ const ForgotPassword = ({ onBack, onLogin }) => {
   const [error, setError] = useState('');
   const [credentials, setCredentials] = useState(null);
 
-  const handleUsernameSubmit = (e) => {
+  const handleUsernameSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const creds = getStoredCredentials();
+    
+    // 1. Try local cache first
+    let creds = getStoredCredentials();
 
-    if (username === creds.username) {
+    if (creds && username.toLowerCase() === creds.username.toLowerCase()) {
       setCredentials(creds);
       setStep(2);
-    } else {
-      setError('Username not found');
+      return;
+    }
+
+    // 2. If not in local or different user, fetch from Cloud
+    try {
+        const cloudCreds = await getUserFromCloud(username.trim());
+        if (cloudCreds) {
+            setCredentials(cloudCreds);
+            setStep(2);
+        } else {
+            setError('Username not found');
+        }
+    } catch (err) {
+        setError('Connection error. Please try again.');
     }
   };
 
@@ -27,7 +41,7 @@ const ForgotPassword = ({ onBack, onLogin }) => {
     e.preventDefault();
     setError('');
 
-    if (verifySecurityAnswer(securityAnswer)) {
+    if (securityAnswer.toLowerCase().trim() === credentials.securityAnswer.toLowerCase().trim()) {
       setStep(3);
     } else {
       setError('Incorrect answer. Please try again.');
@@ -35,7 +49,7 @@ const ForgotPassword = ({ onBack, onLogin }) => {
     }
   };
 
-  const handlePasswordReset = (e) => {
+  const handlePasswordReset = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -49,9 +63,13 @@ const ForgotPassword = ({ onBack, onLogin }) => {
       return;
     }
 
-    updatePassword(newPassword);
-    setAuthenticated(true);
-    onLogin();
+    try {
+        await updatePassword(newPassword);
+        setAuthenticated(true);
+        onLogin();
+    } catch (err) {
+        setError("Database update failed. Please check internet.");
+    }
   };
 
   return (
