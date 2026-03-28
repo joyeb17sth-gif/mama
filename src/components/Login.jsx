@@ -61,10 +61,6 @@ const Login = ({ onLogin }) => {
 
     try {
       // LOGIN FLOW
-      if (isLoginMode) {
-        // Simulate a small delay for better UX
-        await new Promise(resolve => setTimeout(resolve, 300));
-
         const result = await loginUser(username, password);
 
         if (result.success) {
@@ -79,21 +75,7 @@ const Login = ({ onLogin }) => {
           setError((result.error || 'Login failed') + attemptsMsg);
           setPassword('');
         }
-      }
-      // SIGNUP FLOW
-      else {
-        if (password !== confirmPassword) {
-          throw new Error("Passwords do not match");
-        }
 
-        const success = await registerUser(username, password, securityQuestion, securityAnswer);
-        if (success) {
-          setSuccessMsg("Account created successfully! Logging you in...");
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          setAuthenticated(true);
-          onLogin(); // Pass 'signup' if specific logic needed
-        }
-      }
     } catch (err) {
       setError(err.message || "An unexpected error occurred");
     } finally {
@@ -177,84 +159,26 @@ const Login = ({ onLogin }) => {
           </div>
 
           {/* Signup Extra Fields */}
-          {!isLoginMode && (
-            <div className="space-y-4 animate-fadeIn">
-              <div>
-                <label className="block text-p3 font-bold text-gray-400 mb-2">
-                  Confirm Password
-                </label>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0 outline-none transition font-medium"
-                  placeholder="Confirm password"
-                />
-              </div>
 
-              <div className="pt-2 border-t border-gray-100">
-                <p className="text-xs text-gray-400 mb-3">Security Question (for recovery)</p>
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    value={securityQuestion}
-                    onChange={(e) => setSecurityQuestion(e.target.value)}
-                    required
-                    disabled={loading}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0 outline-none transition font-medium text-sm"
-                    placeholder="Question (e.g. Pet's name?)"
-                  />
-                  <input
-                    type="text"
-                    value={securityAnswer}
-                    onChange={(e) => setSecurityAnswer(e.target.value)}
-                    required
-                    disabled={loading}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0 outline-none transition font-medium text-sm"
-                    placeholder="Answer"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Submit Button */}
           <button
             type="submit"
             disabled={loading || isLocked}
-            className={`w-full text-white py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition font-bold uppercase tracking-wider text-sm mt-4 
-            ${isLoginMode ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700' : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700'}`}
+            className={`w-full text-white py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition font-bold uppercase tracking-wider text-sm mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700`}
           >
-            {loading ? (isLoginMode ? 'Logging in...' : 'Creating Account...') : isLocked ? `Locked (${lockoutSeconds}s)` : (isLoginMode ? 'Login' : 'Create Account')}
+            {loading ? 'Logging in...' : isLocked ? `Locked (${lockoutSeconds}s)` : 'Login'}
           </button>
         </form>
 
         <div className="mt-6 flex flex-col gap-3 text-center">
-          {/* Toggle Login/Signup */}
-          <div className="text-p3 text-gray-600">
-            {isLoginMode ? "Don't have an account? " : "Already have an account? "}
-            <button
-              onClick={toggleMode}
-              disabled={loading || isLocked}
-              className="font-bold text-blue-600 hover:text-blue-800 hover:underline disabled:text-gray-400"
-            >
-              {isLoginMode ? 'Sign Up' : 'Login'}
-            </button>
-          </div>
-
-          {/* Forgot Password */}
-          {isLoginMode && (
-            <button
-              onClick={() => onLogin('forgot')}
-              disabled={isLocked || loading}
-              className="text-sm text-gray-500 hover:text-gray-700 hover:underline disabled:opacity-50"
-            >
-              Forgot Password?
-            </button>
-          )}
+          <button
+            onClick={() => onLogin('forgot')}
+            disabled={isLocked || loading}
+            className="text-sm text-gray-500 hover:text-gray-700 hover:underline disabled:opacity-50"
+          >
+            Forgot Password?
+          </button>
         </div>
       </div>
     </div>
