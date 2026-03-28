@@ -12,7 +12,7 @@ import {
   logAction
 } from './utils/storage';
 import { encryptData } from './utils/encryptionUtils';
-import { isAuthenticated, setAuthenticated, isFirstRun, getStoredCredentials } from './utils/auth';
+import { isAuthenticated, setAuthenticated, getStoredCredentials } from './utils/auth';
 
 // Components
 import Dashboard from './components/Dashboard';
@@ -42,7 +42,6 @@ import Layout from './components/Layout';
 function App() {
   const [authenticated, setAuthenticatedState] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [showInitialSetup, setShowInitialSetup] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState(null);
@@ -106,12 +105,6 @@ function App() {
   };
 
   useEffect(() => {
-    // Check if first run (no credentials set up yet)
-    if (isFirstRun()) {
-      setShowInitialSetup(true);
-      return;
-    }
-
     const authStatus = isAuthenticated();
     setAuthenticatedState(authStatus);
     if (authStatus) {
@@ -316,20 +309,7 @@ function App() {
     }
   };
 
-  // Show initial setup if first run
-  if (showInitialSetup) {
-    return (
-      <InitialSetup
-        onComplete={() => {
-          setShowInitialSetup(false);
-          setAuthenticatedState(true);
-          setContractors(getContractors());
-          setSites(getSites());
-          syncData();
-        }}
-      />
-    );
-  }
+
 
   // Show login if not authenticated
   if (!authenticated) {
