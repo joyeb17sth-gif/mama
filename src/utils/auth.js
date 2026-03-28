@@ -275,3 +275,90 @@ export const getUserFromCloud = async (username) => {
     throw err;
   }
 };
+
+// Admin: Fetch all users
+export const getAllUsers = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('app_credentials')
+      .select('id, data');
+      
+    if (error) throw error;
+    if (!data) return [];
+    
+    // Decrypt all
+    return data.map(row => {
+        if (!row.data) return null;
+        try {
+            const dec = decryptData(row.data);
+            return {
+                dbId: row.id, // Keep reference to Supabase ID for deletion
+                username: dec?.username || 'Unknown',
+                role: dec?.role || 'user',
+                lastUpdate: dec?.timestamp || null,
+                _raw: dec // Store entire decrypted object if we need it
+            };
+        } catch {
+            return null;
+        }
+    }).filter(Boolean);
+  } catch (err) {
+    console.error("Error fetching all users:", err.message);
+    throw err;
+  }
+};
+
+// Admin: forceful password reset by Admin
+export const adminResetPassword = async (targetUsername, newPassword) => {
+    if (!newPassword || newPassword.length < 6) {
+        throw new Error('Password must be at least 6 characters');
+    }
+    
+    // First we must find the user's actual record in DB
+    const { data, error } = await supabase.from('app_credentials').select('id, data');
+    if (error) throw error;
+    
+    let targetRow = null;
+    let decryptedTarget = null;
+    
+    for (const row of (data || [])) {
+        if (row.data) {
+            try {
+                const dec = decryptData(row.data);
+                if (dec && dec.username && dec.username.toLowerCase() === targetUsername.toLowerCase()) {
+                    targetRow = row;
+                    decryptedTarget = dec;
+                    break;
+                }
+            } catch {
+                 // skip parse errors
+            }
+        }
+    }
+    
+    if (!targetRow) throw new Error(`User "${targetUsername}" not found.`);
+    
+    // Modify their password
+    decryptedTarget.password = hashPassword(newPassword);
+    
+    // Re-encrypt and save that specific row
+    const encryptedData = encryptData(decryptedTarget);
+    const { error: updateErr } = await supabase
+        .from('app_credentials')
+        .update({ data: encryptedData })
+        .eq('id', targetRow.id);
+        
+    if (updateErr) throw updateErr;
+};
+
+// Admin: delete user completely
+export const deleteUser = async (targetDbId) => {
+    if (!targetDbId) throw new Error("Invalid User ID");
+    
+    const { error } = await supabase
+        .from('app_credentials')
+        .delete()
+        .eq('id', targetDbId);
+        
+    if (error) throw error;
+};

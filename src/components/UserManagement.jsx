@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { registerUser } from '../utils/auth';
+import React, { useState, useEffect } from 'react';
+import { registerUser, getAllUsers, deleteUser, adminResetPassword, getStoredCredentials } from '../utils/auth';
 
 const UserManagement = () => {
     const [formData, setFormData] = useState({
@@ -12,6 +12,28 @@ const UserManagement = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
+    
+    // User List state
+    const [users, setUsers] = useState([]);
+    const [loadingUsers, setLoadingUsers] = useState(true);
+    const [currentUser, setCurrentUser] = useState(null);
+
+    const loadUsers = async () => {
+        setLoadingUsers(true);
+        try {
+            const fetched = await getAllUsers();
+            setUsers(fetched);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoadingUsers(false);
+        }
+    };
+
+    useEffect(() => {
+        setCurrentUser(getStoredCredentials());
+        loadUsers();
+    }, []);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -46,6 +68,7 @@ const UserManagement = () => {
                 securityQuestion: '',
                 securityAnswer: '',
             });
+            loadUsers(); // Refresh the list after creation
         } catch (err) {
             setError(err.message);
         } finally {
@@ -155,15 +178,86 @@ const UserManagement = () => {
                     </div>
                 </form>
             </div>
-            <div className="p-6 bg-blue-50/50 border border-blue-100 rounded-2xl">
-                <div className="flex gap-4">
-                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-blue-600 shadow-sm">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-blue-900 text-sm italic">Main Admin Privilege</h3>
-                        <p className="text-blue-700/80 text-xs mt-1 leading-relaxed italic">As the Main Admin, only you can access this section to create or manage secondary user accounts. Secondary users will have the same data visibility but cannot create other users.</p>
-                    </div>
+
+            {/* List of Invited Users */}
+            <div className="bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden">
+                <div className="p-8 border-b border-zinc-100 bg-zinc-50/50">
+                    <h2 className="text-xl font-bold text-zinc-900">Manage Team Members</h2>
+                    <p className="text-zinc-500 text-sm mt-1">View, reset passwords, or remove access for existing users.</p>
+                </div>
+                
+                <div className="p-0">
+                    {loadingUsers ? (
+                        <div className="p-8 text-center text-zinc-500 text-sm">Loading users...</div>
+                    ) : users.length === 0 ? (
+                        <div className="p-8 text-center text-zinc-500 text-sm">No secondary users found.</div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-zinc-50 text-zinc-400 text-xs uppercase tracking-widest border-b border-zinc-100">
+                                        <th className="p-4 font-bold">Username</th>
+                                        <th className="p-4 font-bold">Role</th>
+                                        <th className="p-4 font-bold text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-100">
+                                    {users.map((user) => (
+                                        <tr key={user.dbId} className="hover:bg-zinc-50/50 transition-colors">
+                                            <td className="p-4 font-medium text-zinc-900">{user.username}</td>
+                                            <td className="p-4">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'admin' && user.username === 'Joyeb' ? 'bg-indigo-100 text-indigo-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                                                    {user.username === 'Joyeb' ? 'Master Admin' : 'Staff Admin'}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 flex items-center justify-end gap-3">
+                                                {user.username !== 'Joyeb' ? (
+                                                    <>
+                                                        <button 
+                                                            onClick={async () => {
+                                                                const newPass = prompt(`Enter new password for ${user.username} (min 6 chars):`);
+                                                                if (!newPass) return;
+                                                                if (newPass.length < 6) return alert("Password must be at least 6 characters.");
+                                                                
+                                                                if (window.confirm(`Are you sure you want to forcefully reset the password for ${user.username}?`)) {
+                                                                    try {
+                                                                        await adminResetPassword(user.username, newPass);
+                                                                        alert(`Password for ${user.username} has been reset.`);
+                                                                    } catch (e) {
+                                                                        alert("Error: " + e.message);
+                                                                    }
+                                                                }
+                                                            }}
+                                                            className="text-xs font-bold text-blue-600 hover:text-blue-800 uppercase tracking-widest"
+                                                        >
+                                                            Reset Password
+                                                        </button>
+                                                        <button 
+                                                            onClick={async () => {
+                                                                if (window.confirm(`CRITICAL: Are you sure you want to permenantly delete the account for ${user.username}? They will immediately lose all access.`)) {
+                                                                    try {
+                                                                        await deleteUser(user.dbId);
+                                                                        loadUsers();
+                                                                    } catch (e) {
+                                                                        alert("Error deleting user: " + e.message);
+                                                                    }
+                                                                }
+                                                            }}
+                                                            className="text-xs font-bold text-rose-600 hover:text-rose-800 uppercase tracking-widest"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <span className="text-xs italic text-zinc-400">Restricted</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
