@@ -10,6 +10,7 @@ const getSecretKey = () => {
 };
 
 const SECRET_KEY = getSecretKey();
+const LEGACY_SECRET_KEY = 'payscleep-dev-key-not-for-production';
 
 export const encryptData = (data) => {
     try {
@@ -27,11 +28,17 @@ export const decryptData = (ciphertext) => {
         const decryptedData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
         return decryptedData;
     } catch (e) {
-        // Fallback: mostly for migration if data was previously unencrypted
+        // Fallback for migration (trying legacy decryption key or unencrypted JSON)
         try {
-            return JSON.parse(ciphertext);
+            const legacyBytes = CryptoJS.AES.decrypt(ciphertext, LEGACY_SECRET_KEY);
+            const legacyDecrypted = JSON.parse(legacyBytes.toString(CryptoJS.enc.Utf8));
+            return legacyDecrypted;
         } catch (e2) {
-            return null;
+            try {
+                return JSON.parse(ciphertext);
+            } catch (e3) {
+                return null;
+            }
         }
     }
 };
