@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { loginUser, registerUser, setAuthenticated, isAccountLocked, getLockoutRemainingSeconds } from '../utils/auth';
-import { supabase } from '../utils/supabaseClient';
 
 const Login = ({ onLogin }) => {
   const [isLoginMode, setIsLoginMode] = useState(true);
@@ -179,39 +178,6 @@ const Login = ({ onLogin }) => {
             className="text-sm text-gray-500 hover:text-gray-700 hover:underline disabled:opacity-50"
           >
             Forgot Password?
-          </button>
-          
-          <button
-            onClick={async () => {
-              if (window.confirm('WARNING: This will delete ALL users and create ONLY Joyeb with password joyeb1234@. Proceed?')) {
-                setLoading(true);
-                try {
-                  // 1. Fetch all existing users
-                  const { data: users, error: fetchErr } = await supabase.from('app_credentials').select('id');
-                  if (fetchErr) throw fetchErr;
-                  
-                  // 2. Delete all existing users
-                  if (users && users.length > 0) {
-                      const ids = users.map(u => u.id);
-                      for(let i=0; i<ids.length; i++) {
-                          await supabase.from('app_credentials').delete().eq('id', ids[i]);
-                      }
-                  }
-
-                  // 3. Register Joyeb
-                  await registerUser('Joyeb', 'joyeb1234@', 'Color', 'Blue');
-                  
-                  alert('System successfully reset! You can now log in as Joyeb with password joyeb1234@');
-                } catch (err) {
-                  alert('Reset failed: ' + err.message);
-                } finally {
-                  setLoading(false);
-                }
-              }
-            }}
-            className="text-xs text-rose-500 hover:text-rose-700 mt-8 opacity-20 hover:opacity-100 transition-opacity"
-          >
-            Developer Reset System
           </button>
         </div>
       </div>
