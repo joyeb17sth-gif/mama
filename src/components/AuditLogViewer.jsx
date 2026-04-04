@@ -110,7 +110,7 @@ const AuditLogViewer = () => {
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredLogs.reverse().map(log => (
+                        {[...filteredLogs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).map(log => (
                             <tr key={log.id} className="hover:bg-gray-50">
                                 <td className="px-6 py-4 whitespace-nowrap text-p3 text-gray-500">
                                     {new Date(log.timestamp).toLocaleString()}

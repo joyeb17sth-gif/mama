@@ -159,12 +159,27 @@ export const getPaymentSummaries = () => {
   return ((stored ? decryptData(stored) : null) || []).filter(Boolean);
 };
 
-export const logAction = (action, details, user = 'Admin') => {
+export const logAction = (action, details, user = null) => {
+  let finalUser = user;
+  if (!finalUser || finalUser === 'Admin') {
+    try {
+      const stored = localStorage.getItem('appCredentials');
+      if (stored) {
+        const dec = decryptData(stored);
+        finalUser = (dec && dec.username) ? dec.username : 'Unknown User';
+      } else {
+        finalUser = 'System';
+      }
+    } catch(e) {
+      finalUser = 'System';
+    }
+  }
+
   const logs = getAuditLogs();
   const newLog = {
     id: Date.now().toString(),
     timestamp: new Date().toISOString(),
-    user,
+    user: finalUser,
     action,
     details
   };
