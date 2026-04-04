@@ -275,7 +275,7 @@ const ContractorForm = ({ contractor, onSave, onCancel }) => {
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary-50/50 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none rounded-2xl"></div>
 
         <h3 className="text-p1 text-zinc-900 mb-2 relative z-10 font-bold">Custom Pay Rates</h3>
-        <p className="text-p3 text-zinc-500 font-medium mb-6 relative z-10">Set specific rates for this contractor that override site defaults.</p>
+        <p className="text-p3 text-zinc-500 font-medium mb-6 relative z-10">Set specific rates for this contractor per site. Rates must be configured here for pay to be calculated.</p>
 
         {/* Add Entry Card */}
         <div className="bg-zinc-50/50 p-6 rounded-2xl border border-zinc-200 mb-6 relative z-50">
@@ -379,8 +379,8 @@ const ContractorForm = ({ contractor, onSave, onCancel }) => {
           {formData.customRates.length === 0 && (
             <div className="text-center py-12 border border-dashed border-zinc-200 rounded-2xl bg-zinc-50/30">
               <div className="mb-2 text-4xl opacity-20">🏷️</div>
-              <div className="text-zinc-500 font-medium text-sm">No specific rate overrides configured</div>
-              <div className="text-zinc-400 text-xs mt-1">Default site rates will be applied automatically</div>
+              <div className="text-zinc-500 font-medium text-sm">No pay rates configured for this contractor</div>
+              <div className="text-zinc-400 text-xs mt-1">Add rates per site to enable pay calculation</div>
             </div>
           )}
         </div>

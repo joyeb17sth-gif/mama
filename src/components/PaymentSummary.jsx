@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import { getDayType } from '../utils/dateUtils';
-import { getTimesheets, getContractors, getPayRates, getPaymentSummaries, savePaymentSummaries, getTrainingReleases, saveTimesheets, logAction, getPublicHolidays } from '../utils/storage';
+import { getTimesheets, getContractors, getPaymentSummaries, savePaymentSummaries, getTrainingReleases, saveTimesheets, logAction, getPublicHolidays } from '../utils/storage';
 import { consolidateContractorPay } from '../utils/payrollCalculations';
 import { exportPaymentSummaryToCSV } from '../utils/exportUtils';
 import Payslip from './Payslip';
@@ -13,7 +13,7 @@ import Dropdown from './Dropdown';
 const PaymentSummary = () => {
   const [timesheets, setTimesheets] = useState([]);
   const [contractors, setContractors] = useState([]);
-  const [payRates, setPayRates] = useState([]);
+
   const [summary, setSummary] = useState([]);
   const [selectedPeriod, setSelectedPeriod] = useState('');
   const [selectedPayslip, setSelectedPayslip] = useState(null);
@@ -145,7 +145,6 @@ const PaymentSummary = () => {
   const refreshData = () => {
     setTimesheets(getTimesheets());
     setContractors(getContractors());
-    setPayRates(getPayRates());
     setPublicHolidays(getPublicHolidays());
   };
 
@@ -198,8 +197,8 @@ const PaymentSummary = () => {
       const contractorTimesheets = periodTimesheets
         .flatMap(ts => ts.entries.map(entry => ({
           ...entry,
-          siteId: ts.siteId,
-          siteName: ts.siteName,
+          siteId: entry.siteId || ts.siteId,
+          siteName: entry.siteName || ts.siteName,
           periodStart: ts.periodStart,
         })))
         .filter(entry => entry.contractorId === contractorId);
@@ -259,13 +258,11 @@ const PaymentSummary = () => {
         // Supporting legacy entries: Find rates if missing
         let effectiveRates = entry.rates;
         if (!effectiveRates) {
-          const siteRates = payRates.find(r => r.siteId === entry.siteId);
-          const contractorRates = siteRates?.contractorRates?.[contractorId];
-          effectiveRates = contractorRates || {
-            weekday: siteRates?.weekday || 0,
-            saturday: siteRates?.saturday || 0,
-            sunday: siteRates?.sunday || 0,
-            publicHoliday: siteRates?.publicHoliday || 0
+          effectiveRates = {
+            weekday: 0,
+            saturday: 0,
+            sunday: 0,
+            publicHoliday: 0
           };
         }
 
@@ -339,7 +336,7 @@ const PaymentSummary = () => {
         totalOtherPay,
         totalDeduction,
         totalNetPay,
-        siteBreakdown,
+        siteBreakdown: siteBreakdown.filter(s => s.hours > 0 || s.trainingHours > 0 || Math.abs(s.pay) > 0 || Math.abs(s.netPay) > 0 || s.isRelease),
       };
     });
 
@@ -749,7 +746,7 @@ const PaymentSummary = () => {
               <ul className="space-y-3">
                 <li className="flex items-center gap-3 text-sm font-bold text-zinc-700">
                   <span className="w-5 h-5 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-[10px]">1</span>
-                  Confirm pay rates in configuration
+                  Confirm custom pay rates on each contractor
                 </li>
                 <li className="flex items-center gap-3 text-sm font-bold text-zinc-700">
                   <span className="w-5 h-5 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-[10px]">2</span>

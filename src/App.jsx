@@ -4,7 +4,6 @@ import {
   getContractors, saveContractors, getContractorsAsync,
   getSites, saveSites, getSitesAsync,
   getTimesheets, saveTimesheets, getTimesheetsAsync,
-  getPayRates, savePayRates, getPayRatesAsync,
   getPublicHolidays, savePublicHolidays, getPublicHolidaysAsync,
   getTrainingReleasesAsync,
   getAuditLogsAsync,
@@ -21,7 +20,7 @@ import ContractorForm from './components/ContractorForm';
 import SiteList from './components/SiteList';
 import SiteForm from './components/SiteForm';
 import SiteAllocation from './components/SiteAllocation';
-import PayRateConfiguration from './components/PayRateConfiguration';
+
 import TimesheetEntry from './components/TimesheetEntry';
 import TimesheetList from './components/TimesheetList';
 import PaymentSummary from './components/PaymentSummary';
@@ -76,7 +75,7 @@ function App() {
       const cloudContractors = await getContractorsAsync();
       const cloudSites = await getSitesAsync();
       const cloudTimesheets = await getTimesheetsAsync();
-      const cloudPayRates = await getPayRatesAsync();
+
       const cloudReleases = await getTrainingReleasesAsync();
       const cloudPublicHolidays = await getPublicHolidaysAsync();
       const cloudAuditLogs = await getAuditLogsAsync();
@@ -92,7 +91,7 @@ function App() {
       }
       if (cloudPublicHolidays) localStorage.setItem('publicHolidays', encryptData(cloudPublicHolidays));
       if (cloudTimesheets) localStorage.setItem('timesheets', encryptData(cloudTimesheets));
-      if (cloudPayRates) localStorage.setItem('payRates', encryptData(cloudPayRates));
+
       if (cloudReleases) localStorage.setItem('trainingReleases', encryptData(cloudReleases));
       if (cloudAuditLogs) localStorage.setItem('auditLogs', encryptData(cloudAuditLogs));
       if (cloudPaymentSummaries) localStorage.setItem('paymentSummaries', encryptData(cloudPaymentSummaries));
@@ -234,10 +233,7 @@ function App() {
       setSites(updated);
       saveSites(updated);
 
-      // Clean up associated pay rates
-      const allRates = getPayRates();
-      const updatedRates = allRates.filter(r => r.siteId !== id);
-      savePayRates(updatedRates);
+
 
       logAction('DELETE_SITE', { id });
     }
@@ -498,12 +494,7 @@ function App() {
           </div>
         )}
 
-        {/* Pay Rates Tab */}
-        {activeTab === 'payrates' && (
-          <div className="mt-6">
-            <PayRateConfiguration />
-          </div>
-        )}
+
 
         {/* Timesheets Tab */}
         {activeTab === 'timesheets' && (

@@ -1,7 +1,7 @@
 import { useState, useEffect, Fragment } from 'react';
 import { generatePeriodDates, formatDateDisplay } from '../utils/dateUtils';
 import { checkBudgetStatus, calculateTimesheetPay } from '../utils/payrollCalculations';
-import { getPayRates, getTimesheets, savePayRates, saveSites, getSites, saveContractors, getContractors, logAction, getPublicHolidays } from '../utils/storage';
+import { getTimesheets, saveSites, getSites, saveContractors, getContractors, logAction, getPublicHolidays } from '../utils/storage';
 import ContractorForm from './ContractorForm';
 import Toast from './Toast';
 import Dropdown from './Dropdown';
@@ -10,18 +10,15 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
   const [site, setSite] = useState(initialSite);
   const [dates, setDates] = useState([]);
   const [entries, setEntries] = useState([]);
-  const [payRates, setPayRates] = useState({});
+
   const [showToast, setShowToast] = useState(false);
   const [budgetStatus, setBudgetStatus] = useState(null);
   const [totalStats, setTotalStats] = useState({ hours: 0, pay: 0, budgetedHours: 0, budgetedAmount: 0 });
 
-  const [showRateModal, setShowRateModal] = useState(false);
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [showNewContractorModal, setShowNewContractorModal] = useState(false);
-  const [tempRates, setTempRates] = useState({ weekday: 0, saturday: 0, sunday: 0, publicHoliday: 0 });
   const [toastMsg, setToastMsg] = useState('');
   const [allSites, setAllSites] = useState(getSites());
-  const [rateModalSite, setRateModalSite] = useState(null);
   const [publicHolidays, setPublicHolidays] = useState([]);
   const subSites = allSites.filter(s => s.isSubSite && s.parentSiteId === site.id);
 
@@ -40,17 +37,18 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
       };
     }
 
-    // Get base rates for the target site
-    const allRates = getPayRates();
-    const siteRates = allRates.find(r => r.siteId === useSiteId);
-    if (siteRates) {
-      return {
-        weekday: parseFloat(siteRates.weekday) || 0,
-        saturday: parseFloat(siteRates.saturday) || 0,
-        sunday: parseFloat(siteRates.sunday) || 0,
-        publicHoliday: parseFloat(siteRates.publicHoliday) || 0,
-        isCustom: false
-      };
+    const targetSiteObj = allSites.find(s => s.id === useSiteId);
+    if (targetSiteObj && targetSiteObj.codeRates && contractor) {
+      const codeRate = targetSiteObj.codeRates.find(r => r.code === contractor.contractorId);
+      if (codeRate) {
+        return {
+          weekday: codeRate.weekday || 0,
+          saturday: codeRate.saturday || 0,
+          sunday: codeRate.sunday || 0,
+          publicHoliday: codeRate.publicHoliday || 0,
+          isCustom: true
+        };
+      }
     }
 
     return { weekday: 0, saturday: 0, sunday: 0, publicHoliday: 0, isCustom: false };
@@ -102,7 +100,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
       setTotalStats({ hours: 0, pay: 0, budgetedHours: primaryBudget.hours, budgetedAmount: primaryBudget.money });
       setBudgetStatus(checkBudgetStatus(0, 0, primaryBudget.hours, primaryBudget.money));
     }
-  }, [entries, payRates, site, allSites]);
+  }, [entries, site, allSites]);
 
   // Reset entries only when switching to a completely different site or period
   useEffect(() => {
@@ -118,35 +116,12 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
       const holidays = getPublicHolidays().map(h => h.date);
       setPublicHolidays(holidays);
 
-      // Load pay rates for this site
-      const allRates = getPayRates();
-      const siteRates = allRates.find(r => r.siteId === site.id);
-      if (siteRates) {
-        const rates = {
-          weekday: parseFloat(siteRates.weekday) || 0,
-          saturday: parseFloat(siteRates.saturday) || 0,
-          sunday: parseFloat(siteRates.sunday) || 0,
-          publicHoliday: parseFloat(siteRates.publicHoliday) || 0,
-        };
-        setPayRates(rates);
 
-        const allZero = Object.values(rates).every(r => r === 0);
-        if (allZero) {
-          setToastMsg('Operational Alert: Pay rates for this site are currently $0. Configuration required.');
-          setShowToast(true);
-        }
-      } else {
-        const defaultRates = { weekday: 0, saturday: 0, sunday: 0, publicHoliday: 0 };
-        setPayRates(defaultRates);
-        setToastMsg('Status Critical: No pay rates configured for this terminal. Configuration mandated before data entry.');
-        setShowToast(true);
-      }
 
       if (initialData && initialData.entries) {
         setEntries(initialData.entries);
       } else {
-        // Load contractors from primary site AND all sub-sites
-        const primaryAllocated = contractors.filter(c => site.allocatedContractors?.includes(c.id));
+        // Load contractors from sub-sites only (main site is display-only)
         const subSitesAllocated = subSites.flatMap(ss =>
           contractors
             .filter(c => ss.allocatedContractors?.includes(c.id))
@@ -154,18 +129,6 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
         );
 
         const initialEntries = [
-          ...primaryAllocated.map(c => ({
-            contractorId: c.id,
-            contractorName: c.name,
-            siteId: site.id,
-            siteName: site.siteName,
-            dailyHours: periodDates.map(d => ({ date: d.date, hours: 0, isTraining: false })),
-            manualLumpSumHours: null,
-            extraHours: 0,
-            allowance: 0,
-            otherPay: 0,
-            deduction: 0
-          })),
           ...subSitesAllocated.map(({ contractor, siteId, siteName }) => ({
             contractorId: contractor.id,
             contractorName: contractor.name,
@@ -185,46 +148,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
     }
   }, [site.id, periodStart, periodEnd, initialData?.id]);
 
-  const handleOpenRateModal = (targetSiteId) => {
-    const targetSite = allSites.find(s => s.id === targetSiteId);
-    if (!targetSite) return;
 
-    const allRates = getPayRates();
-    const siteRates = allRates.find(r => r.siteId === targetSiteId);
-
-    setTempRates(siteRates ? {
-      weekday: parseFloat(siteRates.weekday) || 0,
-      saturday: parseFloat(siteRates.saturday) || 0,
-      sunday: parseFloat(siteRates.sunday) || 0,
-      publicHoliday: parseFloat(siteRates.publicHoliday) || 0,
-    } : { weekday: 0, saturday: 0, sunday: 0, publicHoliday: 0 });
-
-    setRateModalSite(targetSite);
-    setShowRateModal(true);
-  };
-
-  const handleUpdateRates = () => {
-    if (!rateModalSite) return;
-
-    const allRates = getPayRates();
-    const existingIndex = allRates.findIndex(r => r.siteId === rateModalSite.id);
-    const updatedRate = { siteId: rateModalSite.id, siteName: rateModalSite.siteName, ...tempRates };
-
-    if (existingIndex >= 0) allRates[existingIndex] = updatedRate;
-    else allRates.push(updatedRate);
-
-    savePayRates(allRates);
-
-    // If we updated the primary site, update the local payRates state too
-    if (rateModalSite.id === site.id) {
-      setPayRates(tempRates);
-    }
-
-    setShowRateModal(false);
-    setRateModalSite(null);
-    setToastMsg(`Pay rates updated for ${rateModalSite.siteName}.`);
-    setShowToast(true);
-  };
 
   const handleQuickAddStaff = (contractorId, contractorObj = null, targetSiteId) => {
     const useSiteId = targetSiteId || site.id;
@@ -589,52 +513,11 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
             </p>
           </div>
 
-          {/* Compact Rates Visualization */}
-          <div className="flex flex-wrap gap-2.5">
-            {/* Primary Site Rates */}
-            <div className="bg-white border border-zinc-100 rounded-2xl px-4 py-3 flex items-center gap-4">
-              <div className="w-1.5 h-6 bg-primary-500 rounded-full"></div>
-              <div className="flex gap-4">
-                <div className="flex flex-col">
-                  <span className="text-[9px] font-bold text-zinc-300 leading-none mb-1">Weekday</span>
-                  <span className="text-xs font-bold text-zinc-900">${payRates.weekday}</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[9px] font-bold text-zinc-300 leading-none mb-1">Saturday</span>
-                  <span className="text-xs font-bold text-zinc-900">${payRates.saturday}</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[9px] font-bold text-zinc-300 leading-none mb-1">Sunday</span>
-                  <span className="text-xs font-bold text-zinc-900">${payRates.sunday}</span>
-                </div>
-              </div>
-            </div>
 
-            {/* Subsite Aggregate Display */}
-            {subSites.length > 0 && (
-              <div className="flex -space-x-3 hover:space-x-1 transition-all">
-                {subSites.map(subSite => {
-                  const allRates = getPayRates();
-                  const subSiteRates = allRates.find(r => r.siteId === subSite.id) || { weekday: 0 };
-                  return (
-                    <div key={subSite.id} className="w-10 h-10 rounded-2xl bg-white border-2 border-zinc-50 flex items-center justify-center text-[10px] font-bold text-zinc-400 cursor-help hover:bg-zinc-900 hover:text-white hover:border-zinc-900 transition-all" title={`${subSite.siteName}: $${subSiteRates.weekday}/hr`}>
-                      {subSite.siteName[0].toUpperCase()}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
         </div>
 
         <div className="flex flex-wrap gap-3 w-full xl:w-auto">
-          <button
-            onClick={() => handleOpenRateModal(site.id)}
-            className="flex-1 xl:flex-none px-5 py-3 bg-white text-zinc-600 border border-zinc-100 rounded-2xl hover:bg-zinc-50 transition-all flex items-center justify-center gap-2.5 text-[11px] font-bold hover:-translate-y-0.5 active:translate-y-0"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            Rates
-          </button>
+
           <button
             onClick={() => setShowNewContractorModal(true)}
             className="flex-1 xl:flex-none px-5 py-3 bg-white text-zinc-600 border border-zinc-100 rounded-2xl hover:bg-zinc-50 transition-all flex items-center justify-center gap-2.5 text-[11px] font-bold hover:-translate-y-0.5 active:translate-y-0"
@@ -661,9 +544,9 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
 
       <div className="overflow-auto rounded-[2rem] border border-zinc-100 max-h-[75vh] custom-scrollbar relative bg-white">
         <table className="min-w-full border-collapse table-fixed md:table-auto">
-          <thead className="bg-zinc-900 sticky top-0 z-[60]">
+          <thead className="bg-zinc-900 sticky top-0 z-[2000]">
             <tr className="divide-x divide-zinc-800">
-              <th className="px-6 py-5 text-left text-p3 font-bold text-zinc-400 sticky left-0 top-0 bg-zinc-900 z-[70] w-[220px]">Employee Profile</th>
+              <th className="px-6 py-5 text-left text-p3 font-bold text-zinc-400 sticky left-0 top-0 bg-zinc-900 z-[2010] w-[220px]">Employee Profile</th>
               {dates.map(date => {
                 const isPH = publicHolidays.includes(date.date);
                 const holidayName = getPublicHolidays().find(h => h.date === date.date)?.name;
@@ -692,7 +575,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
               <th className="px-3 py-5 text-center text-[11px] font-bold text-zinc-500 min-w-[80px]">Other</th>
               <th className="px-3 py-5 text-center text-[11px] font-bold text-rose-500 bg-rose-500/5 min-w-[90px]">Deductions</th>
               <th className="px-3 py-5 text-center text-p3 font-bold text-zinc-400 min-w-[110px]">Gross Pay</th>
-              <th className="px-3 py-5 text-center text-[11px] font-bold text-emerald-500 bg-emerald-500/10 min-w-[120px] sticky right-0 z-[70] bg-zinc-900">Net Settlement</th>
+              <th className="px-3 py-5 text-center text-[11px] font-bold text-emerald-500 bg-emerald-500/10 min-w-[120px] sticky right-0 z-[2010] bg-zinc-900">Net Settlement</th>
               <th className="px-3 py-5 text-center text-[11px] font-bold text-amber-500 min-w-[90px]">Escrow (T)</th>
             </tr>
           </thead>
@@ -712,31 +595,38 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                 );
               }
 
-              return relevantSites.map(currentSite => {
+              return relevantSites.map((currentSite, siteIdx) => {
                 const isPrimary = currentSite.id === site.id;
                 const siteEntries = entries.filter(e => e.siteId === currentSite.id);
 
-                // Colors for grouping
-                const colors = [
-                  { border: 'border-blue-500', bg: 'bg-blue-50/20' },
-                  { border: 'border-emerald-500', bg: 'bg-emerald-50/20' },
-                  { border: 'border-indigo-500', bg: 'bg-indigo-50/20' },
-                  { border: 'border-amber-500', bg: 'bg-amber-50/20' },
-                  { border: 'border-rose-500', bg: 'bg-rose-50/20' },
-                  { border: 'border-violet-500', bg: 'bg-violet-50/20' },
+                // Solid background tints for sub-site groups (prevents see-through on sticky cols)
+                const subSiteTints = [
+                  '#f6fafe',   // blue (equivalent to 4% opacity over white)
+                  '#f4fcf8',   // emerald 
+                  '#fefaf2',   // amber
+                  '#f9f7fe',   // violet
+                  '#fef5fa',   // pink
+                  '#f3fbfd',   // cyan
                 ];
-                const getGroupColor = (cId) => {
-                  const idStr = String(cId);
-                  const hash = idStr.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                  return colors[hash % colors.length];
-                };
+                const subSiteBorders = [
+                  'rgba(59, 130, 246, 0.15)',   // blue
+                  'rgba(16, 185, 129, 0.15)',   // emerald
+                  'rgba(245, 158, 11, 0.15)',   // amber
+                  'rgba(139, 92, 246, 0.15)',   // violet
+                  'rgba(236, 72, 153, 0.15)',   // pink
+                  'rgba(6, 182, 212, 0.15)',    // cyan
+                ];
+                const subSiteIndex = isPrimary ? -1 : relevantSites.filter(s => s.id !== site.id).indexOf(currentSite);
+                const tint = isPrimary ? 'transparent' : subSiteTints[subSiteIndex % subSiteTints.length];
+                const borderTint = isPrimary ? undefined : subSiteBorders[subSiteIndex % subSiteBorders.length];
+                const baseZ = 1000 - (siteIdx * 100);
 
                 return (
                   <Fragment key={currentSite.id}>
                     {/* Site Header Row */}
-                    <tr className="bg-zinc-50/80 group/site">
+                    <tr style={{ backgroundColor: isPrimary ? undefined : tint }}>
                       {/* FIXED LEFT: Site Title */}
-                      <td className="px-6 py-4 border-y border-zinc-100 sticky left-0 z-[50] bg-zinc-50">
+                      <td className="px-6 py-4 border-y border-zinc-100 sticky left-0" style={{ backgroundColor: isPrimary ? '#fafafa' : tint, borderLeftWidth: isPrimary ? 0 : 3, borderLeftColor: borderTint, borderLeftStyle: 'solid', zIndex: baseZ }}>
                         <div className="flex items-center gap-3 min-w-[380px]">
                           <div className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${isPrimary ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-500 border-zinc-200'}`}>
                             {isPrimary ? 'Terminal' : 'Sub-Hub'}
@@ -746,42 +636,37 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                       </td>
 
                       {/* SPACER: Middle Columns */}
-                      <td colSpan={totalCols - 1} className="border-y border-zinc-100 bg-zinc-50/50"></td>
+                      <td colSpan={totalCols - 1} className="border-y border-zinc-100" style={{ backgroundColor: isPrimary ? undefined : tint }}></td>
 
-                      {/* FIXED RIGHT: Actions */}
-                      <td className="px-6 py-4 border-y border-zinc-100 sticky right-0 z-[50] bg-zinc-50 text-right">
-                        <div className="flex items-center justify-end gap-3">
-                          <Dropdown
-                            value=""
-                            onChange={(val) => {
-                              if (val) {
-                                handleQuickAddStaff(val, null, currentSite.id);
+                      {/* FIXED RIGHT: Actions (only for sub-sites) */}
+                      <td className="px-6 py-4 border-y border-zinc-100 sticky right-0 text-right" style={{ backgroundColor: isPrimary ? '#fafafa' : tint, zIndex: baseZ }}>
+                        {!isPrimary && (
+                          <div className="flex items-center justify-end gap-3">
+                            <Dropdown
+                              value=""
+                              onChange={(val) => {
+                                if (val) {
+                                  handleQuickAddStaff(val, null, currentSite.id);
+                                }
+                              }}
+                              options={contractors
+                                .filter(c => c.status === 'active')
+                                .filter(c => !siteEntries.some(e => e.contractorId === c.id))
+                                .map(c => ({ value: c.id, label: c.name }))
                               }
-                            }}
-                            options={contractors
-                              .filter(c => c.status === 'active')
-                              .filter(c => !siteEntries.some(e => e.contractorId === c.id))
-                              .map(c => ({ value: c.id, label: c.name }))
-                            }
-                            placeholder="+ Deploy Resource..."
-                            variant="compact"
-                            showSelected={false}
-                            className="w-48"
-                          />
-                          <button
-                            onClick={() => handleOpenRateModal(currentSite.id)}
-                            className="p-2 bg-white border border-zinc-200 text-zinc-400 rounded-xl hover:text-zinc-900 hover:border-zinc-900 transition-all"
-                            title="Adjust Site Rates"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.012 -2.574c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.065-2.572c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                          </button>
-                        </div>
+                              placeholder="+ Deploy Resource..."
+                              variant="compact"
+                              showSelected={false}
+                              className="w-48"
+                            />
+                          </div>
+                        )}
                       </td>
                     </tr>
 
-                    {/* Site Entries */}
-                    {siteEntries.length === 0 ? (
-                      <tr>
+                    {/* Site Entries - only for sub-sites */}
+                    {isPrimary ? null : siteEntries.length === 0 ? (
+                      <tr style={{ backgroundColor: tint }}>
                         <td colSpan={totalCols + 1} className="px-4 py-4 text-center text-[10px] text-slate-400 italic">No workers assigned to this site yet.</td>
                       </tr>
                     ) : siteEntries.map((entry, index) => {
@@ -791,9 +676,10 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                       return (
                         <tr
                           key={`${entry.contractorId}-${entry.siteId}`}
-                          className="hover:bg-zinc-50/50 transition-colors group/row border-b border-zinc-50"
+                          className="hover:brightness-[0.97] transition-all group/row border-b border-zinc-50"
+                          style={{ backgroundColor: tint }}
                         >
-                          <td className="px-6 py-4 sticky left-0 group-hover/row:bg-zinc-50 z-[40] border-r border-zinc-100 min-w-[220px] bg-white transition-colors">
+                          <td className="px-6 py-4 sticky left-0 transition-colors" style={{ backgroundColor: tint, borderLeftWidth: 3, borderLeftColor: borderTint, borderLeftStyle: 'solid', zIndex: baseZ - 10 - index }}>
                             <div className="flex flex-col gap-3">
                               <div className="flex items-center justify-between gap-3">
                                 <div className="font-bold text-zinc-900 text-sm tracking-tight group-hover/row:text-primary-600 transition-colors">{entry.contractorName}</div>
@@ -932,7 +818,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                             </div>
                           </td>
                           <td className="px-4 py-4 text-center font-bold text-xs text-zinc-400 tracking-tight">${calculation.totalPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                          <td className="px-4 py-4 text-center sticky right-0 z-[40] bg-emerald-50/50">
+                          <td className="px-4 py-4 text-center sticky right-0" style={{ backgroundColor: tint, zIndex: baseZ - 10 - index }}>
                             <span className="font-bold text-sm text-emerald-600">${calculation.netPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                           </td>
                           <td className="px-4 py-4 text-center">
@@ -957,59 +843,8 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
 
       {/* MODALS */}
       {
-        showRateModal && (
-          <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-md flex items-center justify-center z-[200] p-4 animate-in fade-in duration-300">
-            <div className="bg-white rounded-[2.5rem] w-full max-w-md overflow-hidden border border-zinc-100 flex flex-col animate-in zoom-in-95 duration-300">
-              {/* Header */}
-              <div className="p-8 border-b border-zinc-50 bg-gradient-to-br from-zinc-50 to-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50"></div>
-                <div className="relative z-10">
-                  <h3 className="text-2xl font-bold text-zinc-900 tracking-tight">Financial Calibration</h3>
-                  <p className="text-sm text-zinc-500 font-medium">Adjusting rates for {rateModalSite?.siteName}</p>
-                </div>
-              </div>
-
-              <div className="p-8">
-                <div className="grid grid-cols-2 gap-5 mb-8">
-                  {['weekday', 'saturday', 'sunday', 'publicHoliday'].map(type => (
-                    <div key={type}>
-                      <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 ml-1">{type}</label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-zinc-400 text-sm">$</span>
-                        <input
-                          type="number"
-                          value={tempRates[type]}
-                          onChange={(e) => setTempRates({ ...tempRates, [type]: parseFloat(e.target.value) || 0 })}
-                          className="w-full pl-8 pr-4 py-3 bg-zinc-50 border border-transparent rounded-2xl focus:bg-white focus:border-zinc-900 transition-all outline-none font-bold text-zinc-900"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={handleUpdateRates}
-                    className="w-full py-4 bg-zinc-900 text-white font-bold uppercase tracking-[0.2em] text-[10px] rounded-2xl hover:bg-black transition-all hover:-translate-y-0.5"
-                  >
-                    Verify & Apply Rates
-                  </button>
-                  <button
-                    onClick={() => setShowRateModal(false)}
-                    className="w-full py-3 text-zinc-400 font-bold uppercase tracking-[0.2em] text-[10px] hover:text-zinc-600 transition-all"
-                  >
-                    Discard Changes
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      }
-
-      {
         showNewContractorModal && (
-          <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-md flex items-center justify-center z-[200] p-4 animate-in fade-in duration-300">
+          <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-in fade-in duration-300">
             <div className="bg-white rounded-[2.5rem] w-full max-w-2xl max-h-[90vh] overflow-hidden border border-zinc-100 flex flex-col animate-in slide-in-from-bottom-8 duration-500">
               {/* Header */}
               <div className="p-8 border-b border-zinc-50 bg-gradient-to-br from-zinc-50 to-white relative overflow-hidden flex justify-between items-center">
@@ -1036,7 +871,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
 
       {
         showStaffModal && (
-          <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300">
             <div className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden border border-zinc-100 flex flex-col animate-in zoom-in-95 duration-300 max-h-[85vh]">
               {/* Header */}
               <div className="p-8 border-b border-zinc-50 bg-gradient-to-br from-zinc-50 to-white relative overflow-hidden">

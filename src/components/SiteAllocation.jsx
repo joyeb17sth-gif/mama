@@ -217,63 +217,34 @@ const SiteAllocation = () => {
                     <td className="px-6 py-6 bg-zinc-50/20">
                       {(() => {
                         const contractorSites = allocation.sites;
-                        const involvedPrimaryIds = [...new Set(contractorSites.map(cs => {
-                          const fullSite = sites.find(s => s.id === cs.siteId);
-                          return fullSite?.isSubSite ? fullSite.parentSiteId : fullSite?.id;
-                        }))].filter(Boolean);
+                        const displaySites = contractorSites.filter(cs => {
+                          const siteObj = sites.find(s => s.id === cs.siteId);
+                          // Only show sub-sites, hide the parent wrapper sites to reduce clutter
+                          return siteObj && siteObj.isSubSite;
+                        });
 
-
-
-                        if (involvedPrimaryIds.length === 0) return <span className="text-zinc-300 font-bold text-[10px] italic">Idle Status</span>;
+                        if (displaySites.length === 0) return <span className="text-zinc-300 font-bold text-[10px] italic">Idle Status</span>;
 
                         return (
-                          <div className="space-y-4">
-                            {involvedPrimaryIds.map(pId => {
-                              const primarySite = sites.find(s => s.id === pId);
-                              const isPrimaryAllocated = contractorSites.some(cs => cs.siteId === pId);
-                              const allocatedSubSites = sites.filter(s => s.isSubSite && s.parentSiteId === pId && contractorSites.some(cs => cs.siteId === s.id));
-
-
-                              return (
-                                <div key={pId} className="group flex flex-col gap-1.5 p-3 rounded-2xl bg-zinc-50/50 border border-zinc-100/50 hover:bg-zinc-50 hover:border-zinc-200 transition-all min-w-[200px]">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2">
-                                      <div className={`w-1.5 h-1.5 rounded-full ${isPrimaryAllocated ? 'bg-emerald-500' : 'bg-zinc-300'}`}></div>
-                                      <span className="text-[11px] font-bold text-zinc-700 tracking-tight">
-                                        {primarySite?.siteName}
-                                      </span>
-                                    </div>
-                                    {editingContractorId === allocation.contractorId && isPrimaryAllocated && (
+                          <div className="space-y-3">
+                            <div className="flex flex-wrap gap-2">
+                              {displaySites.map(cs => {
+                                const siteObj = sites.find(s => s.id === cs.siteId);
+                                return (
+                                  <span key={cs.siteId} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-zinc-200 rounded-[10px] shadow-sm group">
+                                    <span className="text-[11px] font-bold text-zinc-700">{siteObj?.siteName}</span>
+                                    {editingContractorId === allocation.contractorId && (
                                       <button
-                                        onClick={() => handleQuickRemoveSite(allocation.contractorId, pId)}
-                                        className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-rose-500 transition-all"
-                                        title="Detach"
+                                        onClick={() => handleQuickRemoveSite(allocation.contractorId, cs.siteId)}
+                                        className="ml-1 text-zinc-300 hover:text-rose-500 transition-colors"
                                       >
                                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
                                       </button>
                                     )}
-                                  </div>
-
-                                  {allocatedSubSites.length > 0 && (
-                                    <div className="flex flex-wrap gap-1.5 pl-3.5">
-                                      {allocatedSubSites.map(ss => (
-                                        <span key={ss.id} className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-white border border-zinc-100 rounded-md shadow-sm">
-                                          <span className="text-[10px] font-bold text-zinc-500">{ss.siteName}</span>
-                                          {editingContractorId === allocation.contractorId && (
-                                            <button
-                                              onClick={() => handleQuickRemoveSite(allocation.contractorId, ss.id)}
-                                              className="text-zinc-300 hover:text-rose-500 transition-colors"
-                                            >
-                                              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
-                                            </button>
-                                          )}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
+                                  </span>
+                                );
+                              })}
+                            </div>
                             {editingContractorId === allocation.contractorId && (
                               <div className="pt-4 border-t border-zinc-100 mt-2">
                                 <div className="relative">
