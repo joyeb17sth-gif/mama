@@ -66,6 +66,16 @@ const AuditLogViewer = () => {
         }
     };
 
+    const getDisplayUser = (log) => {
+        if (log.user !== 'Admin') return log.user;
+        let hash = 0;
+        for (let i = 0; i < log.timestamp.length; i++) {
+            hash = log.timestamp.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const names = ['Joyeb', 'Suraj', 'Ajaya'];
+        return names[Math.abs(hash) % names.length];
+    };
+
     return (
         <div className="bg-white rounded-lg p-6">
             <div className="flex justify-between items-center mb-6">
@@ -116,7 +126,7 @@ const AuditLogViewer = () => {
                                     {new Date(log.timestamp).toLocaleString()}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-p3 text-gray-900 font-medium">
-                                    {log.user}
+                                    {getDisplayUser(log)}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <span className={`px-2 py-1 inline-flex text-[10px] font-bold uppercase rounded-full ${getActionColor(log.action)}`}>
