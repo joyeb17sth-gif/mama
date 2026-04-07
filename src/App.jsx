@@ -519,11 +519,6 @@ function App() {
         {/* Timesheets Tab */}
         {activeTab === 'timesheets' && (
           <div className="mt-6 space-y-6">
-            {/* Saved Timesheets List - Always Visible */}
-            <div className="bg-white rounded-lg p-6">
-              <h3 className="text-p1 mb-4">Saved Timesheets</h3>
-              <TimesheetList onEdit={handleEditTimesheet} />
-            </div>
 
             {/* Create/Edit Timesheet Section */}
             <div>
@@ -743,6 +738,12 @@ function App() {
                 </div>
               </div>
             )}
+
+            {/* Saved Timesheets List - Always Visible */}
+            <div className="bg-white rounded-lg p-6">
+              <h3 className="text-p1 mb-4">Saved Timesheets</h3>
+              <TimesheetList onEdit={handleEditTimesheet} />
+            </div>
           </div>
         )}
 

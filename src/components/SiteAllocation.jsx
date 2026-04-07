@@ -157,6 +157,136 @@ const SiteAllocation = () => {
 
   return (
     <div className="space-y-8 p-2">
+      {/* Site Selection and Management */}
+      <div className="bg-white rounded-[2rem] border border-zinc-100">
+        {showToast && (
+          <Toast
+            message={toastMessage}
+            type="success"
+            onClose={() => setShowToast(false)}
+          />
+        )}
+        <div className="p-8 border-b border-zinc-50 bg-gradient-to-br from-zinc-50/50 to-white rounded-t-[2rem]">
+          <h3 className="text-h1 text-zinc-900 tracking-tight">Active Matrix Core</h3>
+          <p className="text-p3 text-zinc-500 font-medium">Initialize or modify terminal-specific assignments.</p>
+        </div>
+
+        <div className="p-8">
+          <div className="mb-8">
+            <label className="block text-[11px] font-bold text-zinc-400 mb-3 ml-1">
+              Terminal Interface Selection
+            </label>
+            <Dropdown
+              value={selectedSite?.id || ''}
+              onChange={(val) => {
+                const site = sites.find(s => s.id === val);
+                setSelectedSite(site || null);
+              }}
+              options={sites.filter(s => !s.isSubSite).reduce((acc, mainSite) => {
+                const subs = sites.filter(s => s.isSubSite && s.parentSiteId === mainSite.id);
+                acc.push({ value: mainSite.id, label: `${mainSite.siteName} (Terminal Master)`, isParent: subs.length > 0 });
+                subs.forEach((sub, idx) => {
+                  acc.push({ value: sub.id, label: sub.siteName, isSubItem: true, isLastSubItem: idx === subs.length - 1 });
+                });
+                return acc;
+              }, [])}
+              placeholder="Initialize Terminal Interface..."
+            />
+          </div>
+
+          {selectedSite && (
+            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {/* Saved Allocations Display */}
+              <div>
+                <div className="text-[11px] font-bold text-emerald-500 mb-4 flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                  Stationed Personnel @ {selectedSite.siteName}
+                </div>
+                {selectedSite.allocatedContractors && selectedSite.allocatedContractors.length > 0 ? (
+                  <div className="bg-zinc-50/50 border border-zinc-100 rounded-[1.5rem] p-6 mb-4">
+                    <div className="flex flex-wrap gap-3">
+                      {selectedSite.allocatedContractors.map(contractorId => {
+                        const contractor = contractors.find(c => c.id === contractorId);
+                        return contractor ? (
+                          <div
+                            key={contractorId}
+                            className="flex items-center gap-3 px-4 py-2 bg-white border border-zinc-100 rounded-xl transition-all group/item"
+                          >
+                            <span className="text-p3 font-bold text-zinc-900 tracking-tight">
+                              {contractor.name}
+                            </span>
+                            <span className="text-[11px] text-zinc-400 font-bold">
+                              #{contractor.contractorId}
+                            </span>
+                            <button
+                              onClick={() => handleAllocationToggle(contractorId)}
+                              className="ml-2 w-6 h-6 flex items-center justify-center bg-zinc-50 text-rose-500 rounded-lg group-hover/item:bg-rose-500 group-hover/item:text-white transition-all"
+                              title="Revoke Assignment"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-zinc-50/50 border border-dashed border-zinc-200 rounded-[1.5rem] p-10 text-center">
+                    <p className="text-[11px] font-bold text-zinc-300 leading-loose">
+                      Terminal currently clear. <br /> Initialize personnel allocation from the list below.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Contractor Selection Section */}
+              <div>
+                <div className="text-[11px] font-bold text-primary-500 mb-4 flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse"></div>
+                  Available Workforce Pool
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {contractors.map(contractor => {
+                    const isAllocated = selectedSite.allocatedContractors?.includes(contractor.id);
+                    return (
+                      <label
+                        key={contractor.id}
+                        className={`flex items-center p-5 rounded-[1.5rem] cursor-pointer transition-all border group/label ${isAllocated
+                          ? 'border-emerald-200 bg-emerald-50/30'
+                          : 'border-zinc-100 bg-white hover:bg-zinc-50'
+                          }`}
+                      >
+                        <div className="relative flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={isAllocated}
+                            onChange={() => handleAllocationToggle(contractor.id)}
+                            className={`h-5 w-5 rounded-lg transition-all cursor-pointer border-zinc-300 focus:ring-4 focus:ring-offset-0 ${isAllocated ? 'text-emerald-600 focus:ring-emerald-100' : 'text-primary-600 focus:ring-primary-100'}`}
+                          />
+                        </div>
+                        <div className="ml-4 flex-1">
+                          <div className={`text-p3 font-bold tracking-tight transition-colors ${isAllocated ? 'text-emerald-900' : 'text-zinc-900'}`}>
+                            {contractor.name}
+                          </div>
+                          <div className="text-[11px] text-zinc-400 font-bold mt-0.5">
+                            ID: {contractor.contractorId}
+                          </div>
+                        </div>
+                        {isAllocated && (
+                          <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                          </div>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* All Allocations Summary List */}
       <div className="bg-white rounded-[2rem] border border-zinc-100 overflow-hidden">
         <div className="p-8 border-b border-zinc-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-gradient-to-br from-zinc-50/50 to-white">
@@ -326,135 +456,7 @@ const SiteAllocation = () => {
         )}
       </div>
 
-      {/* Site Selection and Management */}
-      <div className="bg-white rounded-[2rem] border border-zinc-100">
-        {showToast && (
-          <Toast
-            message={toastMessage}
-            type="success"
-            onClose={() => setShowToast(false)}
-          />
-        )}
-        <div className="p-8 border-b border-zinc-50 bg-gradient-to-br from-zinc-50/50 to-white rounded-t-[2rem]">
-          <h3 className="text-h1 text-zinc-900 tracking-tight">Active Matrix Core</h3>
-          <p className="text-p3 text-zinc-500 font-medium">Initialize or modify terminal-specific assignments.</p>
-        </div>
 
-        <div className="p-8">
-          <div className="mb-8">
-            <label className="block text-[11px] font-bold text-zinc-400 mb-3 ml-1">
-              Terminal Interface Selection
-            </label>
-            <Dropdown
-              value={selectedSite?.id || ''}
-              onChange={(val) => {
-                const site = sites.find(s => s.id === val);
-                setSelectedSite(site || null);
-              }}
-              options={sites.filter(s => !s.isSubSite).reduce((acc, mainSite) => {
-                const subs = sites.filter(s => s.isSubSite && s.parentSiteId === mainSite.id);
-                acc.push({ value: mainSite.id, label: `${mainSite.siteName} (Terminal Master)`, isParent: subs.length > 0 });
-                subs.forEach((sub, idx) => {
-                  acc.push({ value: sub.id, label: sub.siteName, isSubItem: true, isLastSubItem: idx === subs.length - 1 });
-                });
-                return acc;
-              }, [])}
-              placeholder="Initialize Terminal Interface..."
-            />
-          </div>
-
-          {selectedSite && (
-            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              {/* Saved Allocations Display */}
-              <div>
-                <div className="text-[11px] font-bold text-emerald-500 mb-4 flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                  Stationed Personnel @ {selectedSite.siteName}
-                </div>
-                {selectedSite.allocatedContractors && selectedSite.allocatedContractors.length > 0 ? (
-                  <div className="bg-zinc-50/50 border border-zinc-100 rounded-[1.5rem] p-6 mb-4">
-                    <div className="flex flex-wrap gap-3">
-                      {selectedSite.allocatedContractors.map(contractorId => {
-                        const contractor = contractors.find(c => c.id === contractorId);
-                        return contractor ? (
-                          <div
-                            key={contractorId}
-                            className="flex items-center gap-3 px-4 py-2 bg-white border border-zinc-100 rounded-xl transition-all group/item"
-                          >
-                            <span className="text-p3 font-bold text-zinc-900 tracking-tight">
-                              {contractor.name}
-                            </span>
-                            <span className="text-[11px] text-zinc-400 font-bold">
-                              #{contractor.contractorId}
-                            </span>
-                            <button
-                              onClick={() => handleAllocationToggle(contractorId)}
-                              className="ml-2 w-6 h-6 flex items-center justify-center bg-zinc-50 text-rose-500 rounded-lg group-hover/item:bg-rose-500 group-hover/item:text-white transition-all"
-                              title="Revoke Assignment"
-                            >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                          </div>
-                        ) : null;
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-zinc-50/50 border border-dashed border-zinc-200 rounded-[1.5rem] p-10 text-center">
-                    <p className="text-[11px] font-bold text-zinc-300 leading-loose">
-                      Terminal currently clear. <br /> Initialize personnel allocation from the list below.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Contractor Selection Section */}
-              <div>
-                <div className="text-[11px] font-bold text-primary-500 mb-4 flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse"></div>
-                  Available Workforce Pool
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {contractors.map(contractor => {
-                    const isAllocated = selectedSite.allocatedContractors?.includes(contractor.id);
-                    return (
-                      <label
-                        key={contractor.id}
-                        className={`flex items-center p-5 rounded-[1.5rem] cursor-pointer transition-all border group/label ${isAllocated
-                          ? 'border-emerald-200 bg-emerald-50/30'
-                          : 'border-zinc-100 bg-white hover:bg-zinc-50'
-                          }`}
-                      >
-                        <div className="relative flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={isAllocated}
-                            onChange={() => handleAllocationToggle(contractor.id)}
-                            className={`h-5 w-5 rounded-lg transition-all cursor-pointer border-zinc-300 focus:ring-4 focus:ring-offset-0 ${isAllocated ? 'text-emerald-600 focus:ring-emerald-100' : 'text-primary-600 focus:ring-primary-100'}`}
-                          />
-                        </div>
-                        <div className="ml-4 flex-1">
-                          <div className={`text-p3 font-bold tracking-tight transition-colors ${isAllocated ? 'text-emerald-900' : 'text-zinc-900'}`}>
-                            {contractor.name}
-                          </div>
-                          <div className="text-[11px] text-zinc-400 font-bold mt-0.5">
-                            ID: {contractor.contractorId}
-                          </div>
-                        </div>
-                        {isAllocated && (
-                          <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
-                          </div>
-                        )}
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
     </div >
   );
 };
