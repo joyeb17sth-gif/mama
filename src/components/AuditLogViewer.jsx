@@ -25,11 +25,14 @@ const AuditLogViewer = () => {
             case 'DELETE_CONTRACTOR': return 'bg-red-100 text-red-800';
             case 'SAVE_TIMESHEET': return 'bg-indigo-100 text-indigo-800';
             case 'UPDATE_TIMESHEET': return 'bg-indigo-100 text-indigo-800';
+            case 'UPDATE_TIMESHEET_STATUS': return 'bg-blue-100 text-blue-800';
             case 'RELEASE_TRAINING_PAY': return 'bg-amber-100 text-amber-800';
             case 'CREATE_SITE': return 'bg-purple-100 text-purple-800';
             case 'UPDATE_SITE': return 'bg-pink-100 text-pink-800';
             case 'DELETE_SITE': return 'bg-red-100 text-red-800';
             case 'DELETE_TIMESHEET': return 'bg-red-100 text-red-800';
+            case 'EXPORT_ARCHIVE': return 'bg-teal-100 text-teal-800';
+            case 'PURGE_ARCHIVE': return 'bg-rose-100 text-rose-800';
             default: return 'bg-gray-100 text-gray-800';
         }
     };
@@ -55,6 +58,8 @@ const AuditLogViewer = () => {
                 return `Saved timesheet for ${details.siteName} (${details.period})`;
             case 'UPDATE_TIMESHEET':
                 return `Modified timesheet for ${details.siteName}`;
+            case 'UPDATE_TIMESHEET_STATUS':
+                return `Updated timesheet status to "${details.status}"`;
             case 'DELETE_TIMESHEET':
                 return `Removed timesheet (ID: ${details.id})`;
             case 'RELEASE_TRAINING_PAY':
@@ -94,8 +99,11 @@ const AuditLogViewer = () => {
                             { value: 'DELETE_SITE', label: 'Delete Site' },
                             { value: 'SAVE_TIMESHEET', label: 'Save Timesheet' },
                             { value: 'UPDATE_TIMESHEET', label: 'Update Timesheet' },
+                            { value: 'UPDATE_TIMESHEET_STATUS', label: 'Update Timesheet Status' },
                             { value: 'DELETE_TIMESHEET', label: 'Delete Timesheet' },
-                            { value: 'RELEASE_TRAINING_PAY', label: 'Release Training Pay' }
+                            { value: 'RELEASE_TRAINING_PAY', label: 'Release Training Pay' },
+                            { value: 'EXPORT_ARCHIVE', label: 'Export Backup' },
+                            { value: 'PURGE_ARCHIVE', label: 'Purge Archive' }
                         ]}
                         variant="compact"
                         className="w-56"

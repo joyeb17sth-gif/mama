@@ -8,6 +8,7 @@ import Payslip from './Payslip';
 import html2pdf from 'html2pdf.js';
 import Toast from './Toast';
 import { supabase } from '../utils/supabaseClient';
+import JSZip from 'jszip';
 import Dropdown from './Dropdown';
 
 const PaymentSummary = () => {
@@ -26,6 +27,7 @@ const PaymentSummary = () => {
   const [hasGenerated, setHasGenerated] = useState(false);
   const [selectedContractors, setSelectedContractors] = useState([]);
   const [isSending, setIsSending] = useState(false);
+  const [isZipping, setIsZipping] = useState(false);
 
   // Handle individual checkbox change
   const handleSelectContractor = (contractorId) => {
@@ -139,6 +141,97 @@ const PaymentSummary = () => {
       setSelectedPayslip(null);
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleZippedExport = async () => {
+    if (selectedContractors.length === 0) {
+      alert('Please select at least one contractor to export.');
+      return;
+    }
+
+    setIsZipping(true);
+    try {
+      const zip = new JSZip();
+      let successCount = 0;
+
+      const targets = summary.filter(p => selectedContractors.includes(p.contractorId));
+
+      for (const payment of targets) {
+        const contractor = contractors.find(c => c.id === payment.contractorId);
+
+        // 1. Render in DOM temporarily
+        setSelectedPayslip(payment);
+
+        // Wait for React to render the component 
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        const payslipElement = document.querySelector('.payslip-wrapper');
+
+        if (!payslipElement) {
+          console.error('Could not find payslip element in DOM');
+          continue;
+        }
+
+        // 2. Generate PDF
+        const opt = {
+          margin: [10, 10, 10, 10],
+          filename: `Payslip - ${contractor.name} - ${selectedPeriod}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 3, useCORS: true, letterRendering: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['avoid-all'] }
+        };
+
+        const pdfBase64 = await html2pdf().set(opt).from(payslipElement).output('datauristring');
+        const base64Data = pdfBase64.split(',')[1];
+        
+        // Convert base64 to binary
+        const binaryString = window.atob(base64Data);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Add file to ZIP
+        const fileName = `Payslip - ${contractor?.name || payment.contractorName}.pdf`;
+        zip.file(fileName, bytes.buffer);
+        successCount++;
+      }
+
+      // Cleanup view
+      setSelectedPayslip(null);
+
+      // 3. Generate Zip file and trigger download
+      if (successCount > 0) {
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        
+        const zipUrl = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = zipUrl;
+        const zipFileName = `Payslips_Bundle_${selectedPeriod.replace(/[^a-zA-Z0-9]/g, '_')}.zip`;
+        a.download = zipFileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(zipUrl);
+
+        logAction('EXPORT_ARCHIVE', `Downloaded Zipped PDF Payslips for ${successCount} contractors`);
+        
+        setToastMessage(`Successfully exported ${successCount} payslip PDFs inside a ZIP package.`);
+        setShowToast(true);
+        setSelectedContractors([]);
+      } else {
+         alert('Failed to generate any PDFs.');
+      }
+
+    } catch (error) {
+      console.error('Error generating PDF bundle:', error);
+      alert('An error occurred while generating the PDF bundle.');
+      setSelectedPayslip(null);
+    } finally {
+      setIsZipping(false);
     }
   };
 
@@ -635,6 +728,21 @@ const PaymentSummary = () => {
                   </svg>
                 )}
                 {isSending ? 'Sending Dispatch...' : `Send Payslips (${selectedContractors.length})`}
+              </button>
+              <button
+                onClick={handleZippedExport}
+                disabled={isZipping || selectedContractors.length === 0}
+                className={`px-5 py-2.5 bg-zinc-100 text-zinc-900 border border-zinc-200 rounded-xl font-bold text-[11px] hover:bg-zinc-200 transition-all flex items-center gap-2 ${isZipping || selectedContractors.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-0.5 active:translate-y-0'}`}
+              >
+                {isZipping ? (
+                  <svg className="animate-spin h-3.5 w-3.5 text-zinc-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                )}
+                {isZipping ? 'Bundling PDFs...' : `Export PDFs (${selectedContractors.length})`}
               </button>
               <button
                 onClick={handleExport}

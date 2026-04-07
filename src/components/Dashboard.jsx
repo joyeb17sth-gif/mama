@@ -7,6 +7,7 @@ import {
 import { calculateTimesheetPay, checkBudgetStatus } from '../utils/payrollCalculations';
 import { exportPaymentSummaryToCSV } from '../utils/exportUtils';
 import Toast from './Toast';
+import Archiver from './Archiver';
 
 const Dashboard = () => {
     const [sites, setSites] = useState([]);
@@ -222,7 +223,7 @@ const Dashboard = () => {
 
                 {/* Site Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {(consolidatedSiteBudgets || []).filter(s => s?.siteName?.toLowerCase().includes(siteSearch.toLowerCase())).map(site => {
+                    {(consolidatedSiteBudgets || []).filter(s => s?.siteName?.toLowerCase().includes(siteSearch.toLowerCase())).slice(0, 6).map(site => {
                         const isOverBudget = !site?.status?.withinBudget;
                         return (
                             <div key={site.id} className={`group relative p-6 rounded-xl border transition-all duration-300 ${isOverBudget ? 'border-rose-200 bg-rose-50/50' : 'border-zinc-200 bg-white hover:border-primary-300'}`}>
@@ -290,6 +291,14 @@ const Dashboard = () => {
                         );
                     })}
                 </div>
+                
+                {(consolidatedSiteBudgets || []).filter(s => s?.siteName?.toLowerCase().includes(siteSearch.toLowerCase())).length > 6 && (
+                    <div className="mt-4 text-center">
+                        <span className="text-xs font-medium text-zinc-500">
+                            Showing 6 of {(consolidatedSiteBudgets || []).filter(s => s?.siteName?.toLowerCase().includes(siteSearch.toLowerCase())).length} sites. Use the filter above to find more.
+                        </span>
+                    </div>
+                )}
             </div>
 
             {/* Dashboard Alerts */}
@@ -309,7 +318,7 @@ const Dashboard = () => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 gap-8">
 
                 {/* Training Pay Oversight */}
                 {contractors.some(c => getTrainingBalance(c.id).balance > 0) ? (
@@ -457,7 +466,7 @@ const Dashboard = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-50">
-                            {contractors.filter(c => c.name.toLowerCase().includes(contractorSearch.toLowerCase())).map(c => (
+                            {contractors.filter(c => c.name.toLowerCase().includes(contractorSearch.toLowerCase())).slice(0, 10).map(c => (
                                 <tr key={c.id} className="hover:bg-zinc-50/80 transition-colors group">
                                     <td className="px-6 py-3.5 text-xs font-mono text-zinc-400">{c.contractorId}</td>
                                     <td className="px-6 py-3.5">
@@ -488,9 +497,19 @@ const Dashboard = () => {
                     </table>
                 </div>
                 {/* Footer / Pagination hint */}
-                <div className="px-6 py-3 border-t border-zinc-100 bg-zinc-50 text-right">
-                    <span className="text-[10px] font-medium text-zinc-400">Showing {contractors.length} records</span>
+                <div className="px-6 py-3 border-t border-zinc-100 bg-zinc-50 flex justify-between items-center">
+                    <span className="text-[10px] font-medium text-zinc-500">
+                        {contractors.filter(c => c.name.toLowerCase().includes(contractorSearch.toLowerCase())).length > 10 ? 'Use the filter above to find more contractors.' : ''}
+                    </span>
+                    <span className="text-[10px] font-medium text-zinc-400">
+                        Showing {Math.min(10, contractors.filter(c => c.name.toLowerCase().includes(contractorSearch.toLowerCase())).length)} of {contractors.length} records
+                    </span>
                 </div>
+            </div>
+
+            {/* Data Archiving Section */}
+            <div>
+                <Archiver />
             </div>
         </div>
     );

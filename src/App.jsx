@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { parseISO, differenceInDays, addDays, format } from 'date-fns';
 import {
+  initStorage,
   getContractors, saveContractors, getContractorsAsync,
   getSites, saveSites, getSitesAsync,
   getTimesheets, saveTimesheets, getTimesheetsAsync,
@@ -45,6 +46,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState(null);
+  const [isStorageReady, setIsStorageReady] = useState(false);
 
   // Contractors
   const [contractors, setContractors] = useState([]);
@@ -105,6 +107,14 @@ function App() {
   };
 
   useEffect(() => {
+    initStorage().then(() => {
+      setIsStorageReady(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isStorageReady) return;
+
     // Check if first run (no credentials set up yet)
     if (isFirstRun()) {
       setShowInitialSetup(true);
@@ -123,7 +133,7 @@ function App() {
       }, 30000);
       return () => clearInterval(interval);
     }
-  }, [authenticated]);
+  }, [authenticated, isStorageReady]);
 
   // Contractor handlers
   const handleAddContractor = () => {
@@ -312,7 +322,17 @@ function App() {
     }
   };
 
-
+  // Loading state while IndexedDB mounts
+  if (!isStorageReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-8 h-8 rounded-full border-4 border-zinc-200 border-t-primary-600 animate-spin"></div>
+            <p className="text-zinc-500 font-medium text-sm">Mounting Secure Storage...</p>
+          </div>
+      </div>
+    );
+  }
 
   // Show initial setup if first run
   if (showInitialSetup) {
