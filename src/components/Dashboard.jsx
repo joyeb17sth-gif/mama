@@ -125,6 +125,8 @@ const Dashboard = () => {
         const currentMonthStr = today.toISOString().slice(0, 7); // yyyy-MM
         const upcoming = [];
 
+        if (!periodicalTasks || !Array.isArray(periodicalTasks)) return upcoming;
+
         periodicalTasks.forEach(task => {
             const site = sites.find(s => s.id === task.siteId);
             const schedule = task.schedules?.find(s => s.targetPeriod === currentMonthStr && s.status === 'Scheduled');
