@@ -52,7 +52,11 @@ const EmployeeList = ({ employees, onEdit, onDelete }) => {
                   Edit
                 </button>
                 <button
-                  onClick={() => onDelete(employee.id)}
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to delete this employee?')) {
+                      onDelete(employee.id);
+                    }
+                  }}
                   className="text-red-600 hover:text-red-900"
                 >
                   Delete

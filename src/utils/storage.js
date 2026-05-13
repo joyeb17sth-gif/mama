@@ -7,6 +7,8 @@ localforage.config({
   storeName: 'app_data'
 });
 
+export const DEFAULT_GLOBAL_RATES = { allowancePerHour: 2.80, otherPerDay: 10.00 };
+
 export const memoryCache = {
   contractors: [],
   sites: [],
@@ -16,7 +18,9 @@ export const memoryCache = {
   trainingReleases: [],
   auditLogs: [],
   paymentSummaries: [],
-  publicHolidays: []
+  publicHolidays: [],
+  periodicalTasks: [],
+  globalRates: { ...DEFAULT_GLOBAL_RATES }
 };
 
 // Initialize the storage on app start
@@ -53,7 +57,7 @@ const saveToCloud = async (table, id, data) => {
     .from(table)
     .upsert({ id, data: encrypted, updated_at: new Date() });
 
-  if (error) console.error(`Error saving to ${table}:`, error);
+  if (error && import.meta.env.DEV) console.error(`Error saving to ${table}:`, error);
 };
 
 // Helper to get all data from a Supabase table
@@ -63,7 +67,7 @@ const getFromCloud = async (table) => {
     .select('data');
 
   if (error) {
-    console.error(`Error fetching from ${table}:`, error);
+    if (import.meta.env.DEV) console.error(`Error fetching from ${table}:`, error);
     return [];
   }
 
@@ -157,31 +161,34 @@ export const savePublicHolidays = async (holidays) => {
 export const getPublicHolidaysAsync = () => getSingleFromCloud('public_holidays', 'main_list');
 export const getPublicHolidays = () => memoryCache.publicHolidays;
 
-
-// --- USERS / CREDENTIALS ---
-
-export const saveUserToCloud = async (userProfile) => {
-  await saveToCloud('app_credentials', userProfile.username, userProfile);
+// --- PERIODICAL TASKS ---
+export const savePeriodicalTasks = async (tasks) => {
+  memoryCache.periodicalTasks = tasks;
+  await localforage.setItem('periodicalTasks', encryptData(tasks));
+  await saveToCloud('periodical_tasks', 'main_list', tasks);
 };
+export const getPeriodicalTasksAsync = () => getSingleFromCloud('periodical_tasks', 'main_list');
+export const getPeriodicalTasks = () => memoryCache.periodicalTasks;
 
-export const getUserFromCloud = async (username) => {
-  return await getSingleFromCloud('app_credentials', username);
+// --- GLOBAL RATES (Allowance per hour, Other per day) ---
+export const saveGlobalRates = async (rates) => {
+  memoryCache.globalRates = rates;
+  await localforage.setItem('globalRates', encryptData(rates));
+  await saveToCloud('global_rates', 'main_list', rates);
 };
+export const getGlobalRatesAsync = () => getSingleFromCloud('global_rates', 'main_list');
+export const getGlobalRates = () => ({ ...DEFAULT_GLOBAL_RATES, ...(memoryCache.globalRates || {}) });
 
-export const saveCredentialsCloud = async (creds) => {
-  await saveToCloud('app_credentials', 'main', creds);
-};
-export const getCredentialsCloud = () => getSingleFromCloud('app_credentials', 'main');
+
 
 // --- ACTIONS LOGGING ---
-export const logAction = (action, details, user = null) => {
+export const logAction = async (action, details, user = null) => {
   let finalUser = user;
   if (!finalUser || finalUser === 'Admin') {
     try {
-      const stored = localStorage.getItem('appCredentials');
-      if (stored) {
-        const dec = decryptData(stored);
-        finalUser = (dec && dec.username) ? dec.username : 'Unknown User';
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session && session.user) {
+        finalUser = session.user.email;
       } else {
         finalUser = 'System';
       }
@@ -190,7 +197,6 @@ export const logAction = (action, details, user = null) => {
     }
   }
 
-  const logs = [...getAuditLogs()];
   const newLog = {
     id: Date.now().toString(),
     timestamp: new Date().toISOString(),
@@ -198,6 +204,56 @@ export const logAction = (action, details, user = null) => {
     action,
     details
   };
-  logs.unshift(newLog);
-  saveAuditLogs(logs); // uses the new function which updates cache, localforage and cloud
+
+  try {
+    // Fetch the absolute latest logs from the cloud directly to prevent concurrency overwrite issues
+    const cloudLogs = await getSingleFromCloud('audit_logs', 'main_list');
+    
+    let latestLogs = [];
+    if (cloudLogs && Array.isArray(cloudLogs)) {
+      latestLogs = cloudLogs;
+    } else {
+      latestLogs = [...getAuditLogs()];
+    }
+
+    // Prepend the new log
+    latestLogs.unshift(newLog);
+
+    // Calculate the date 90 days ago
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+    // Filter to only keep logs from the last 90 days
+    let filteredLogs = latestLogs.filter(log => {
+      try {
+        return new Date(log.timestamp) >= ninetyDaysAgo;
+      } catch (e) {
+        return true; // if parsing fails, keep it just in case
+      }
+    });
+
+    // Keep unbounded growth in check - e.g., max 2000 items as secondary fallback
+    const trimmedLogs = filteredLogs.slice(0, 2000);
+
+    // Save back to cloud, localforage, and update cache
+    await saveAuditLogs(trimmedLogs);
+  } catch (err) {
+    if (import.meta.env.DEV) console.error("Error writing audit log safely:", err);
+    // Fallback to purely local append
+    const logs = [...getAuditLogs()];
+    logs.unshift(newLog);
+
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+    let filteredLogs = logs.filter(log => {
+      try {
+        return new Date(log.timestamp) >= ninetyDaysAgo;
+      } catch (e) {
+        return true;
+      }
+    });
+
+    saveAuditLogs(filteredLogs.slice(0, 2000));
+  }
 };

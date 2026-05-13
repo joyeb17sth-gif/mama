@@ -7,8 +7,8 @@ export const calculatePayslip = (employee, salary, allowances = 0, deductions = 
   // Calculate gross salary
   const grossSalary = basicSalary + totalAllowances;
   
-  // Calculate net salary
-  const netSalary = grossSalary - totalDeductions;
+  // Calculate net salary (floor at 0 to prevent negative payslips)
+  const netSalary = Math.max(0, grossSalary - totalDeductions);
   
   return {
     employeeId: employee.id,

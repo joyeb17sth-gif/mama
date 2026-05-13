@@ -5,11 +5,8 @@ const Login = ({ onLogin }) => {
   const [isLoginMode, setIsLoginMode] = useState(true);
 
   // Form State
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [securityQuestion, setSecurityQuestion] = useState('');
-  const [securityAnswer, setSecurityAnswer] = useState('');
 
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -35,9 +32,6 @@ const Login = ({ onLogin }) => {
     setError('');
     setSuccessMsg('');
     setPassword('');
-    setConfirmPassword('');
-    setSecurityQuestion('');
-    setSecurityAnswer('');
   };
 
   const toggleMode = () => {
@@ -61,7 +55,7 @@ const Login = ({ onLogin }) => {
 
     try {
       // LOGIN FLOW
-        const result = await loginUser(username, password);
+        const result = await loginUser(email, password);
 
         if (result.success) {
           setAuthenticated(true);
@@ -122,21 +116,21 @@ const Login = ({ onLogin }) => {
             </div>
           )}
 
-          {/* Username Field */}
+          {/* Email Field */}
           <div>
             <label className="block text-p3 font-bold text-gray-400 mb-2">
-              Username
+              Email Address
             </label>
             <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
               autoFocus
               disabled={isLocked || loading}
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0 outline-none transition font-medium disabled:bg-gray-100 disabled:cursor-not-allowed"
-              placeholder="Enter your username"
+              placeholder="you@example.com"
             />
           </div>
 

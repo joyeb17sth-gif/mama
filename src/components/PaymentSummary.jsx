@@ -11,7 +11,7 @@ import { supabase } from '../utils/supabaseClient';
 import JSZip from 'jszip';
 import Dropdown from './Dropdown';
 
-const PaymentSummary = () => {
+const PaymentSummary = ({ syncVersion }) => {
   const [timesheets, setTimesheets] = useState([]);
   const [contractors, setContractors] = useState([]);
 
@@ -71,7 +71,7 @@ const PaymentSummary = () => {
         const contractor = contractors.find(c => c.id === payment.contractorId);
 
         if (!contractor?.email) {
-          console.warn(`Skipping ${payment.contractorName}: No email address.`);
+          if (import.meta.env.DEV) console.warn(`Skipping ${payment.contractorName}: No email address.`);
           failCount++;
           continue;
         }
@@ -85,7 +85,7 @@ const PaymentSummary = () => {
         const payslipElement = document.querySelector('.payslip-wrapper');
 
         if (!payslipElement) {
-          console.error('Could not find payslip element in DOM');
+          if (import.meta.env.DEV) console.error('Could not find payslip element in DOM');
           setSelectedPayslip(null);
           failCount++;
           continue;
@@ -121,7 +121,7 @@ const PaymentSummary = () => {
         setSelectedPayslip(null);
 
         if (error) {
-          console.error(`Error sending to ${contractor.name}:`, error);
+          if (import.meta.env.DEV) console.error(`Error sending to ${contractor.name}:`, error);
           failCount++;
         } else {
           successCount++;
@@ -136,7 +136,7 @@ const PaymentSummary = () => {
         alert(`Failed to send ${failCount} payslips. Please check the console.`);
       }
     } catch (error) {
-      console.error('Fatal error in sending payslips:', error);
+      if (import.meta.env.DEV) console.error('Fatal error in sending payslips:', error);
       alert('An error occurred while connecting to the email service.');
       setSelectedPayslip(null);
     } finally {
@@ -169,7 +169,7 @@ const PaymentSummary = () => {
         const payslipElement = document.querySelector('.payslip-wrapper');
 
         if (!payslipElement) {
-          console.error('Could not find payslip element in DOM');
+          if (import.meta.env.DEV) console.error('Could not find payslip element in DOM');
           continue;
         }
 
@@ -227,7 +227,7 @@ const PaymentSummary = () => {
       }
 
     } catch (error) {
-      console.error('Error generating PDF bundle:', error);
+      if (import.meta.env.DEV) console.error('Error generating PDF bundle:', error);
       alert('An error occurred while generating the PDF bundle.');
       setSelectedPayslip(null);
     } finally {
@@ -243,7 +243,7 @@ const PaymentSummary = () => {
 
   useEffect(() => {
     refreshData();
-  }, []);
+  }, [syncVersion]);
 
   const generateSummary = () => {
     if (!selectedPeriod) {
@@ -272,9 +272,11 @@ const PaymentSummary = () => {
       return;
     }
 
-    console.log('Generating summary for:', selectedPeriod);
-    console.log('Found timesheets:', periodTimesheets.length);
-    console.log('Found releases:', periodReleases.length);
+    if (import.meta.env.DEV) {
+      console.log('Generating summary for:', selectedPeriod);
+      console.log('Found timesheets:', periodTimesheets.length);
+      console.log('Found releases:', periodReleases.length);
+    }
 
     // 4. Get unique contractor IDs from both timesheets AND releases
     // Filter out any invalid IDs
@@ -306,6 +308,7 @@ const PaymentSummary = () => {
       let totalPay = 0;
       let totalAllowance = 0;
       let totalOtherPay = 0;
+      let totalCustomAddition = 0;
       let totalDeduction = 0;
       let totalNetPay = 0;
       const siteBreakdown = [];
@@ -318,8 +321,9 @@ const PaymentSummary = () => {
         const pay = entry.totalPay || 0;
         const allowance = entry.allowance || 0;
         const otherPay = entry.otherPay || 0;
+        const customAddition = entry.customAddition || 0;
         const deduction = entry.deduction || 0;
-        const netPay = entry.netPay || (pay + allowance + otherPay - deduction);
+        const netPay = entry.netPay || (pay + allowance + otherPay + customAddition - deduction);
 
         // Supporting legacy entries: Re-calculate hoursByType if missing
         let hoursByType = entry.hoursByRateType;
@@ -364,16 +368,20 @@ const PaymentSummary = () => {
         totalPay += pay;
         totalAllowance += allowance;
         totalOtherPay += otherPay;
+        totalCustomAddition += customAddition;
         totalDeduction += deduction;
         totalNetPay += netPay;
 
-        const existingSite = siteBreakdown.find(s => s.siteId === entry.siteId);
+        // Use rateCode in the identifier to separate different pay grades on the same site
+        const identifier = entry.rateCode ? `${entry.siteId}-${entry.rateCode}` : entry.siteId;
+        const existingSite = siteBreakdown.find(s => s.identifier === identifier);
         if (existingSite) {
           existingSite.hours += hours;
           existingSite.trainingHours += tHours;
           existingSite.pay += pay;
           existingSite.allowance += allowance;
           existingSite.otherPay += otherPay;
+          existingSite.customAddition += customAddition;
           existingSite.deduction += deduction;
           existingSite.netPay += netPay;
           // Aggregate hours by type
@@ -382,13 +390,16 @@ const PaymentSummary = () => {
           });
         } else {
           siteBreakdown.push({
+            identifier,
             siteId: entry.siteId,
             siteName: entry.siteName,
+            rateCode: entry.rateCode || null,
             hours,
             trainingHours: tHours,
             pay,
             allowance,
             otherPay,
+            customAddition,
             deduction,
             netPay,
             rates: effectiveRates,
@@ -404,13 +415,16 @@ const PaymentSummary = () => {
       // Add releases to breakdown
       if (totalReleaseAmount > 0) {
         siteBreakdown.push({
+          identifier: 'training-release',
           siteId: 'training-release',
           siteName: 'Training Pay Release',
+          rateCode: null,
           hours: totalReleaseHours,
           trainingHours: 0,
           pay: totalReleaseAmount,
           allowance: 0,
           otherPay: 0,
+          customAddition: 0,
           deduction: 0,
           netPay: totalReleaseAmount,
           isRelease: true,
@@ -427,6 +441,7 @@ const PaymentSummary = () => {
         totalPay,
         totalAllowance,
         totalOtherPay,
+        totalCustomAddition,
         totalDeduction,
         totalNetPay,
         siteBreakdown: siteBreakdown.filter(s => s.hours > 0 || s.trainingHours > 0 || Math.abs(s.pay) > 0 || Math.abs(s.netPay) > 0 || s.isRelease),
@@ -599,18 +614,17 @@ const PaymentSummary = () => {
       {showToast && <Toast message={toastMessage} onClose={() => setShowToast(false)} />}
       {/* Training Pay Alert Modal */}
       {showTrainingPayAlert && (
-        <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-md flex items-center justify-center z-50 animate-in fade-in duration-300 p-4">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-2xl max-h-[90vh] overflow-hidden border border-zinc-100 flex flex-col">
+        <div className="fixed inset-0 bg-notion-black/40 backdrop-blur-sm flex items-center justify-center z-[5000] p-4 animate-fade-in">
+          <div className="bg-white rounded-comfortable shadow-notion-deep w-full max-h-[90vh] overflow-hidden border whisper-border flex flex-col animate-scale-in">
             {/* Header */}
-            <div className="p-8 border-b border-zinc-50 bg-gradient-to-br from-zinc-50 to-white relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-48 h-48 bg-primary-50 rounded-full blur-3xl -mr-24 -mt-24 opacity-50"></div>
+            <div className="p-8 bg-notion-warm-white relative overflow-hidden">
               <div className="relative z-10 flex items-center gap-5">
-                <div className="w-16 h-16 rounded-2xl bg-zinc-900 text-white flex items-center justify-center">
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                <div className="w-14 h-14 rounded-micro bg-notion-black text-white flex items-center justify-center shadow-notion-card">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                 </div>
                 <div>
-                  <h3 className="text-h1 font-bold text-zinc-900 tracking-tight">Escrow Distribution Required</h3>
-                  <p className="text-zinc-500 font-medium">System detected {unreleasedTrainingPay.length} pending training pay releases.</p>
+                  <h3 className="text-display-secondary text-notion-black tracking-notion-display">Escrow Distribution Required</h3>
+                  <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mt-1">Found {unreleasedTrainingPay.length} pending training pay releases.</p>
                 </div>
               </div>
             </div>
@@ -621,72 +635,69 @@ const PaymentSummary = () => {
                 {unreleasedTrainingPay.map((item, index) => (
                   <div
                     key={item.contractorId}
-                    className="group bg-white rounded-[2rem] p-6 border border-zinc-100 hover:border-primary-200 transition-all relative overflow-hidden"
+                    className="group bg-notion-warm-white/30 rounded-micro p-6 whisper-border hover:shadow-notion-card transition-all relative overflow-hidden"
                   >
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-zinc-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative z-10">
                       <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm ${item.isEligible ? 'bg-primary-600 text-white' : 'bg-zinc-100 text-zinc-400'}`}>
+                        <div className={`w-10 h-10 rounded-micro flex items-center justify-center font-bold text-xs shadow-sm whisper-border ${item.isEligible ? 'bg-emerald-600 text-white border-emerald-700' : 'bg-white text-notion-warm-gray-300'}`}>
                           {index + 1}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <h4 className="text-p1 font-bold text-zinc-900">{item.contractorName}</h4>
+                            <h4 className="text-body-semibold text-notion-black uppercase tracking-tight">{item.contractorName}</h4>
                             {item.isEligible && (
-                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[9px] font-bold border border-emerald-100">Eligible</span>
+                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-micro text-badge font-bold whisper-border uppercase tracking-widest">Released</span>
                             )}
                           </div>
-                          <div className="text-xs font-bold text-zinc-400 mt-0.5">
-                            Progress: <span className={item.trainingDays >= 5 ? 'text-emerald-600' : 'text-primary-600'}>{item.trainingDays} / 5 Days</span>
+                          <div className="text-caption font-bold text-notion-warm-gray-300 mt-1 uppercase tracking-tight">
+                            Progress: <span className={item.trainingDays >= 5 ? 'text-emerald-600' : 'text-notion-blue'}>{item.trainingDays} / 5 Units</span>
                           </div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-[10px] font-bold text-zinc-400 mb-1">Accumulated Escrow</div>
-                        <div className="text-2xl font-bold text-zinc-900 tracking-tighter">${item.amount.toFixed(2)}</div>
+                        <div className="text-badge font-bold text-notion-warm-gray-300 mb-1 uppercase tracking-widest">Accumulated Balance</div>
+                        <div className="text-xl font-bold text-notion-black tracking-tight tabular-nums">${item.amount.toFixed(2)}</div>
                       </div>
                     </div>
 
-                    <div className="mt-6 pt-5 border-t border-zinc-50 flex flex-wrap gap-4 relative z-10">
-                      <div className="flex items-center gap-2 text-xs font-bold text-zinc-500">
-                        <span className={`w-2 h-2 rounded-full ${item.isEligible ? 'bg-emerald-500' : 'bg-primary-500'}`}></span>
+                    <div className="mt-6 pt-5 border-t whisper-border flex flex-wrap gap-6 relative z-10">
+                      <div className="flex items-center gap-2 text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest">
+                        <span className={`w-2 h-2 rounded-full ${item.isEligible ? 'bg-emerald-500' : 'bg-notion-blue'}`}></span>
                         {item.isEligible ? 'Verified for immediate release' : `${5 - item.trainingDays} sessions remaining`}
                       </div>
-                      <div className="flex items-center gap-2 text-xs font-bold text-zinc-500">
-                        <svg className="w-4 h-4 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                        Release Date: <span className="text-zinc-900 font-bold">{item.dueDateObj ? format(item.dueDateObj, 'dd MMM yyyy') : 'TBD'}</span>
+                      <div className="flex items-center gap-2 text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest">
+                        <svg className="w-3.5 h-3.5 text-notion-warm-gray-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        Release Target: <span className="text-notion-black font-bold">{item.dueDateObj ? format(item.dueDateObj, 'dd MMM yyyy') : 'TBD'}</span>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-8 bg-zinc-900 rounded-[2rem] p-6 text-white relative overflow-hidden">
-                <div className="absolute bottom-0 right-0 w-32 h-32 bg-primary-600 rounded-full blur-3xl -mb-16 -mr-16 opacity-30"></div>
+              <div className="mt-8 bg-notion-black rounded-micro p-6 text-white relative overflow-hidden shadow-notion-deep">
                 <div className="relative z-10 flex gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <div className="w-10 h-10 rounded-micro bg-white/10 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6 text-notion-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   </div>
                   <div>
-                    <h5 className="font-bold text-sm mb-1 text-primary-400">Payroll Integration</h5>
-                    <p className="text-xs text-zinc-400 leading-relaxed">Training payments are held in escrow for 150 days. Visit the <strong className="text-white">Management Grid</strong> to manually authorize early releases for eligible contractors.</p>
+                    <h5 className="text-badge font-bold text-notion-blue uppercase tracking-widest mb-1">Payroll Orchestration</h5>
+                    <p className="text-xs text-zinc-400 leading-relaxed font-medium">Training payouts are held in escrow for 150 days. Visit the <strong className="text-white">Operation Hub</strong> to manually authorize early releases for verified personnel.</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="p-8 bg-zinc-50 border-t border-zinc-100 flex flex-col md:flex-row justify-end gap-3">
+            <div className="p-8 bg-notion-warm-white border-t whisper-border flex flex-col md:flex-row justify-end gap-3">
               <button
                 onClick={() => {
                   setShowTrainingPayAlert(false);
                   setToastMessage('Alert dismissed. Review pending items in the Dashboard.');
                   setShowToast(true);
                 }}
-                className="px-8 py-4 bg-white border border-zinc-200 text-zinc-900 rounded-2xl font-bold text-[10px] hover:bg-zinc-100 transition"
+                className="px-6 py-3 bg-white whisper-border text-notion-black rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-zinc-100 transition shadow-sm"
               >
-                Decline & Continue
+                Dismiss Analytics
               </button>
               <button
                 onClick={() => {
@@ -694,20 +705,20 @@ const PaymentSummary = () => {
                   setToastMessage('Alert acknowledged. Pending items listed in Management Grid.');
                   setShowToast(true);
                 }}
-                className="px-8 py-4 bg-zinc-900 text-white rounded-2xl font-bold text-[10px] hover:bg-black transition"
+                className="px-8 py-3 bg-notion-black text-white rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-black transition shadow-notion-deep"
               >
-                Acknowledge Protocol
+                Confirm Protocol
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-zinc-100 p-8 animate-fade-in-up">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h3 className="text-h2 font-bold text-zinc-900 tracking-tight">Payment Summary & Consolidation</h3>
-            <p className="text-sm text-zinc-500 font-medium">Review, export, and send payslips for processed periods.</p>
+      <div className="notion-card p-10 animate-fade-in-up">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-10">
+          <div className="space-y-1">
+            <h3 className="text-display-secondary text-notion-black tracking-notion-display">Consolidated Settlement</h3>
+            <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest">Review, audit, and dispatch processed payment cycles.</p>
           </div>
 
           {summary.length > 0 && (
@@ -715,7 +726,7 @@ const PaymentSummary = () => {
               <button
                 onClick={handleSendPayslips}
                 disabled={isSending || selectedContractors.length === 0}
-                className={`px-5 py-2.5 bg-primary-600 text-white rounded-xl font-bold text-[11px] hover:bg-primary-700 transition-all flex items-center gap-2 group ${isSending || selectedContractors.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-0.5 active:translate-y-0'}`}
+                className={`px-5 py-2 bg-notion-blue text-white rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-notion-blue-active transition-all flex items-center gap-2 group shadow-notion-card ${isSending || selectedContractors.length === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:-translate-y-0.5 active:translate-y-0'}`}
               >
                 {isSending ? (
                   <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -732,10 +743,10 @@ const PaymentSummary = () => {
               <button
                 onClick={handleZippedExport}
                 disabled={isZipping || selectedContractors.length === 0}
-                className={`px-5 py-2.5 bg-zinc-100 text-zinc-900 border border-zinc-200 rounded-xl font-bold text-[11px] hover:bg-zinc-200 transition-all flex items-center gap-2 ${isZipping || selectedContractors.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-0.5 active:translate-y-0'}`}
+                className={`px-5 py-2 bg-notion-warm-white text-notion-black whisper-border rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-zinc-200 transition-all flex items-center gap-2 shadow-sm ${isZipping || selectedContractors.length === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:-translate-y-0.5 active:translate-y-0'}`}
               >
                 {isZipping ? (
-                  <svg className="animate-spin h-3.5 w-3.5 text-zinc-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin h-3.5 w-3.5 text-notion-warm-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
@@ -746,7 +757,7 @@ const PaymentSummary = () => {
               </button>
               <button
                 onClick={handleExport}
-                className="px-5 py-2.5 bg-zinc-900 text-white rounded-xl font-bold text-[11px] hover:bg-zinc-800 transition-all flex items-center gap-2 hover:-translate-y-0.5 active:translate-y-0"
+                className="px-5 py-2 bg-notion-black text-white rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2 shadow-notion-deep hover:-translate-y-0.5 active:translate-y-0"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 Export CSV
@@ -756,22 +767,22 @@ const PaymentSummary = () => {
         </div>
 
         {timesheets.length === 0 && (
-          <div className="bg-amber-50 border border-amber-100 rounded-2xl p-6 mb-8 flex items-start gap-4">
-            <div className="p-2 bg-amber-100 text-amber-600 rounded-xl">
+          <div className="bg-orange-50 whisper-border rounded-comfortable p-6 mb-10 flex items-start gap-4">
+            <div className="p-2 bg-orange-100 text-orange-600 rounded-micro whisper-border">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             </div>
             <div>
-              <h4 className="text-sm font-bold text-amber-900">No Timesheets Available</h4>
-              <p className="text-sm text-amber-700 mt-1 font-medium">Please process timesheets in the dedicated tab before generating a payment summary.</p>
+              <h4 className="text-body-semibold text-orange-900 uppercase tracking-tight">Zero Activity Source</h4>
+              <p className="text-caption text-orange-700 mt-1 font-bold uppercase tracking-widest">Process terminal timesheets before generating consolidated settlements.</p>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
           {/* Active Periods Selection */}
           <div className="space-y-3">
-            <label className="block pl-1">
-              Pending Pay Periods
+            <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest pl-1">
+              Active Pay Cycles
             </label>
             <Dropdown
               value={!categorizedPeriods.find(p => p.value === selectedPeriod)?.isCompleted ? selectedPeriod : ''}
@@ -788,8 +799,8 @@ const PaymentSummary = () => {
           {/* Completed Periods Dropdown */}
           <div className="space-y-3">
             <div className="flex justify-between items-center pl-1">
-              <label className="block">
-                Export History
+              <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest">
+                Processed Vault
               </label>
               {completedPeriods.length > 5 && (
                 <div className="relative">
@@ -798,7 +809,7 @@ const PaymentSummary = () => {
                     placeholder="Search history..."
                     value={historyFilter}
                     onChange={(e) => setHistoryFilter(e.target.value)}
-                    className="text-[9px] px-3 py-1 bg-white border border-zinc-200 rounded-full focus:ring-2 focus:ring-emerald-100 outline-none w-32 font-bold placeholder:text-zinc-300 transition-all border-dashed hover:border-emerald-300"
+                    className="text-[9px] px-3 py-1 bg-notion-warm-white bg-notion-warm-white whisper-border rounded-micro focus:shadow-notion-card outline-none w-32 font-bold placeholder:text-notion-warm-gray-100 tracking-widest"
                   />
                 </div>
               )}
@@ -810,33 +821,33 @@ const PaymentSummary = () => {
                 setSummary([]);
                 setHasGenerated(false);
               }}
-              options={completedPeriods.map(p => ({ ...p, label: `${p.label} (Processed)` }))}
-              placeholder={historyFilter ? `Matching "${historyFilter}" (${completedPeriods.length})` : '-- View Processed Vault --'}
+              options={completedPeriods.map(p => ({ ...p, label: `${p.label} (Audit Done)` }))}
+              placeholder={historyFilter ? `Matching "${historyFilter}" (${completedPeriods.length})` : '-- View History --'}
             />
           </div>
         </div>
 
-        <div className="bg-zinc-50/50 p-6 rounded-2xl border border-zinc-100 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-zinc-400 border border-zinc-100">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+        <div className="bg-notion-warm-white/50 p-6 rounded-comfortable whisper-border flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-micro bg-white whisper-border flex items-center justify-center text-notion-warm-gray-100 shadow-sm">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
             </div>
-            <div className="text-sm font-bold text-zinc-900 tracking-tight">
+            <div className="text-body-semibold text-notion-black tracking-tight">
               {selectedPeriod ? (
-                <span className="flex items-center gap-2">
-                  Current Scope: <span className="px-2.5 py-1 bg-white border border-zinc-200 rounded-lg text-primary-600">{categorizedPeriods.find(p => p.value === selectedPeriod)?.label}</span>
-                </span>
+                <div className="flex items-center gap-3">
+                  Scope Identification: <span className="px-3 py-1 bg-white whisper-border rounded-micro text-notion-blue text-badge font-bold uppercase tracking-widest shadow-sm">{categorizedPeriods.find(p => p.value === selectedPeriod)?.label}</span>
+                </div>
               ) : (
-                <span className="text-zinc-400 italic font-medium">Please select a cycle to generate analysis...</span>
+                <span className="text-notion-warm-gray-100 italic uppercase tracking-widest font-bold text-badge">Awaiting cycle identification...</span>
               )}
             </div>
           </div>
           <button
             onClick={generateSummary}
             disabled={!selectedPeriod}
-            className="w-full md:w-auto px-8 py-3 bg-zinc-900 text-white rounded-xl font-bold text-[11px] hover:bg-black transition-all disabled:opacity-30 hover:-translate-y-0.5 active:translate-y-0"
+            className="w-full md:w-auto px-8 py-3 bg-notion-black text-white rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-black transition-all shadow-notion-deep disabled:opacity-20"
           >
-            Start Verification
+            Initiate Synthesis
           </button>
         </div>
 
@@ -849,7 +860,7 @@ const PaymentSummary = () => {
             <p className="text-zinc-500 max-w-sm mx-auto mb-8 font-medium">
               We parsed the timesheets for this period but found no billable hours or payment data.
             </p>
-            <div className="text-left bg-zinc-50 p-6 rounded-2xl border border-zinc-100 inline-block max-w-md w-full">
+            <div className="text-left bg-zinc-50 p-6 rounded-2xl border border-zinc-100 inline-block w-full">
               <p className="text-[10px] font-bold text-zinc-400 mb-4">Verification Checklist</p>
               <ul className="space-y-3">
                 <li className="flex items-center gap-3 text-sm font-bold text-zinc-700">
@@ -870,88 +881,88 @@ const PaymentSummary = () => {
         )}
 
         {summary.length > 0 && (
-          <div className="mt-10 animate-fade-in-up">
-            <div className="overflow-x-auto rounded-2xl border border-zinc-100 bg-white">
-              <table className="min-w-full divide-y divide-zinc-100">
-                <thead>
-                  <tr className="bg-zinc-50/50">
-                    <th className="px-6 py-4 text-center w-12">
+          <div className="mt-12 animate-fade-in-up">
+            <div className="overflow-hidden rounded-comfortable whisper-border bg-white shadow-notion-deep">
+              <table className="min-w-full divide-y whisper-border">
+                <thead className="bg-notion-warm-white">
+                  <tr>
+                    <th className="px-6 py-4 text-center w-14">
                       <input
                         type="checkbox"
-                        className="w-5 h-5 rounded-lg border-zinc-300 text-primary-600 focus:ring-primary-100 transition-all cursor-pointer"
+                        className="w-4 h-4 rounded-micro border-notion-warm-gray-300 text-notion-blue focus:ring-0 transition-all cursor-pointer"
                         onChange={handleSelectAll}
                         checked={summary.length > 0 && selectedContractors.length === summary.length}
                       />
                     </th>
-                    <th className="px-6 py-4 text-left text-[11px] font-bold text-zinc-400">Employee Identity</th>
-                    <th className="px-6 py-4 text-center text-[11px] font-bold text-zinc-400">Workload</th>
-                    <th className="px-6 py-4 text-right text-[11px] font-bold text-emerald-600 bg-emerald-50/50">Net Payable</th>
-                    <th className="px-6 py-4 text-left text-[11px] font-bold text-zinc-400">Site Allocations & Details</th>
-                    <th className="px-6 py-4 text-right text-[11px] font-bold text-zinc-400">Action</th>
+                    <th className="px-6 py-4 text-left text-caption font-bold text-notion-warm-gray-300 uppercase tracking-widest">Resource Identity</th>
+                    <th className="px-6 py-4 text-center text-caption font-bold text-notion-warm-gray-300 uppercase tracking-widest">Cycle Load</th>
+                    <th className="px-6 py-4 text-right text-caption font-bold text-emerald-600 bg-emerald-50/30 uppercase tracking-widest">Net Settlement</th>
+                    <th className="px-6 py-4 text-left text-caption font-bold text-notion-warm-gray-300 uppercase tracking-widest">Site Allocations & Analytics</th>
+                    <th className="px-6 py-4 text-right text-caption font-bold text-notion-warm-gray-300 uppercase tracking-widest">Verification</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100">
+                <tbody className="divide-y whisper-border">
                   {summary.map(payment => {
                     const contractor = contractors.find(c => c.id === payment.contractorId);
                     const isSelected = selectedContractors.includes(payment.contractorId);
                     return (
-                      <tr key={payment.contractorId} className={`transition-all group ${isSelected ? 'bg-primary-50/20' : 'hover:bg-zinc-50/50'}`}>
-                        <td className="px-6 py-5 text-center">
+                      <tr key={payment.contractorId} className={`transition-all group ${isSelected ? 'bg-notion-warm-white/50' : 'hover:bg-zinc-50/30'}`}>
+                        <td className="px-6 py-6 text-center">
                           <input
                             type="checkbox"
-                            className="w-5 h-5 rounded-lg border-zinc-300 text-primary-600 focus:ring-primary-100 transition-all cursor-pointer"
+                            className="w-4 h-4 rounded-micro border-notion-warm-gray-300 text-notion-blue focus:ring-0 transition-all cursor-pointer"
                             checked={isSelected}
                             onChange={() => handleSelectContractor(payment.contractorId)}
                           />
                         </td>
-                        <td className="px-6 py-5 whitespace-nowrap">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-900 font-bold text-xs border border-zinc-200">
+                        <td className="px-6 py-6 whitespace-nowrap">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-micro bg-notion-black text-white flex items-center justify-center font-bold text-xs shadow-notion-card">
                               {contractor?.name[0].toUpperCase()}
                             </div>
                             <div>
-                              <div className="text-sm font-bold text-zinc-900 tracking-tight">{contractor?.name}</div>
-                              <div className="text-[10px] font-bold text-zinc-400">ID: {contractor?.contractorId}</div>
+                              <div className="text-body-semibold text-notion-black tracking-tight">{contractor?.name}</div>
+                              <div className="text-caption font-bold text-notion-warm-gray-300 mt-0.5 uppercase tracking-widest">ID: {contractor?.contractorId}</div>
                               {!contractor?.email && (
-                                <span className="inline-flex mt-1 px-1.5 py-0.5 bg-rose-50 text-rose-500 text-[8px] font-bold rounded border border-rose-100">Missing Email</span>
+                                <span className="inline-flex mt-1.5 px-1.5 py-0.5 bg-notion-badge-rose-bg text-rose-600 text-badge font-bold rounded-micro whisper-border uppercase tracking-widest">Missing Email</span>
                               )}
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-5 text-center">
-                          <div className="text-sm font-bold text-zinc-900">{payment.totalHours.toFixed(2)} <span className="text-[10px] text-zinc-400 font-medium">hrs</span></div>
+                        <td className="px-6 py-6 text-center">
+                          <div className="text-body-semibold text-notion-black tabular-nums">{payment.totalHours.toFixed(2)} <span className="text-[10px] text-notion-warm-gray-300 font-bold uppercase tracking-widest ml-1">hrs</span></div>
                         </td>
-                        <td className="px-6 py-5 text-right font-bold text-emerald-600 bg-emerald-50/10">
-                          <div className="text-base tracking-tight">${payment.totalNetPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                        <td className="px-6 py-6 text-right font-bold text-emerald-600 bg-emerald-50/10 tabular-nums">
+                          <div className="text-lg tracking-tight">${payment.totalNetPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                         </td>
-                        <td className="px-6 py-5 max-w-md">
+                        <td className="px-6 py-6 max-w-md">
                           <div className="flex flex-wrap gap-2 py-1">
                             {payment.siteBreakdown.map((s, idx) => (
-                              <div key={idx} className="bg-zinc-50 group-hover:bg-white rounded-xl p-3 border border-zinc-200/50 transition-all flex flex-col min-w-[140px]">
+                              <div key={idx} className="bg-notion-warm-white/50 group-hover:bg-white rounded-micro p-3 whisper-border transition-all flex flex-col min-w-[150px] shadow-sm">
                                 <div className="flex justify-between items-center gap-4 mb-2">
-                                  <span className="text-[10px] font-bold text-zinc-700 uppercase tracking-tighter truncate max-w-[100px]">{s.siteName}</span>
-                                  <span className="text-[11px] font-bold text-zinc-900">${s.netPay.toFixed(2)}</span>
+                                  <span className="text-badge font-bold text-notion-black uppercase tracking-tight truncate max-w-[110px]">{s.siteName}</span>
+                                  <span className="text-badge font-bold text-notion-black tabular-nums">${s.netPay.toFixed(2)}</span>
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">
-                                  {s.hours > 0 && <span className="text-[9px] font-bold text-zinc-400 bg-zinc-100/50 px-1.5 py-0.5 rounded">{s.hours.toFixed(1)}h wrk</span>}
-                                  {s.trainingHours > 0 && <span className="text-[9px] font-bold text-amber-500 bg-amber-50/50 px-1.5 py-0.5 rounded">Trn</span>}
-                                  {(s.allowance > 0 || s.otherPay > 0) && <span className="text-[9px] font-bold text-primary-500 bg-primary-50/50 px-1.5 py-0.5 rounded">+Adj</span>}
-                                  {s.deduction > 0 && <span className="text-[9px] font-bold text-rose-500 bg-rose-50/50 px-1.5 py-0.5 rounded">-Ded</span>}
+                                  {s.hours > 0 && <span className="text-[8px] font-bold text-notion-warm-gray-300 bg-notion-warm-white whisper-border px-1.5 py-0.5 rounded-micro uppercase tracking-widest">{s.hours.toFixed(1)}h</span>}
+                                  {s.trainingHours > 0 && <span className="text-[8px] font-bold text-orange-600 bg-orange-50 whisper-border px-1.5 py-0.5 rounded-micro uppercase tracking-widest">Trn</span>}
+                                  {(s.allowance > 0 || s.otherPay > 0) && <span className="text-[8px] font-bold text-notion-blue bg-notion-badge-blue-bg whisper-border px-1.5 py-0.5 rounded-micro uppercase tracking-widest">Adj</span>}
+                                  {s.deduction > 0 && <span className="text-[8px] font-bold text-rose-500 bg-notion-badge-rose-bg whisper-border px-1.5 py-0.5 rounded-micro uppercase tracking-widest">Ded</span>}
                                 </div>
                               </div>
                             ))}
                           </div>
                         </td>
-                        <td className="px-6 py-5 text-right">
+                        <td className="px-6 py-6 text-right">
                           <button
                             onClick={() => setSelectedPayslip(payment)}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-50 text-zinc-900 text-[11px] font-bold rounded-xl border border-zinc-200 hover:bg-zinc-900 hover:text-white hover:border-zinc-900 transition-all group/btn"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-white text-notion-black text-badge font-bold uppercase tracking-widest rounded-micro whisper-border hover:bg-notion-black hover:text-white transition-all shadow-sm group/btn"
                           >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-3.5 h-3.5 text-notion-warm-gray-100 group-hover/btn:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
-                            Preview
+                            Audit
                           </button>
                         </td>
                       </tr>

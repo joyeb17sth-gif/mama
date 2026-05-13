@@ -67,6 +67,11 @@ export const exportPaymentSummaryToCSV = (paymentSummary, contractors) => {
   ].join('\n');
 
   // Create blob and download
+  const confirmExport = window.confirm(
+    'WARNING: This CSV file contains sensitive banking details (BSB, Account Numbers, Account Names).\n\nPlease store this file securely and do not share it via unencrypted channels.'
+  );
+  if (!confirmExport) return;
+
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);

@@ -46,7 +46,7 @@ const PublicHolidayManager = () => {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in-up">
+        <div className="w-full space-y-8 animate-fade-in-up">
             {showToast && <Toast message={toastMsg} onClose={() => setShowToast(false)} />}
 
             <div className="bg-white rounded-[2.5rem] p-10 border border-zinc-100 relative overflow-hidden">

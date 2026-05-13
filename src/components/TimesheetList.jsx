@@ -21,10 +21,20 @@ const TimesheetList = ({ onEdit }) => {
 
   const handleDelete = (id) => {
     if (window.confirm('Are you sure you want to delete this timesheet? This action cannot be undone.')) {
+      const timesheetToDelete = timesheets.find(t => t.id === id);
       const updated = timesheets.filter(t => t.id !== id);
       setTimesheets(updated);
       saveTimesheets(updated);
-      logAction('DELETE_TIMESHEET', { id });
+      
+      const periodInfo = timesheetToDelete?.periodStart && timesheetToDelete?.periodEnd 
+        ? `${timesheetToDelete.periodStart} to ${timesheetToDelete.periodEnd}`
+        : 'Unknown Period';
+        
+      logAction('DELETE_TIMESHEET', { 
+        id,
+        siteName: timesheetToDelete?.siteName || 'Unknown Site',
+        period: periodInfo
+      });
     }
   };
 
@@ -87,29 +97,29 @@ const TimesheetList = ({ onEdit }) => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-[2rem] border border-zinc-100">
-        <table className="min-w-full border-collapse">
+      <div className="bg-white rounded-[2rem] border border-zinc-100 overflow-x-auto custom-scrollbar max-w-full">
+        <table className="w-full border-collapse table-fixed">
           <thead>
             <tr className="bg-zinc-900">
-              <th className="px-6 py-5 text-left text-p3 font-bold text-zinc-400 border-b border-zinc-800 rounded-tl-[2rem]">
+              <th className="px-6 py-5 text-left text-p3 font-bold text-zinc-400 border-b border-zinc-800 rounded-tl-[2rem] w-[15%]">
                 Deployment Node
               </th>
-              <th className="px-6 py-5 text-left text-p3 font-bold text-zinc-400 border-b border-zinc-800">
+              <th className="px-6 py-5 text-left text-p3 font-bold text-zinc-400 border-b border-zinc-800 w-[15%]">
                 Timeline
               </th>
-              <th className="px-6 py-5 text-left text-p3 font-bold text-zinc-400 border-b border-zinc-800">
+              <th className="px-6 py-5 text-left text-p3 font-bold text-zinc-400 border-b border-zinc-800 w-[30%]">
                 Personnel
               </th>
-              <th className="px-6 py-5 text-center text-p3 font-bold text-zinc-400 border-b border-zinc-800">
+              <th className="px-6 py-5 text-center text-p3 font-bold text-zinc-400 border-b border-zinc-800 w-[10%]">
                 Utilization
               </th>
-              <th className="px-6 py-5 text-right text-p3 font-bold text-zinc-400 border-b border-zinc-800">
+              <th className="px-6 py-5 text-right text-p3 font-bold text-zinc-400 border-b border-zinc-800 w-[10%]">
                 Valuation
               </th>
-              <th className="px-6 py-5 text-center text-p3 font-bold text-zinc-400 border-b border-zinc-800">
+              <th className="px-6 py-5 text-center text-p3 font-bold text-zinc-400 border-b border-zinc-800 w-[12%]">
                 Protocol
               </th>
-              <th className="px-6 py-5 text-center text-p3 font-bold text-zinc-400 border-b border-zinc-800 rounded-tr-[2rem]">
+              <th className="px-6 py-5 text-center text-p3 font-bold text-zinc-400 border-b border-zinc-800 rounded-tr-[2rem] w-[8%]">
                 Actions
               </th>
             </tr>
@@ -140,8 +150,8 @@ const TimesheetList = ({ onEdit }) => {
                       {timesheet.periodStart}
                     </div>
                   </td>
-                  <td className="px-6 py-5 max-w-[200px]">
-                    <div className="text-p3 font-bold text-zinc-500 truncate" title={contractorNames}>
+                  <td className="px-6 py-5 overflow-hidden">
+                    <div className="text-p3 font-bold text-zinc-500 truncate w-full max-w-[150px] sm:max-w-[250px] md:max-w-[400px] lg:max-w-xl" title={contractorNames}>
                       {contractorNames}
                     </div>
                   </td>

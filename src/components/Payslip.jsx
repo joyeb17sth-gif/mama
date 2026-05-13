@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, Fragment } from 'react';
 import { format, parseISO } from 'date-fns';
 import html2pdf from 'html2pdf.js';
+import { getGlobalRates } from '../utils/storage';
 
 const Payslip = ({ payment, period, contractor, onBack }) => {
     const payslipRef = useRef();
@@ -28,7 +29,7 @@ const Payslip = ({ payment, period, contractor, onBack }) => {
                 windowWidth: 1100
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['css', 'legacy'] }
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         };
 
         html2pdf().set(opt).from(element).save();
@@ -38,19 +39,21 @@ const Payslip = ({ payment, period, contractor, onBack }) => {
 
     return (
         <div className="bg-zinc-50 min-h-screen p-8 pt-24 print:p-0 print:bg-white">
-            <style dangerouslySetInnerHTML={{
-                __html: `
+            <style>
+                {`
                 @media print {
                     @page { size: A4 portrait; margin: 15mm; }
                     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; }
                     .print-hidden { display: none !important; }
                     .payslip-wrapper { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; border: none !important; box-shadow: none !important; }
+                    .break-avoid { break-inside: avoid; -webkit-column-break-inside: avoid; page-break-inside: avoid; }
                 }
-            `}} />
+                `}
+            </style>
 
             {/* Navigation Header - Fixed at top */}
             <div className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md border-b border-zinc-100 z-50 print-hidden">
-                <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
+                <div className="w-full mx-auto px-6 py-4 flex justify-between items-center">
                     <button
                         onClick={onBack}
                         className="flex items-center gap-2.5 text-zinc-500 hover:text-zinc-900 font-bold transition-all text-sm"
@@ -82,16 +85,15 @@ const Payslip = ({ payment, period, contractor, onBack }) => {
                         <div className="text-sm font-bold text-zinc-500 uppercase tracking-widest">{periodLabel}</div>
                     </div>
                     <div className="text-right">
-                        <div className="text-lg font-bold text-zinc-900">SitalPayslip</div>
-                        <div className="text-xs text-zinc-500 font-medium mt-1">
-                            Infrastructure Services<br />
-                            ABN: 12 345 678 901
+                        <div className="text-lg font-bold text-zinc-900 leading-tight">
+                            Seetal Payslip<br />
+                            <span className="text-sm font-medium text-zinc-500">management system</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Employee Info Grid */}
-                <div className="grid grid-cols-2 gap-12 mb-12">
+                <div className="grid grid-cols-2 gap-12 mb-12 break-avoid">
                     <div>
                         <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4 border-b border-zinc-100 pb-2">Employee Details</h3>
                         <div className="space-y-2">
@@ -139,45 +141,83 @@ const Payslip = ({ payment, period, contractor, onBack }) => {
                         <thead>
                             <tr className="border-b-2 border-zinc-100">
                                 <th className="py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider w-1/2">Description</th>
-                                <th className="py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider text-center">Rate</th>
                                 <th className="py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider text-center">Hours</th>
+                                <th className="py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider text-center">Rate</th>
                                 <th className="py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider text-right">Total</th>
                             </tr>
                         </thead>
-                        <tbody className="text-sm text-zinc-900">
-                            {payment.siteBreakdown.map((site, sIdx) => (
-                                <Fragment key={sIdx}>
-                                    <tr className="border-b border-zinc-50 bg-zinc-50/50">
-                                        <td colSpan={4} className="py-2 px-2 font-bold text-xs uppercase tracking-wide">
-                                            {site.siteName}
+                        {payment.siteBreakdown.map((site, sIdx) => (
+                            <tbody key={sIdx} className="break-avoid text-sm text-zinc-900 border-t border-zinc-100 first:border-t-0">
+                                <tr className="border-b border-zinc-50 bg-zinc-50/50">
+                                        <td colSpan={4} className="py-2 px-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-xs uppercase tracking-wide">{site.siteName}</span>
+                                                {site.rateCode && <span className="bg-zinc-200/50 border border-zinc-200 rounded px-1.5 py-0.5 text-[9px] font-bold text-zinc-500 whitespace-nowrap">Code: {site.rateCode}</span>}
+                                            </div>
                                         </td>
                                     </tr>
                                     {!site.isRelease && site.hoursByType && Object.entries(site.hoursByType).map(([type, hrs], tIdx) => (
                                         hrs > 0 && (
                                             <tr key={tIdx} className="border-b border-zinc-50">
-                                                <td className="py-3 pl-6 text-zinc-600 capitalize">{type.replace(/([A-Z])/g, ' $1')} Rate</td>
-                                                <td className="py-3 text-center text-zinc-500">${(site.rates?.[type] || 0).toFixed(2)}</td>
+                                                <td className="py-3 pl-6 text-zinc-600 capitalize">{type.replace(/([A-Z])/g, ' $1')}</td>
                                                 <td className="py-3 text-center">{hrs.toFixed(2)}</td>
+                                                <td className="py-3 text-center text-zinc-500">${(site.rates?.[type] || 0).toFixed(2)}</td>
                                                 <td className="py-3 text-right font-bold">${(hrs * (site.rates?.[type] || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                             </tr>
                                         )
                                     ))}
+                                    {/* Allowance line item */}
+                                    {!site.isRelease && (site.allowance || 0) > 0 && (() => {
+                                        const globalRates = getGlobalRates();
+                                        const allowanceRate = globalRates.allowancePerHour;
+                                        const allowanceHours = allowanceRate > 0 ? site.allowance / allowanceRate : 0;
+                                        return (
+                                            <tr className="border-b border-zinc-50">
+                                                <td className="py-3 pl-6 text-zinc-600">Allowance</td>
+                                                <td className="py-3 text-center">{allowanceHours.toFixed(2)}</td>
+                                                <td className="py-3 text-center text-zinc-500">${allowanceRate.toFixed(2)}/hr</td>
+                                                <td className="py-3 text-right font-bold">${site.allowance.toFixed(2)}</td>
+                                            </tr>
+                                        );
+                                    })()}
+                                    {/* Other Pay line item */}
+                                    {!site.isRelease && (site.otherPay || 0) > 0 && (() => {
+                                        const globalRates = getGlobalRates();
+                                        const otherRate = globalRates.otherPerDay;
+                                        const otherDays = otherRate > 0 ? site.otherPay / otherRate : 0;
+                                        return (
+                                            <tr className="border-b border-zinc-50">
+                                                <td className="py-3 pl-6 text-zinc-600">Other Additions</td>
+                                                <td className="py-3 text-center">{otherDays.toFixed(2)}</td>
+                                                <td className="py-3 text-center text-zinc-500">${otherRate.toFixed(2)}/day</td>
+                                                <td className="py-3 text-right font-bold">${site.otherPay.toFixed(2)}</td>
+                                            </tr>
+                                        );
+                                    })()}
+                                    {/* Custom Addition line item */}
+                                    {!site.isRelease && (site.customAddition || 0) > 0 && (
+                                        <tr className="border-b border-zinc-50">
+                                            <td className="py-3 pl-6 text-zinc-600">Extra Allowances / Adjustments</td>
+                                            <td className="py-3 text-center">-</td>
+                                            <td className="py-3 text-center text-zinc-500">-</td>
+                                            <td className="py-3 text-right font-bold">${site.customAddition.toFixed(2)}</td>
+                                        </tr>
+                                    )}
                                     {site.isRelease && (
                                         <tr className="border-b border-zinc-50">
                                             <td className="py-3 pl-6 text-zinc-600">Training Escrow Release</td>
-                                            <td className="py-3 text-center text-zinc-500">-</td>
                                             <td className="py-3 text-center">{site.hours > 0 ? site.hours.toFixed(2) : '-'}</td>
+                                            <td className="py-3 text-center text-zinc-500">-</td>
                                             <td className="py-3 text-right font-bold">${site.pay.toFixed(2)}</td>
                                         </tr>
                                     )}
-                                </Fragment>
+                                </tbody>
                             ))}
-                        </tbody>
                     </table>
                 </div>
 
                 {/* Adjustments & Totals */}
-                <div className="flex justify-end mb-12">
+                <div className="flex justify-end mb-12 break-avoid">
                     <div className="w-1/2 space-y-3">
                         {/* Totals Block */}
                         <div className="space-y-2 border-t border-zinc-100 pt-4">
@@ -186,10 +226,10 @@ const Payslip = ({ payment, period, contractor, onBack }) => {
                                 <span className="font-bold text-zinc-900">${payment.totalPay.toFixed(2)}</span>
                             </div>
 
-                            {(payment.totalAllowance > 0 || payment.totalOtherPay > 0) && (
+                            {(payment.totalAllowance > 0 || payment.totalOtherPay > 0 || payment.totalCustomAddition > 0) && (
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-zinc-500 font-medium">Allowances & Bonuses</span>
-                                    <span className="font-bold text-zinc-900">+${(payment.totalAllowance + payment.totalOtherPay).toFixed(2)}</span>
+                                    <span className="text-zinc-500 font-medium">All Allowances</span>
+                                    <span className="font-bold text-zinc-900">+${(payment.totalAllowance + payment.totalOtherPay + payment.totalCustomAddition).toFixed(2)}</span>
                                 </div>
                             )}
 
@@ -210,9 +250,9 @@ const Payslip = ({ payment, period, contractor, onBack }) => {
 
                 {/* Footer */}
                 <div className="border-t border-zinc-200 pt-8 text-center">
-                    <p className="text-xs text-zinc-400 max-w-lg mx-auto leading-relaxed">
-                        Payment authorized by SitalPayslip. Funds should appear in your nominated account within 1-2 business days.
-                        Questions? Contact support@sitalpayslip.com
+                    <p className="text-xs text-zinc-400 mx-auto leading-relaxed">
+                        Payment authorized by Seetal Payslip management system. Funds should appear in your nominated account within 1-2 business days.
+                        Questions? Contact payroll@seetalgroup.com
                     </p>
                 </div>
             </div>

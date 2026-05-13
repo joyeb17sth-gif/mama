@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { parseISO, differenceInDays, addDays, format } from 'date-fns';
 import {
-  initStorage,
+  initStorage, memoryCache,
   getContractors, saveContractors, getContractorsAsync,
   getSites, saveSites, getSitesAsync,
   getTimesheets, saveTimesheets, getTimesheetsAsync,
@@ -9,10 +9,15 @@ import {
   getTrainingReleasesAsync,
   getAuditLogsAsync,
   getPaymentSummariesAsync,
+  getPayRatesAsync,
+  getGlobalRatesAsync,
+  getPeriodicalTasks, savePeriodicalTasks, getPeriodicalTasksAsync,
   logAction
 } from './utils/storage';
 import { encryptData } from './utils/encryptionUtils';
-import { isAuthenticated, setAuthenticated, isFirstRun, getStoredCredentials } from './utils/auth';
+import localforage from 'localforage';
+import { isAuthenticated, isFirstRun, logoutUser } from './utils/auth';
+import { supabase } from './utils/supabaseClient';
 
 // Components
 import Dashboard from './components/Dashboard';
@@ -24,6 +29,9 @@ import SiteAllocation from './components/SiteAllocation';
 
 import TimesheetEntry from './components/TimesheetEntry';
 import TimesheetList from './components/TimesheetList';
+import TaskMatrix from './components/TaskMatrix';
+import TaskBudgetMatrix from './components/TaskBudgetMatrix';
+import TaskManagementModal from './components/TaskManagementModal';
 import PaymentSummary from './components/PaymentSummary';
 import TrainingEscrowManager from './components/TrainingEscrowManager';
 import AuditLogViewer from './components/AuditLogViewer';
@@ -38,6 +46,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 import Toast from './components/Toast';
 import Layout from './components/Layout';
+import GlobalRatesConfig from './components/GlobalRatesConfig';
 
 function App() {
   const [authenticated, setAuthenticatedState] = useState(false);
@@ -47,6 +56,8 @@ function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState(null);
   const [isStorageReady, setIsStorageReady] = useState(false);
+  const [syncVersion, setSyncVersion] = useState(0);
+  const [userProfileData, setUserProfileData] = useState({ name: 'Loading...', role: 'user' });
 
   // Contractors
   const [contractors, setContractors] = useState([]);
@@ -57,6 +68,10 @@ function App() {
   const [sites, setSites] = useState([]);
   const [showSiteForm, setShowSiteForm] = useState(false);
   const [editingSite, setEditingSite] = useState(null);
+
+  // Periodical Tasks
+  const [periodicalTasks, setPeriodicalTasks] = useState([]);
+  const [managingTasksSite, setManagingTasksSite] = useState(null);
 
   // Timesheets
   const [selectedSiteForTimesheet, setSelectedSiteForTimesheet] = useState(null);
@@ -77,29 +92,66 @@ function App() {
       const cloudContractors = await getContractorsAsync();
       const cloudSites = await getSitesAsync();
       const cloudTimesheets = await getTimesheetsAsync();
-
+      const cloudPayRates = await getPayRatesAsync();
       const cloudReleases = await getTrainingReleasesAsync();
       const cloudPublicHolidays = await getPublicHolidaysAsync();
       const cloudAuditLogs = await getAuditLogsAsync();
       const cloudPaymentSummaries = await getPaymentSummariesAsync();
+      const cloudPeriodicalTasks = await getPeriodicalTasksAsync();
 
+      // Update memoryCache + localforage + React state for ALL data types
       if (cloudContractors) {
-        localStorage.setItem('contractors', encryptData(cloudContractors));
+        memoryCache.contractors = cloudContractors;
+        await localforage.setItem('contractors', encryptData(cloudContractors));
         setContractors(cloudContractors);
       }
       if (cloudSites) {
-        localStorage.setItem('sites', encryptData(cloudSites));
+        memoryCache.sites = cloudSites;
+        await localforage.setItem('sites', encryptData(cloudSites));
         setSites(cloudSites);
       }
-      if (cloudPublicHolidays) localStorage.setItem('publicHolidays', encryptData(cloudPublicHolidays));
-      if (cloudTimesheets) localStorage.setItem('timesheets', encryptData(cloudTimesheets));
+      if (cloudTimesheets) {
+        memoryCache.timesheets = cloudTimesheets;
+        await localforage.setItem('timesheets', encryptData(cloudTimesheets));
+      }
+      if (cloudPayRates) {
+        memoryCache.payRates = cloudPayRates;
+        await localforage.setItem('payRates', encryptData(cloudPayRates));
+      }
+      if (cloudPublicHolidays) {
+        memoryCache.publicHolidays = cloudPublicHolidays;
+        await localforage.setItem('publicHolidays', encryptData(cloudPublicHolidays));
+      }
+      if (cloudReleases) {
+        memoryCache.trainingReleases = cloudReleases;
+        await localforage.setItem('trainingReleases', encryptData(cloudReleases));
+      }
+      if (cloudAuditLogs) {
+        memoryCache.auditLogs = cloudAuditLogs;
+        await localforage.setItem('auditLogs', encryptData(cloudAuditLogs));
+      }
+      if (cloudPaymentSummaries) {
+        memoryCache.paymentSummaries = cloudPaymentSummaries;
+        await localforage.setItem('paymentSummaries', encryptData(cloudPaymentSummaries));
+      }
+      if (cloudPeriodicalTasks) {
+        memoryCache.periodicalTasks = cloudPeriodicalTasks;
+        await localforage.setItem('periodicalTasks', encryptData(cloudPeriodicalTasks));
+        setPeriodicalTasks(cloudPeriodicalTasks);
+      }
 
-      if (cloudReleases) localStorage.setItem('trainingReleases', encryptData(cloudReleases));
-      if (cloudAuditLogs) localStorage.setItem('auditLogs', encryptData(cloudAuditLogs));
-      if (cloudPaymentSummaries) localStorage.setItem('paymentSummaries', encryptData(cloudPaymentSummaries));
+      // Sync global rates (allowance per hour, other per day)
+      const cloudGlobalRates = await getGlobalRatesAsync();
+      if (cloudGlobalRates) {
+        memoryCache.globalRates = cloudGlobalRates;
+        await localforage.setItem('globalRates', encryptData(cloudGlobalRates));
+      }
+
+      // Bump sync version to force child components to re-render with fresh cache data
+      setSyncVersion(v => v + 1);
 
     } catch (e) {
-      console.error('Cloud sync failed', e);
+      if (import.meta.env.DEV) console.error('Cloud sync failed', e);
       setSyncError('Sync failed. Working offline.');
     } finally {
       setIsSyncing(false);
@@ -115,24 +167,46 @@ function App() {
   useEffect(() => {
     if (!isStorageReady) return;
 
-    // Check if first run (no credentials set up yet)
     if (isFirstRun()) {
       setShowInitialSetup(true);
       return;
     }
 
-    const authStatus = isAuthenticated();
-    setAuthenticatedState(authStatus);
-    if (authStatus) {
-      setContractors(getContractors());
-      setSites(getSites());
-      syncData();
-      
-      const interval = setInterval(() => {
-          syncData();
-      }, 30000);
-      return () => clearInterval(interval);
-    }
+    let intervalId;
+
+    const checkAuth = async () => {
+      const authStatus = await isAuthenticated();
+      setAuthenticatedState(authStatus);
+
+      if (authStatus) {
+        // Fetch user info securely
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && session.user) {
+          const email = session.user.email;
+          let role = 'user';
+          try {
+             const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+             if (profile) role = profile.role;
+          } catch(e) {}
+          setUserProfileData({ name: email, role });
+        }
+
+        setContractors(getContractors());
+        setSites(getSites());
+        setPeriodicalTasks(getPeriodicalTasks());
+        syncData();
+        
+        intervalId = setInterval(() => {
+            syncData();
+        }, 30000);
+      }
+    };
+
+    checkAuth();
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [authenticated, isStorageReady]);
 
   // Contractor handlers
@@ -177,10 +251,14 @@ function App() {
 
   const handleDeleteContractor = (id) => {
     if (window.confirm('Are you sure you want to delete this contractor?')) {
+      const contractorToDelete = contractors.find(c => c.id === id);
       const updated = contractors.filter(c => c.id !== id);
       setContractors(updated);
       saveContractors(updated);
-      logAction('DELETE_CONTRACTOR', { id });
+      logAction('DELETE_CONTRACTOR', { 
+        id,
+        name: contractorToDelete?.name || 'Unknown Contractor'
+      });
     }
   };
 
@@ -206,21 +284,25 @@ function App() {
     setShowSiteForm(true);
   };
 
-  const handleSaveSite = (formData) => {
-    if (editingSite && editingSite.id) {
+  const handleSaveSite = (formData, siteTasks = []) => {
+    let siteId = editingSite?.id;
+    let newSiteName = formData.siteName;
+
+    if (siteId) {
       const updated = sites.map(s =>
-        s.id === editingSite.id ? { ...s, ...formData } : s
+        s.id === siteId ? { ...s, ...formData } : s
       );
       setSites(updated);
       saveSites(updated);
       logAction('UPDATE_SITE', {
-        id: editingSite.id,
+        id: siteId,
         name: formData.siteName,
         changes: formData
       });
     } else {
+      siteId = Date.now().toString();
       const newSite = {
-        id: Date.now().toString(),
+        id: siteId,
         allocatedContractors: [],
         ...formData,
       };
@@ -232,21 +314,57 @@ function App() {
         name: newSite.siteName
       });
     }
+
+    // Process Periodical Tasks for this site
+    const tasksToSave = siteTasks.map(t => ({ ...t, siteId }));
+    
+    // Merge into global periodicalTasks (remove old ones for this site, add new ones)
+    const otherTasks = periodicalTasks.filter(t => t.siteId !== siteId);
+    const updatedPeriodicalTasks = [...otherTasks, ...tasksToSave];
+    
+    setPeriodicalTasks(updatedPeriodicalTasks);
+    savePeriodicalTasks(updatedPeriodicalTasks);
+
     setShowSiteForm(false);
     setEditingSite(null);
-    setSites(getSites()); // Refresh
   };
 
   const handleDeleteSite = (id) => {
     if (window.confirm('Are you sure you want to delete this site?')) {
+      const siteToDelete = sites.find(s => s.id === id);
       const updated = sites.filter(s => s.id !== id);
       setSites(updated);
       saveSites(updated);
 
-
-
-      logAction('DELETE_SITE', { id });
+      logAction('DELETE_SITE', { 
+        id,
+        siteName: siteToDelete?.siteName || 'Unknown Site'
+      });
     }
+  };
+
+  // Periodical Tasks toggle handler
+  const handleToggleTaskStatus = (task, schedule, specificStatus) => {
+    let newStatus = specificStatus;
+    if (!newStatus) {
+      if (schedule.status === 'Scheduled') newStatus = 'Completed';
+      else if (schedule.status === 'Completed') newStatus = 'Completed Not Claimed';
+      else newStatus = 'Scheduled';
+    }
+
+    const updatedTasks = periodicalTasks.map(t => {
+      if (t.id === task.id) {
+        const updatedSchedules = t.schedules.map(s => 
+          s.id === schedule.id ? { ...s, status: newStatus } : s
+        );
+        return { ...t, schedules: updatedSchedules };
+      }
+      return t;
+    });
+
+    setPeriodicalTasks(updatedTasks);
+    savePeriodicalTasks(updatedTasks);
+    logAction('UPDATE_TASK_STATUS', { taskId: task.id, scheduleId: schedule.id, newStatus });
   };
 
   // Timesheet handler
@@ -309,8 +427,8 @@ function App() {
     }
   };
 
-  const handleLogout = () => {
-    setAuthenticated(false);
+  const handleLogout = async () => {
+    await logoutUser();
     setAuthenticatedState(false);
     setActiveTab('dashboard');
   };
@@ -372,8 +490,8 @@ function App() {
         onLogout={handleLogout}
         isSyncing={isSyncing}
         syncData={syncData}
-        userProfile={{ name: getStoredCredentials()?.username || 'Admin User', role: (getStoredCredentials()?.username?.toLowerCase() === 'joyeb') ? 'Main Admin' : 'Staff Admin' }}
-        isAdmin={(getStoredCredentials()?.username?.toLowerCase() === 'joyeb')}
+        userProfile={{ name: userProfileData.name, role: userProfileData.role === 'admin' ? 'System Admin' : 'User' }}
+        isAdmin={userProfileData.role === 'admin' || userProfileData.name.includes('joyeb')}
       >
         <div className="print:hidden">
           {showToast && (
@@ -389,28 +507,28 @@ function App() {
 
         {/* Tab Content */}
         {activeTab === 'dashboard' && (
-          <div className="mt-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-h1 text-gray-900">System Overview</h2>
+          <div className="space-y-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-display-secondary text-notion-black tracking-notion-display">System Overview</h2>
             </div>
-            <Dashboard />
+            <Dashboard syncVersion={syncVersion} />
           </div>
         )}
 
         {activeTab === 'contractors' && (
-          <div className="mt-6">
+          <div className="space-y-6">
             {!showContractorForm ? (
               <div>
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-h1 text-gray-900">Contractor Management</h2>
+                  <h2 className="text-display-secondary text-notion-black tracking-notion-display">Contractor Management</h2>
                   <button
                     onClick={handleAddContractor}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                    className="px-4 py-2 bg-notion-blue text-white rounded-micro hover:bg-notion-blue-active transition shadow-notion-card font-semibold text-sm"
                   >
                     + Add Contractor
                   </button>
                 </div>
-                <div className="bg-white rounded-lg p-6">
+                <div className="notion-card p-6">
                   <ContractorList
                     contractors={contractors}
                     onEdit={handleEditContractor}
@@ -421,7 +539,7 @@ function App() {
             ) : (
               <div>
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-h1 text-gray-900">
+                  <h2 className="text-display-secondary text-notion-black tracking-notion-display">
                     {editingContractor ? 'Edit Contractor' : 'Add New Contractor'}
                   </h2>
                   <button
@@ -429,12 +547,12 @@ function App() {
                       setShowContractorForm(false);
                       setEditingContractor(null);
                     }}
-                    className="text-gray-600 hover:text-gray-800"
+                    className="text-notion-warm-gray-500 hover:text-notion-black text-sm font-medium underline underline-offset-4"
                   >
                     ← Back to List
                   </button>
                 </div>
-                <div className="bg-white rounded-lg p-6">
+                <div className="notion-card p-6">
                   <ContractorForm
                     contractor={editingContractor}
                     onSave={handleSaveContractor}
@@ -451,22 +569,22 @@ function App() {
 
         {/* Sites Tab */}
         {activeTab === 'sites' && (
-          <div className="mt-6">
+          <div className="space-y-6">
             {!showSiteForm ? (
               <div>
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-h1 text-gray-900">Site Management</h2>
+                  <h2 className="text-display-secondary text-notion-black tracking-notion-display">Site Management</h2>
                   <button
                     onClick={() => {
                       setSites(getSites());
                       handleAddSite();
                     }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                    className="px-4 py-2 bg-notion-blue text-white rounded-micro hover:bg-notion-blue-active transition shadow-notion-card font-semibold text-sm"
                   >
                     + Add Site
                   </button>
                 </div>
-                <div className="bg-white rounded-lg p-6">
+                <div className="notion-card p-6">
                   <SiteList
                     sites={sites}
                     onEdit={handleEditSite}
@@ -478,7 +596,7 @@ function App() {
             ) : (
               <div>
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-h1 text-gray-900">
+                  <h2 className="text-display-secondary text-notion-black tracking-notion-display">
                     {editingSite?.id ? 'Edit Site' : (editingSite?.isSubSite ? 'Add New Sub-Site' : 'Add New Site')}
                   </h2>
                   <button
@@ -486,14 +604,15 @@ function App() {
                       setShowSiteForm(false);
                       setEditingSite(null);
                     }}
-                    className="text-gray-600 hover:text-gray-800"
+                    className="text-notion-warm-gray-500 hover:text-notion-black text-sm font-medium underline underline-offset-4"
                   >
                     ← Back to List
                   </button>
                 </div>
-                <div className="bg-white rounded-lg shadow p-6">
+                <div className="notion-card p-6">
                   <SiteForm
                     site={editingSite}
+                    periodicalTasks={periodicalTasks.filter(t => t.siteId === editingSite?.id)}
                     onSave={handleSaveSite}
                     onCancel={() => {
                       setShowSiteForm(false);
@@ -508,22 +627,53 @@ function App() {
 
         {/* Allocation Tab */}
         {activeTab === 'allocation' && (
-          <div className="mt-6">
-            <h2 className="text-h1 text-gray-900 mb-6">Contractor Allocation</h2>
-            <SiteAllocation key={sites.length} />
+          <div className="space-y-6">
+            <h2 className="text-display-secondary text-notion-black tracking-notion-display mb-4">Contractor Allocation</h2>
+            <SiteAllocation key={`${sites.length}-${syncVersion}`} />
           </div>
+        )}
+
+        {/* Task Matrix Tab */}
+        {activeTab === 'task-matrix' && (
+          <div className="space-y-6">
+            <h2 className="text-display-secondary text-notion-black tracking-notion-display mb-4">Contractor Periodicals & Budgets</h2>
+            <TaskBudgetMatrix sites={sites} periodicalTasks={periodicalTasks} />
+            <TaskMatrix 
+              sites={sites} 
+              periodicalTasks={periodicalTasks} 
+              onToggleStatus={handleToggleTaskStatus}
+              onManageTasks={(site) => setManagingTasksSite(site)}
+            />
+          </div>
+        )}
+
+        {/* Task Management Modal */}
+        {managingTasksSite && (
+          <TaskManagementModal
+            site={managingTasksSite}
+            tasks={periodicalTasks.filter(t => t.siteId === managingTasksSite.id)}
+            onSave={(siteId, updatedTasks) => {
+              const tasksToSave = updatedTasks.map(t => ({ ...t, siteId }));
+              const otherTasks = periodicalTasks.filter(t => t.siteId !== siteId);
+              const merged = [...otherTasks, ...tasksToSave];
+              setPeriodicalTasks(merged);
+              savePeriodicalTasks(merged);
+              setManagingTasksSite(null);
+            }}
+            onClose={() => setManagingTasksSite(null)}
+          />
         )}
 
 
 
         {/* Timesheets Tab */}
         {activeTab === 'timesheets' && (
-          <div className="mt-6 space-y-6">
+          <div className="space-y-6">
 
             {/* Create/Edit Timesheet Section */}
             <div>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-h1 text-gray-900">
+                <h2 className="text-display-secondary text-notion-black tracking-notion-display">
                   {isEnteringTimesheet ? 'Timesheet Entry' : 'Create New Timesheet'}
                 </h2>
               </div>
@@ -536,7 +686,7 @@ function App() {
                     setTimesheetPeriodStart('');
                     setTimesheetPeriodEnd('');
                   }}
-                  className="text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium"
+                  className="text-notion-blue hover:text-notion-blue-active flex items-center gap-1 font-medium text-sm underline underline-offset-4"
                 >
                   ← Cancel
                 </button>
@@ -561,7 +711,7 @@ function App() {
                 }}
               />
             ) : (
-              <div className="bg-white rounded-lg p-6">
+              <div className="notion-card p-6 w-full">
                 <div className="space-y-4">
                   <div>
                     <label className="block mb-2 ml-1">
@@ -606,8 +756,8 @@ function App() {
                               // Auto-clear end date if cycle changes or if it becomes invalid
                               setTimesheetPeriodEnd('');
                             }}
-                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${(() => {
-                              if (!timesheetPeriodStart || !selectedSiteForTimesheet) return 'border-gray-300';
+                            className={`w-full px-3 py-1.5 whisper-border rounded-micro focus:outline-none focus:ring-1 focus:ring-notion-focus-blue text-sm ${(() => {
+                              if (!timesheetPeriodStart || !selectedSiteForTimesheet) return 'bg-white';
                               const selectedDate = parseISO(timesheetPeriodStart);
                               const conflictingTimesheet = getTimesheets().find(ts => {
                                 if (ts.siteId !== selectedSiteForTimesheet.id) return false;
@@ -615,7 +765,7 @@ function App() {
                                 const tsEnd = parseISO(ts.periodEnd);
                                 return selectedDate >= tsStart && selectedDate <= tsEnd;
                               });
-                              return conflictingTimesheet ? 'border-green-500 bg-green-50' : 'border-gray-300';
+                              return conflictingTimesheet ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white';
                             })()
                               }`}
                           />
@@ -631,7 +781,7 @@ function App() {
 
                             if (conflictingTimesheet) {
                               return (
-                                <p className="mt-1 text-p3 text-green-600 font-semibold flex items-center gap-1">
+                                <p className="mt-1 text-badge text-emerald-600 font-semibold flex items-center gap-1">
                                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                   </svg>
@@ -662,10 +812,10 @@ function App() {
                               return "";
                             })()}
                             onChange={(e) => setTimesheetPeriodEnd(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-1.5 bg-white whisper-border rounded-micro focus:outline-none focus:ring-1 focus:ring-notion-focus-blue text-sm"
                           />
                           {selectedSiteForTimesheet && (
-                            <p className="mt-1 text-p3 text-gray-500">
+                            <p className="mt-1 text-badge text-notion-warm-gray-300">
                               {selectedSiteForTimesheet.payrollCycle === 'weekly'
                                 ? 'Max 7 days allowed'
                                 : selectedSiteForTimesheet.payrollCycle === 'fortnightly'
@@ -677,7 +827,7 @@ function App() {
                       </div>
 
                       {timesheetPeriodStart && timesheetPeriodEnd && selectedSiteForTimesheet.allocatedContractors?.length > 0 && (
-                        <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
+                        <div className="mt-6 pt-4 border-t border-notion-warm-white flex justify-end">
                           <button
                             onClick={() => {
                               const start = parseISO(timesheetPeriodStart);
@@ -724,7 +874,7 @@ function App() {
 
                               setIsEnteringTimesheet(true);
                             }}
-                            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition font-medium flex items-center gap-2"
+                            className="px-5 py-1.5 bg-notion-blue text-white rounded-micro hover:bg-notion-blue-active transition shadow-notion-card font-semibold text-sm flex items-center gap-2"
                           >
                             <span>Confirm & Proceed</span>
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -740,9 +890,9 @@ function App() {
             )}
 
             {/* Saved Timesheets List - Always Visible */}
-            <div className="bg-white rounded-lg p-6">
-              <h3 className="text-p1 mb-4">Saved Timesheets</h3>
-              <TimesheetList onEdit={handleEditTimesheet} />
+            <div className="notion-card p-6 w-full">
+              <h3 className="text-card-title text-notion-black tracking-notion-card mb-4">Saved Timesheets</h3>
+              <TimesheetList syncVersion={syncVersion} onEdit={handleEditTimesheet} />
             </div>
           </div>
         )}
@@ -750,36 +900,44 @@ function App() {
         {/* Training Pay Tab */}
         {activeTab === 'training' && (
           <div className="mt-6">
-            <TrainingEscrowManager />
+            <TrainingEscrowManager syncVersion={syncVersion} />
           </div>
         )}
 
         {/* Payment Summary Tab */}
         {activeTab === 'payments' && (
-          <div className="mt-6">
-            <h2 className="text-h1 text-gray-900 mb-6">Payment Summary</h2>
-            <PaymentSummary />
+          <div className="space-y-6">
+            <h2 className="text-display-secondary text-notion-black tracking-notion-display mb-4">Payment Summary</h2>
+            <PaymentSummary syncVersion={syncVersion} />
           </div>
         )}
 
         {/* Public Holidays Tab */}
         {activeTab === 'holidays' && (
           <div className="mt-6">
-            <PublicHolidayManager />
+            <PublicHolidayManager syncVersion={syncVersion} />
           </div>
         )}
 
 
 
         {/* Audit Logs Tab */}
-        {activeTab === 'logs' && (
+        {/* {activeTab === 'logs' && (
           <div className="mt-6">
-            <AuditLogViewer />
+            <AuditLogViewer syncVersion={syncVersion} />
+          </div>
+        )} */}
+
+        {/* Global Rates Settings Tab */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            <h2 className="text-display-secondary text-notion-black tracking-notion-display mb-4">Global Rates Configuration</h2>
+            <GlobalRatesConfig syncVersion={syncVersion} />
           </div>
         )}
 
         {/* User Management Tab (Main Admin Only) */}
-        {activeTab === 'users' && getStoredCredentials()?.username?.toLowerCase() === 'joyeb' && (
+        {activeTab === 'users' && (
           <div className="mt-6">
             <UserManagement />
           </div>

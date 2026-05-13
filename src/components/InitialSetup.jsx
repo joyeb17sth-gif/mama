@@ -3,11 +3,9 @@ import { registerUser, setAuthenticated } from '../utils/auth';
 
 const InitialSetup = ({ onComplete }) => {
     const [formData, setFormData] = useState({
-        username: '',
+        email: '',
         password: '',
         confirmPassword: '',
-        securityQuestion: '',
-        securityAnswer: '',
     });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -31,10 +29,8 @@ const InitialSetup = ({ onComplete }) => {
 
         try {
             await registerUser(
-                formData.username,
-                formData.password,
-                formData.securityQuestion,
-                formData.securityAnswer
+                formData.email,
+                formData.password
             );
             setAuthenticated(true);
             onComplete();
@@ -66,20 +62,19 @@ const InitialSetup = ({ onComplete }) => {
                     )}
 
                     <div>
-                        <label htmlFor="username" className="block text-p3 font-bold text-gray-400 mb-2">
-                            Username
+                        <label htmlFor="email" className="block text-p3 font-bold text-gray-400 mb-2">
+                            Email Address
                         </label>
                         <input
-                            id="username"
-                            name="username"
-                            type="text"
-                            value={formData.username}
+                            id="email"
+                            name="email"
+                            type="email"
+                            value={formData.email}
                             onChange={handleChange}
                             required
-                            minLength={3}
                             autoFocus
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-0 outline-none transition font-medium"
-                            placeholder="Choose a username (min 3 characters)"
+                            placeholder="you@example.com"
                         />
                     </div>
 
@@ -117,41 +112,7 @@ const InitialSetup = ({ onComplete }) => {
                         </div>
                     </div>
 
-                    <div className="pt-4 border-t border-gray-100">
-                        <p className="text-xs text-gray-500 mb-4">Security question for password recovery:</p>
-                        <div className="space-y-4">
-                            <div>
-                                <label htmlFor="securityQuestion" className="block text-p3 font-bold text-gray-400 mb-2">
-                                    Security Question
-                                </label>
-                                <input
-                                    id="securityQuestion"
-                                    name="securityQuestion"
-                                    type="text"
-                                    value={formData.securityQuestion}
-                                    onChange={handleChange}
-                                    required
-                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-0 outline-none transition font-medium"
-                                    placeholder="e.g., What is your favorite color?"
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="securityAnswer" className="block text-p3 font-bold text-gray-400 mb-2">
-                                    Security Answer
-                                </label>
-                                <input
-                                    id="securityAnswer"
-                                    name="securityAnswer"
-                                    type="text"
-                                    value={formData.securityAnswer}
-                                    onChange={handleChange}
-                                    required
-                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-0 outline-none transition font-medium"
-                                    placeholder="Your answer (case insensitive)"
-                                />
-                            </div>
-                        </div>
-                    </div>
+
 
                     <button
                         type="submit"

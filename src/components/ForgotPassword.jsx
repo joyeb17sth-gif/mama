@@ -1,74 +1,25 @@
 import { useState } from 'react';
-import { getStoredCredentials, verifySecurityAnswer, updatePassword, setAuthenticated, getUserFromCloud } from '../utils/auth';
+import { resetPasswordForEmail } from '../utils/auth';
 
 const ForgotPassword = ({ onBack, onLogin }) => {
-  const [step, setStep] = useState(1); // 1: username, 2: security question, 3: new password
-  const [username, setUsername] = useState('');
-  const [securityAnswer, setSecurityAnswer] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
-  const [credentials, setCredentials] = useState(null);
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleUsernameSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
-    // 1. Try local cache first
-    let creds = getStoredCredentials();
-
-    if (creds && username.toLowerCase() === creds.username.toLowerCase()) {
-      setCredentials(creds);
-      setStep(2);
-      return;
-    }
-
-    // 2. If not in local or different user, fetch from Cloud
-    try {
-        const cloudCreds = await getUserFromCloud(username.trim());
-        if (cloudCreds) {
-            setCredentials(cloudCreds);
-            setStep(2);
-        } else {
-            setError('Username not found');
-        }
-    } catch (err) {
-        setError('Connection error. Please try again.');
-    }
-  };
-
-  const handleSecurityAnswerSubmit = (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (securityAnswer.toLowerCase().trim() === credentials.securityAnswer.toLowerCase().trim()) {
-      setStep(3);
-    } else {
-      setError('Incorrect answer. Please try again.');
-      setSecurityAnswer('');
-    }
-  };
-
-  const handlePasswordReset = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters long');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
+    setLoading(true);
 
     try {
-        await updatePassword(newPassword, credentials);
-        setAuthenticated(true);
-        onLogin();
+        await resetPasswordForEmail(email);
+        setSuccess(true);
     } catch (err) {
-        setError("Database update failed. Please check internet.");
+        // Sanitize error to prevent backend leakage
+        setError('Failed to send reset email. Please check your email and try again.');
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -77,12 +28,25 @@ const ForgotPassword = ({ onBack, onLogin }) => {
       <div className="max-w-md w-full bg-white rounded-lg p-8">
         <div className="text-center mb-8">
           <h1 className="text-h1 font-bold text-gray-900 mb-2">Reset Password</h1>
-          <p className="text-p3 text-gray-600">Follow the steps to reset your password</p>
+          <p className="text-p3 text-gray-600">
+            {success ? "Check your email" : "Enter your email to receive a reset link"}
+          </p>
         </div>
 
-        {/* Step 1: Enter Username */}
-        {step === 1 && (
-          <form onSubmit={handleUsernameSubmit} className="space-y-6">
+        {success ? (
+          <div className="text-center space-y-6">
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md">
+              A password reset link has been sent to {email}.
+            </div>
+            <button
+              onClick={onBack}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition"
+            >
+              Return to Login
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
                 {error}
@@ -90,18 +54,19 @@ const ForgotPassword = ({ onBack, onLogin }) => {
             )}
 
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                Enter your username
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
               </label>
               <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 autoFocus
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Username"
+                disabled={loading}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                placeholder="you@example.com"
               />
             </div>
 
@@ -109,115 +74,19 @@ const ForgotPassword = ({ onBack, onLogin }) => {
               <button
                 type="button"
                 onClick={onBack}
-                className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 transition"
+                disabled={loading}
+                className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 transition disabled:opacity-50"
               >
                 Back to Login
               </button>
               <button
                 type="submit"
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition"
+                disabled={loading}
+                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition disabled:opacity-50"
               >
-                Continue
+                {loading ? 'Sending...' : 'Send Link'}
               </button>
             </div>
-          </form>
-        )}
-
-        {/* Step 2: Security Question */}
-        {step === 2 && credentials && (
-          <form onSubmit={handleSecurityAnswerSubmit} className="space-y-6">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-                {error}
-              </div>
-            )}
-
-            <div>
-              <label className="block text-p3 font-bold text-gray-700 mb-2">
-                Security Question
-              </label>
-              <p className="text-p1 font-bold text-gray-900 mb-4">{credentials.securityQuestion}</p>
-              <input
-                type="text"
-                value={securityAnswer}
-                onChange={(e) => setSecurityAnswer(e.target.value)}
-                required
-                autoFocus
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Your answer"
-              />
-            </div>
-
-            <div className="flex space-x-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setStep(1);
-                  setError('');
-                  setSecurityAnswer('');
-                }}
-                className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 transition"
-              >
-                Back
-              </button>
-              <button
-                type="submit"
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition"
-              >
-                Verify
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Step 3: New Password */}
-        {step === 3 && (
-          <form onSubmit={handlePasswordReset} className="space-y-6">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-                {error}
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                New Password
-              </label>
-              <input
-                id="newPassword"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                minLength={6}
-                autoFocus
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter new password (min 6 characters)"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm Password
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={6}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Confirm new password"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition"
-            >
-              Reset Password
-            </button>
           </form>
         )}
       </div>
@@ -226,3 +95,4 @@ const ForgotPassword = ({ onBack, onLogin }) => {
 };
 
 export default ForgotPassword;
+

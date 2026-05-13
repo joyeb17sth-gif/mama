@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { registerUser, getAllUsers, deleteUser, adminResetPassword, getStoredCredentials } from '../utils/auth';
+import { supabase } from '../utils/supabaseClient';
+import { registerUser } from '../utils/auth';
 
 const UserManagement = () => {
     const [formData, setFormData] = useState({
-        username: '',
+        email: '',
         password: '',
         confirmPassword: '',
-        securityQuestion: '',
-        securityAnswer: '',
     });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -16,22 +15,22 @@ const UserManagement = () => {
     // User List state
     const [users, setUsers] = useState([]);
     const [loadingUsers, setLoadingUsers] = useState(true);
-    const [currentUser, setCurrentUser] = useState(null);
 
     const loadUsers = async () => {
         setLoadingUsers(true);
         try {
-            const fetched = await getAllUsers();
-            setUsers(fetched);
+            // Explicitly select columns to prevent over-fetching of potentially sensitive future columns
+            const { data, error } = await supabase.from('profiles').select('id, email, role, created_at').order('created_at', { ascending: false });
+            if (error) throw error;
+            setUsers(data || []);
         } catch (err) {
-            console.error(err);
+            if (import.meta.env.DEV) console.error("Failed to load profiles:", err);
         } finally {
             setLoadingUsers(false);
         }
     };
 
     useEffect(() => {
-        setCurrentUser(getStoredCredentials());
         loadUsers();
     }, []);
 
@@ -48,27 +47,20 @@ const UserManagement = () => {
         setSuccess('');
 
         if (formData.password !== formData.confirmPassword) {
-            setError('Passwords do not match');
+            setError('Auth credentials mismatch.');
             setLoading(false);
             return;
         }
 
         try {
-            await registerUser(
-                formData.username,
-                formData.password,
-                formData.securityQuestion,
-                formData.securityAnswer
-            );
-            setSuccess(`User "${formData.username}" created successfully!`);
+            await registerUser(formData.email, formData.password);
+            setSuccess(`Entity "${formData.email}" initialized successfully.`);
             setFormData({
-                username: '',
+                email: '',
                 password: '',
                 confirmPassword: '',
-                securityQuestion: '',
-                securityAnswer: '',
             });
-            loadUsers(); // Refresh the list after creation
+            setTimeout(loadUsers, 2000); // Wait for trigger to create profile
         } catch (err) {
             setError(err.message);
         } finally {
@@ -77,180 +69,116 @@ const UserManagement = () => {
     };
 
     return (
-        <div className="max-w-2xl mx-auto space-y-8">
-            <div className="bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden">
-                <div className="p-8 border-b border-zinc-100 bg-zinc-50/50">
-                    <h2 className="text-xl font-bold text-zinc-900">Create New User Account</h2>
-                    <p className="text-zinc-500 text-sm mt-1">Add a new team member with full access to the system.</p>
+        <div className="w-full space-y-12 animate-fade-in-up">
+            <div className="notion-card overflow-hidden shadow-notion-deep">
+                <div className="p-10 bg-notion-warm-white border-b whisper-border">
+                    <h2 className="text-display-secondary text-notion-black tracking-notion-display">Initialize Administrative Access</h2>
+                    <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mt-1">Configure secondary credentials for system orchestration.</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                <form onSubmit={handleSubmit} className="p-10 space-y-8">
                     {error && (
-                        <div className="p-4 bg-rose-50 border border-rose-100 text-rose-700 rounded-xl text-sm font-medium">
-                            {error}
+                        <div className="p-4 bg-notion-badge-rose-bg whisper-border border-rose-100 text-rose-600 rounded-micro text-badge font-bold uppercase tracking-widest shadow-sm">
+                            Error: {error}
                         </div>
                     )}
                     {success && (
-                        <div className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl text-sm font-medium">
+                        <div className="p-4 bg-emerald-50 whisper-border border-emerald-100 text-emerald-600 rounded-micro text-badge font-bold uppercase tracking-widest shadow-sm">
                             {success}
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="md:col-span-2">
-                            <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Username</label>
+                            <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest pl-1 mb-3 block">Authorization Email</label>
                             <input
-                                type="text"
-                                name="username"
-                                value={formData.username}
+                                type="email"
+                                name="email"
+                                value={formData.email}
                                 onChange={handleChange}
                                 required
-                                className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all font-medium"
-                                placeholder="Team member's username"
+                                className="w-full px-5 py-4 bg-notion-warm-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black transition-all"
+                                placeholder="new_admin@example.com"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Password</label>
+                            <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest pl-1 mb-3 block">Access Key</label>
                             <input
                                 type="password"
                                 name="password"
                                 value={formData.password}
                                 onChange={handleChange}
                                 required
-                                className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all font-medium"
-                                placeholder="Min 6 characters"
+                                className="w-full px-5 py-4 bg-notion-warm-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black transition-all"
+                                placeholder="Secure protocol"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Confirm Password</label>
+                            <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest pl-1 mb-3 block">Key Verification</label>
                             <input
                                 type="password"
                                 name="confirmPassword"
                                 value={formData.confirmPassword}
                                 onChange={handleChange}
                                 required
-                                className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all font-medium"
-                                placeholder="Repeat password"
-                            />
-                        </div>
-
-                        <div className="md:col-span-2 pt-4 border-t border-zinc-100">
-                            <p className="text-xs text-zinc-400 mb-4">Security verification for password recovery:</p>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Security Question</label>
-                            <input
-                                type="text"
-                                name="securityQuestion"
-                                value={formData.securityQuestion}
-                                onChange={handleChange}
-                                required
-                                className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all font-medium"
-                                placeholder="e.g., Favorite city?"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Security Answer</label>
-                            <input
-                                type="text"
-                                name="securityAnswer"
-                                value={formData.securityAnswer}
-                                onChange={handleChange}
-                                required
-                                className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all font-medium"
-                                placeholder="Answer"
+                                className="w-full px-5 py-4 bg-notion-warm-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black transition-all"
+                                placeholder="Re-enter for audit"
                             />
                         </div>
                     </div>
 
-                    <div className="pt-6">
+                    <div className="pt-8">
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-4 bg-zinc-900 text-white rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-zinc-800 transition-all disabled:opacity-50"
+                            className="w-full py-5 bg-notion-black text-white rounded-micro font-bold uppercase tracking-widest text-badge shadow-notion-deep hover:bg-black transition-all disabled:opacity-20 hover:-translate-y-0.5 active:translate-y-0"
                         >
-                            {loading ? 'Creating Account...' : 'Create Team Member Account'}
+                            {loading ? 'Initializing Interface...' : 'Authorize Secondary Identity'}
                         </button>
                     </div>
                 </form>
             </div>
 
             {/* List of Invited Users */}
-            <div className="bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden">
-                <div className="p-8 border-b border-zinc-100 bg-zinc-50/50">
-                    <h2 className="text-xl font-bold text-zinc-900">Manage Team Members</h2>
-                    <p className="text-zinc-500 text-sm mt-1">View, reset passwords, or remove access for existing users.</p>
+            <div className="notion-card overflow-hidden shadow-notion-deep">
+                <div className="p-10 bg-notion-warm-white border-b whisper-border flex justify-between items-start">
+                    <div>
+                        <h2 className="text-display-secondary text-notion-black tracking-notion-display">Personnel Access Matrix</h2>
+                        <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mt-1">Audit active administrative credentials.</p>
+                    </div>
+                    <div className="bg-amber-50 text-amber-700 px-3 py-1 rounded-micro text-badge font-bold uppercase border border-amber-200">
+                        Admin resets moved to Supabase Dashboard
+                    </div>
                 </div>
                 
                 <div className="p-0">
                     {loadingUsers ? (
-                        <div className="p-8 text-center text-zinc-500 text-sm">Loading users...</div>
+                        <div className="p-12 text-center text-notion-warm-gray-100 font-bold text-badge uppercase tracking-widest">Synchronizing credentials...</div>
                     ) : users.length === 0 ? (
-                        <div className="p-8 text-center text-zinc-500 text-sm">No secondary users found.</div>
+                        <div className="p-12 text-center text-notion-warm-gray-100 font-bold text-badge uppercase tracking-widest">No active secondary identities identified.</div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-zinc-50 text-zinc-400 text-xs uppercase tracking-widest border-b border-zinc-100">
-                                        <th className="p-4 font-bold">Username</th>
-                                        <th className="p-4 font-bold">Role</th>
-                                        <th className="p-4 font-bold text-right">Actions</th>
+                                    <tr className="bg-notion-warm-white text-notion-warm-gray-300 text-badge font-bold uppercase tracking-widest border-b whisper-border">
+                                        <th className="p-6">Authorization Email</th>
+                                        <th className="p-6 text-center">Protocol Level</th>
+                                        <th className="p-6 text-right">Added</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-zinc-100">
+                                <tbody className="divide-y whisper-border">
                                     {users.map((user) => (
-                                        <tr key={user.dbId} className="hover:bg-zinc-50/50 transition-colors">
-                                            <td className="p-4 font-medium text-zinc-900">{user.username}</td>
-                                            <td className="p-4">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'admin' && user.username === 'Joyeb' ? 'bg-indigo-100 text-indigo-800' : 'bg-emerald-100 text-emerald-800'}`}>
-                                                    {user.username === 'Joyeb' ? 'Master Admin' : 'Staff Admin'}
+                                        <tr key={user.id} className="hover:bg-zinc-50/30 transition-colors">
+                                            <td className="p-6 font-bold text-notion-black tracking-tight">{user.email}</td>
+                                            <td className="p-6 text-center">
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-micro text-badge font-bold uppercase tracking-widest shadow-sm whisper-border ${user.role === 'admin' ? 'bg-notion-badge-blue-bg text-notion-blue' : 'bg-notion-badge-green-bg text-emerald-700'}`}>
+                                                    {user.role === 'admin' ? 'System Admin' : 'User'}
                                                 </span>
                                             </td>
-                                            <td className="p-4 flex items-center justify-end gap-3">
-                                                {user.username !== 'Joyeb' ? (
-                                                    <>
-                                                        <button 
-                                                            onClick={async () => {
-                                                                const newPass = prompt(`Enter new password for ${user.username} (min 6 chars):`);
-                                                                if (!newPass) return;
-                                                                if (newPass.length < 6) return alert("Password must be at least 6 characters.");
-                                                                
-                                                                if (window.confirm(`Are you sure you want to forcefully reset the password for ${user.username}?`)) {
-                                                                    try {
-                                                                        await adminResetPassword(user.username, newPass);
-                                                                        alert(`Password for ${user.username} has been reset.`);
-                                                                    } catch (e) {
-                                                                        alert("Error: " + e.message);
-                                                                    }
-                                                                }
-                                                            }}
-                                                            className="text-xs font-bold text-blue-600 hover:text-blue-800 uppercase tracking-widest"
-                                                        >
-                                                            Reset Password
-                                                        </button>
-                                                        <button 
-                                                            onClick={async () => {
-                                                                if (window.confirm(`CRITICAL: Are you sure you want to permenantly delete the account for ${user.username}? They will immediately lose all access.`)) {
-                                                                    try {
-                                                                        await deleteUser(user.dbId);
-                                                                        loadUsers();
-                                                                    } catch (e) {
-                                                                        alert("Error deleting user: " + e.message);
-                                                                    }
-                                                                }
-                                                            }}
-                                                            className="text-xs font-bold text-rose-600 hover:text-rose-800 uppercase tracking-widest"
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                    </>
-                                                ) : (
-                                                    <span className="text-xs italic text-zinc-400">Restricted</span>
-                                                )}
+                                            <td className="p-6 text-right text-notion-warm-gray-300 font-bold text-badge">
+                                                {new Date(user.created_at).toLocaleDateString()}
                                             </td>
                                         </tr>
                                     ))}

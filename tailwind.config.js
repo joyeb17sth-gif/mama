@@ -10,48 +10,66 @@ export default {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
-        // "Ultra-modern" Palette
-        background: '#FBFBFB',
-        primary: {
-          50: '#EEF2FF',
-          100: '#E0E7FF',
-          200: '#C7D2FE',
-          300: '#A5B4FC',
-          400: '#818CF8',
-          500: '#6366F1', // Indigo 500
-          600: '#4F46E5', // Indigo 600 - Main Brand Color
-          700: '#4338CA',
-          800: '#3730A3',
-          900: '#312E81',
+        notion: {
+          black: 'rgba(0, 0, 0, 0.95)',
+          blue: '#0075de',
+          'blue-active': '#005bab',
+          'link-blue': '#0075de',
+          'focus-blue': '#097fe8',
+          'badge-blue-bg': '#f2f9ff',
+          'badge-blue-text': '#097fe8',
+          'warm-white': '#f6f5f4',
+          'warm-dark': '#31302e',
+          'warm-gray': {
+            500: '#615d59',
+            300: '#a39e98',
+          },
+          teal: '#2a9d99',
+          green: '#1aae39',
+          orange: '#dd5b00',
+          pink: '#ff64c8',
+          purple: '#391c57',
+          brown: '#523410',
         },
-        zinc: {
-          50: '#FAFAFA',
-          100: '#F4F4F5',
-          200: '#E4E4E7', // Border color
-          300: '#D4D4D8',
-          400: '#A1A1AA',
-          500: '#71717A', // Secondary text
-          600: '#52525B',
-          700: '#3F3F46',
-          800: '#27272A',
-          900: '#18181B', // Primary text
+        // Legacy colors kept for compatibility during migration
+        background: '#ffffff',
+        primary: {
+          50: '#f2f9ff',
+          500: '#0075de',
+          600: '#0075de',
+          700: '#005bab',
         }
       },
+      boxShadow: {
+        'notion-card': 'rgba(0,0,0,0.04) 0px 4px 18px, rgba(0,0,0,0.027) 0px 2.025px 7.84688px, rgba(0,0,0,0.02) 0px 0.8px 2.925px, rgba(0,0,0,0.01) 0px 0.175px 1.04062px',
+        'notion-deep': 'rgba(0,0,0,0.01) 0px 1px 3px, rgba(0,0,0,0.02) 0px 3px 7px, rgba(0,0,0,0.02) 0px 7px 15px, rgba(0,0,0,0.04) 0px 14px 28px, rgba(0,0,0,0.05) 0px 23px 52px',
+      },
       borderRadius: {
-        'lg': '0.75rem', // 12px
-        'xl': '1rem',    // 16px
-        '2xl': '1.5rem', // 24px
+        'micro': '4px',
+        'subtle': '5px',
+        'standard': '8px',
+        'comfortable': '12px',
+        'large': '16px',
+        'pill': '9999px',
       },
       fontSize: {
-        'h1': '24px',
-        'h2': '22px',
-        'p1': '18px',
-        'p2': '16px',
-        'p3': '14px',
+        'display-hero': ['64px', { lineHeight: '1.00', letterSpacing: '-2.125px', fontWeight: '700' }],
+        'display-secondary': ['54px', { lineHeight: '1.04', letterSpacing: '-1.875px', fontWeight: '700' }],
+        'section-heading': ['48px', { lineHeight: '1.00', letterSpacing: '-1.50px', fontWeight: '700' }],
+        'sub-heading-large': ['40px', { lineHeight: '1.50', fontWeight: '700' }],
+        'sub-heading': ['26px', { lineHeight: '1.23', letterSpacing: '-0.625px', fontWeight: '700' }],
+        'card-title': ['22px', { lineHeight: '1.27', letterSpacing: '-0.25px', fontWeight: '700' }],
+        'body-large': ['20px', { lineHeight: '1.40', letterSpacing: '-0.125px', fontWeight: '600' }],
+        'body-medium': ['16px', { lineHeight: '1.50', fontWeight: '500' }],
+        'body-semibold': ['16px', { lineHeight: '1.50', fontWeight: '600' }],
+        'nav-button': ['15px', { lineHeight: '1.33', fontWeight: '600' }],
+        'caption': ['14px', { lineHeight: '1.43', fontWeight: '500' }],
+        'badge': ['12px', { lineHeight: '1.33', fontWeight: '600', letterSpacing: '0.125px' }],
       },
       letterSpacing: {
-        tight: '-0.025em',
-        tighter: '-0.04em',
+        'notion-display': '-2.125px',
+        'notion-section': '-1.5px',
+        'notion-card': '-0.25px',
       }
     },
   },

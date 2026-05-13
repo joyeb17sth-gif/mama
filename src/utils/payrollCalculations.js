@@ -71,16 +71,21 @@ export const calculateTimesheetPay = (timesheetEntry, payRates, publicHolidays =
 
   const allowance = parseFloat(timesheetEntry.allowance) || 0;
   const otherPay = parseFloat(timesheetEntry.otherPay) || 0;
+  const customAddition = parseFloat(timesheetEntry.customAddition) || 0;
   const deduction = parseFloat(timesheetEntry.deduction) || 0;
-  const netPay = totalPay + allowance + otherPay - deduction;
+  
+  // Prevent negative net pay and fix floating point precision errors
+  const rawNetPay = totalPay + allowance + otherPay + customAddition - deduction;
+  const netPay = Math.max(0, Math.round(rawNetPay * 100) / 100);
 
   return {
-    totalHours,
-    totalPay,
-    trainingHours,
-    trainingPay,
+    totalHours: Math.round(totalHours * 100) / 100,
+    totalPay: Math.round(totalPay * 100) / 100,
+    trainingHours: Math.round(trainingHours * 100) / 100,
+    trainingPay: Math.round(trainingPay * 100) / 100,
     allowance,
     otherPay,
+    customAddition,
     deduction,
     netPay,
     hoursByRateType // Added for detailed payslips
@@ -106,7 +111,7 @@ export const checkBudgetStatus = (actualHours, actualAmount, budgetedHours, budg
 // Consolidate payments across multiple sites for a contractor
 export const consolidateContractorPay = (contractorId, timesheets, payRates, publicHolidays = []) => {
   const contractorTimesheets = timesheets.filter(
-    ts => ts.contractorId === contractorId && ts.status === 'approved'
+    ts => ts.contractorId === contractorId && ts.status === 'done'
   );
 
   let totalHours = 0;

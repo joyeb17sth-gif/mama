@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Dropdown from './Dropdown';
 import { getSites } from '../utils/storage';
+import { SiteSchema, validateData } from '../utils/validation';
+import { format, addMonths, startOfYear } from 'date-fns';
 
-const SiteForm = ({ site, onSave, onCancel }) => {
+const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
   const [allSites, setAllSites] = useState([]);
   const [formData, setFormData] = useState({
     siteName: site?.siteName || '',
@@ -14,11 +16,16 @@ const SiteForm = ({ site, onSave, onCancel }) => {
     isTrainingSite: site?.isTrainingSite || false,
     isSubSite: site?.isSubSite || false,
     parentSiteId: site?.parentSiteId || '',
-    codeRates: site?.codeRates || [],
+    codeRates: site?.codeRates || []
   });
 
   const [newRateCode, setNewRateCode] = useState('');
   const [newRates, setNewRates] = useState({ weekday: 0, saturday: 0, sunday: 0, publicHoliday: 0 });
+  const [validationError, setValidationError] = useState('');
+
+  // Periodical Tasks State
+  const [tasks, setTasks] = useState(periodicalTasks);
+
 
   useEffect(() => {
     // Load all sites to populate parent site dropdown
@@ -37,7 +44,7 @@ const SiteForm = ({ site, onSave, onCancel }) => {
         isTrainingSite: site.isTrainingSite || false,
         isSubSite: site.isSubSite || false,
         parentSiteId: site.parentSiteId || '',
-        codeRates: site.codeRates || [],
+        codeRates: site.codeRates || []
       });
     }
   }, [site]);
@@ -96,19 +103,180 @@ const SiteForm = ({ site, onSave, onCancel }) => {
     });
   };
 
+  // Periodical Tasks State
+
+  const getInitialPeriods = (freq) => {
+    if (freq === 'Quarterly') return [
+      { name: '1st Quarter', hours: 0, pricing: 0 },
+      { name: '2nd Quarter', hours: 0, pricing: 0 },
+      { name: '3rd Quarter', hours: 0, pricing: 0 },
+      { name: '4th Quarter', hours: 0, pricing: 0 }
+    ];
+    if (freq === 'Monthly') {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return months.map(m => ({ name: m, hours: 0, pricing: 0 }));
+    }
+    if (freq === '6 Monthly') return [
+      { name: '1st Half', hours: 0, pricing: 0 },
+      { name: '2nd Half', hours: 0, pricing: 0 }
+    ];
+    if (freq === 'Yearly') return [{ name: 'Annual', hours: 0, pricing: 0 }];
+    if (freq === 'Weekly') return [{ name: 'Weekly Average', hours: 0, pricing: 0 }];
+    return [];
+  };
+
+  const [editingTaskId, setEditingTaskId] = useState(null);
+
+  const [newTask, setNewTask] = useState({
+    taskCode: '',
+    taskName: '',
+    frequency: 'Monthly',
+    contractType: 'AD/HOC',
+    startingMonth: 0,
+    periods: getInitialPeriods('Monthly')
+  });
+
+  const handleTaskFrequencyChange = (val) => {
+    setNewTask({
+      ...newTask,
+      frequency: val,
+      startingMonth: 0,
+      periods: getInitialPeriods(val)
+    });
+  };
+
+  const handleTaskPeriodChange = (index, field, value) => {
+    const updatedPeriods = [...newTask.periods];
+    updatedPeriods[index][field] = parseFloat(value) || 0;
+    setNewTask({ ...newTask, periods: updatedPeriods });
+  };
+
+  const calculateTaskTotals = (taskPeriods) => {
+    const totalHours = taskPeriods.reduce((sum, p) => sum + (p.hours || 0), 0);
+    const totalPrice = taskPeriods.reduce((sum, p) => sum + (p.pricing || 0), 0);
+    return { totalHours, totalPrice };
+  };
+
+
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
+    setValidationError('');
+
+    // Strict Input Validation
+    const validationResult = validateData(SiteSchema, formData);
+    if (!validationResult.success) {
+      setValidationError(validationResult.error);
+      return;
+    }
+
+    onSave(validationResult.data, tasks);
+  };
+
+  const generateSchedules = (frequency, startingMonth = 0) => {
+    let interval = 1;
+    if (frequency === 'Weekly') interval = 1;
+    if (frequency === 'Monthly') interval = 1;
+    if (frequency === 'Quarterly') interval = 3;
+    if (frequency === '6 Monthly') interval = 6;
+    if (frequency === 'Yearly') interval = 12;
+
+    const schedules = [];
+    const currentYear = new Date().getFullYear();
+    let currentDate = new Date(currentYear - 2, startingMonth, 1);
+
+    const totalMonths = 12 * 7;
+    for (let i = 0; i < totalMonths; i += interval) {
+       const targetPeriod = format(currentDate, 'yyyy-MM');
+       schedules.push({ id: Date.now().toString() + Math.random().toString(36).substr(2, 9), targetPeriod, status: 'Scheduled' });
+       currentDate = addMonths(currentDate, interval);
+    }
+    return schedules;
+  };
+
+  const handleEditTask = (taskId) => {
+    const taskToEdit = tasks.find(t => t.id === taskId);
+    if (!taskToEdit) return;
+    setNewTask({
+      taskCode: taskToEdit.taskCode || '',
+      taskName: taskToEdit.taskName || '',
+      frequency: taskToEdit.frequency || 'Monthly',
+      contractType: taskToEdit.contractType || 'AD/HOC',
+      startingMonth: taskToEdit.startingMonth || 0,
+      periods: taskToEdit.periodBudgets || getInitialPeriods(taskToEdit.frequency || 'Monthly')
+    });
+    setEditingTaskId(taskId);
+  };
+
+  const handleAddTask = () => {
+    if (!newTask.taskName || !newTask.taskCode) return;
+    
+    const { totalHours, totalPrice } = calculateTaskTotals(newTask.periods);
+    
+    if (editingTaskId) {
+      const existingTask = tasks.find(t => t.id === editingTaskId);
+      const freqChanged = existingTask.frequency !== newTask.frequency;
+      const monthChanged = (existingTask.startingMonth || 0) !== newTask.startingMonth;
+      const updatedTask = {
+        ...existingTask,
+        taskCode: newTask.taskCode.toUpperCase().trim(),
+        taskName: newTask.taskName,
+        frequency: newTask.frequency,
+        startingMonth: newTask.startingMonth,
+        budgetHours: totalHours, 
+        budgetPrice: totalPrice,
+        periodBudgets: newTask.periods,
+        contractType: newTask.contractType,
+        schedules: (freqChanged || monthChanged)
+          ? generateSchedules(newTask.frequency, newTask.startingMonth)
+          : existingTask.schedules
+      };
+      setTasks(tasks.map(t => t.id === editingTaskId ? updatedTask : t));
+      setEditingTaskId(null);
+    } else {
+      const taskToAdd = {
+        id: Date.now().toString(),
+        siteId: site?.id || '',
+        taskCode: newTask.taskCode.toUpperCase().trim(),
+        taskName: newTask.taskName,
+        frequency: newTask.frequency,
+        startingMonth: newTask.startingMonth,
+        budgetHours: totalHours, 
+        budgetPrice: totalPrice,
+        periodBudgets: newTask.periods,
+        contractType: newTask.contractType,
+        schedules: generateSchedules(newTask.frequency, newTask.startingMonth)
+      };
+      setTasks([...tasks, taskToAdd]);
+    }
+
+    setNewTask({
+      taskCode: '',
+      taskName: '',
+      frequency: 'Monthly',
+      contractType: 'AD/HOC',
+      startingMonth: 0,
+      periods: getInitialPeriods('Monthly')
+    });
+  };
+
+  const removeTask = (taskId) => {
+    setTasks(tasks.filter(t => t.id !== taskId));
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 animate-fade-in-up font-sans">
-      <div className="bg-white p-8 rounded-2xl border border-zinc-100">
-        <h3 className="text-p1 font-bold text-zinc-900 mb-6">Site Details</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <form onSubmit={handleSubmit} className="space-y-10 animate-fade-in-up">
+      {validationError && (
+        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-sm font-bold shadow-sm animate-fade-in">
+          {validationError}
+        </div>
+      )}
+      <div className="notion-card p-10">
+        <h3 className="text-display-secondary text-notion-black tracking-notion-display mb-8">Infrastructure Identity</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
-            <label className="block mb-2">
-              Site Name <span className="text-primary-600">*</span>
+            <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest pl-1 mb-2 block">
+              Site Designation <span className="text-notion-blue">*</span>
             </label>
             <input
               type="text"
@@ -116,43 +284,43 @@ const SiteForm = ({ site, onSave, onCancel }) => {
               value={formData.siteName}
               onChange={handleChange}
               required
-              placeholder="e.g. City Hotel"
-              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900 placeholder-zinc-400"
+              placeholder="e.g. City Hotel Terminal"
+              className="w-full px-4 py-3 bg-notion-warm-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black placeholder:text-notion-warm-gray-100 transition-all"
             />
           </div>
 
           <div>
-            <label className="block mb-2">
-              Client Name
+            <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest pl-1 mb-2 block">
+              Client Principal
             </label>
             <input
               type="text"
               name="clientName"
               value={formData.clientName}
               onChange={handleChange}
-              placeholder="Client Company Name"
-              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900 placeholder-zinc-400"
+              placeholder="Client Entity Name"
+              className="w-full px-4 py-3 bg-notion-warm-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black placeholder:text-notion-warm-gray-100 transition-all"
             />
           </div>
 
           <div>
-            <label className="block mb-2">
-              Payroll Cycle <span className="text-primary-600">*</span>
+            <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest pl-1 mb-2 block">
+              Payroll Protocol <span className="text-notion-blue">*</span>
             </label>
             <Dropdown
               value={formData.payrollCycle}
               onChange={(val) => setFormData({ ...formData, payrollCycle: val })}
               options={[
-                { value: 'weekly', label: 'Weekly Cycle' },
-                { value: 'fortnightly', label: 'Fortnightly Cycle' },
-                { value: 'custom', label: 'Custom Protocol' }
+                { value: 'weekly', label: 'Cycle: Weekly' },
+                { value: 'fortnightly', label: 'Cycle: Fortnightly' },
+                { value: 'custom', label: 'Protocol: Custom' }
               ]}
             />
           </div>
 
           <div>
-            <label className="block mb-2">
-              Cleaning Type <span className="text-primary-600">*</span>
+            <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest pl-1 mb-2 block">
+              Operational Domain <span className="text-notion-blue">*</span>
             </label>
             <Dropdown
               value={formData.cleaningType}
@@ -161,22 +329,21 @@ const SiteForm = ({ site, onSave, onCancel }) => {
                 handleChange(e);
               }}
               options={[
-                { value: 'housekeeping', label: 'Housekeeping Operations' },
-                { value: 'cleaning', label: 'Commercial Cleaning' }
+                { value: 'housekeeping', label: 'Housekeeping Domain' },
+                { value: 'cleaning', label: 'Commercial Domain' }
               ]}
             />
           </div>
         </div>
       </div>
 
-      <div className="bg-white p-8 rounded-2xl border border-zinc-100 relative">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-zinc-50 rounded-full mix-blend-multiply filter blur-3xl -mr-32 -mt-32 pointer-events-none opacity-50 overflow-hidden rounded-2xl"></div>
-        <h3 className="text-p1 font-bold text-zinc-900 mb-6 relative z-10">Budget & Configuration</h3>
+      <div className="notion-card p-10 relative">
+        <h3 className="text-display-secondary text-notion-black tracking-notion-display mb-8">Capacity & Configuration</h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
-            <label className="block mb-2">
-              Budgeted Hours (per cycle)
+            <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest pl-1 mb-2 block">
+              Cycle Hourly Threshold
             </label>
             <div className="relative group/input">
               <input
@@ -186,18 +353,18 @@ const SiteForm = ({ site, onSave, onCancel }) => {
                 onChange={handleChange}
                 min="0"
                 step="0.5"
-                className="w-full pl-4 pr-12 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900"
+                className="w-full pl-4 pr-14 py-3 bg-notion-warm-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black tabular-nums"
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-xs pointer-events-none">HRS</span>
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-notion-warm-gray-100 font-bold text-badge uppercase tracking-widest pointer-events-none">Units</span>
             </div>
           </div>
 
           <div>
-            <label className="block mb-2">
-              Budgeted Amount (per cycle)
+            <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest pl-1 mb-2 block">
+              Financial Ceiling
             </label>
             <div className="relative group/input">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold group-focus-within/input:text-primary-500 transition-colors pointer-events-none">$</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-notion-warm-gray-100 font-bold group-focus-within/input:text-notion-blue transition-colors pointer-events-none">$</span>
               <input
                 type="number"
                 name="budgetedAmount"
@@ -205,14 +372,14 @@ const SiteForm = ({ site, onSave, onCancel }) => {
                 onChange={handleChange}
                 min="0"
                 step="0.01"
-                className="w-full pl-8 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 focus:bg-white transition-all font-medium text-zinc-900"
+                className="w-full pl-9 pr-4 py-3 bg-notion-warm-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black tabular-nums"
               />
             </div>
           </div>
         </div>
 
-        <div className="mt-8 space-y-4 relative z-10">
-          <div className="flex items-center p-4 bg-zinc-50/80 border border-zinc-200 rounded-xl hover:bg-white transition-all cursor-pointer group">
+        <div className="mt-10 space-y-4">
+          <div className="flex items-center p-4 bg-notion-warm-white/50 whisper-border rounded-micro hover:bg-zinc-200 transition-all cursor-pointer group shadow-sm">
             <input
               type="checkbox"
               name="isTrainingSite"
@@ -220,17 +387,17 @@ const SiteForm = ({ site, onSave, onCancel }) => {
               checked={formData.isTrainingSite}
               onChange={handleChange}
               disabled={formData.cleaningType !== 'housekeeping'}
-              className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-zinc-300 rounded transition-all cursor-pointer disabled:opacity-50"
+              className="h-4 w-4 text-notion-blue focus:ring-0 border-notion-warm-gray-300 rounded-micro transition-all cursor-pointer"
             />
-            <div className="ml-3">
-              <label htmlFor="isTrainingSite" className={`block text-p3 font-bold ${formData.cleaningType !== 'housekeeping' ? 'text-zinc-400' : 'text-zinc-800'} cursor-pointer`}>
-                Enable Training Mode
+            <div className="ml-4">
+              <label htmlFor="isTrainingSite" className={`block text-badge font-bold uppercase tracking-widest ${formData.cleaningType !== 'housekeeping' ? 'text-notion-warm-gray-100' : 'text-notion-black'} cursor-pointer`}>
+                Activate Training Hub
               </label>
-              <p className="text-xs text-zinc-500">Allows management of training pay escrow (Housekeeping only)</p>
+              <p className="text-[10px] text-notion-warm-gray-300 font-bold uppercase tracking-tight mt-0.5">Automates training escrow synthesis (LODGING ONLY)</p>
             </div>
           </div>
 
-          <div className={`p-5 rounded-xl border transition-all duration-300 ${formData.isSubSite ? 'bg-primary-50/40 border-primary-200' : 'bg-transparent border-transparent'}`}>
+          <div className={`p-6 rounded-micro border transition-all duration-300 shadow-sm ${formData.isSubSite ? 'bg-notion-badge-blue-bg border-notion-blue' : 'bg-notion-warm-white/50 whisper-border'}`}>
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -238,17 +405,17 @@ const SiteForm = ({ site, onSave, onCancel }) => {
                 id="isSubSite"
                 checked={formData.isSubSite}
                 onChange={handleChange}
-                className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-zinc-300 rounded-lg transition-all cursor-pointer"
+                className="h-4 w-4 text-notion-blue focus:ring-0 border-notion-warm-gray-300 rounded-micro transition-all cursor-pointer"
               />
-              <label htmlFor="isSubSite" className="ml-3 block text-p3 font-bold text-zinc-900 cursor-pointer select-none">
-                Mark as Sub-Site (Nested Project)
+              <label htmlFor="isSubSite" className="ml-4 block text-badge font-bold text-notion-black uppercase tracking-widest cursor-pointer select-none">
+                Define as Sub-Terminal (Nested)
               </label>
             </div>
 
             {formData.isSubSite && (
-              <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300 pl-8">
-                <label className="block mb-2">
-                  Select Parent Site <span className="text-primary-600">*</span>
+              <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300 pl-8">
+                <label className="text-badge font-bold text-notion-blue uppercase tracking-widest mb-3 block">
+                  Assign Master Terminal <span className="text-notion-blue">*</span>
                 </label>
                 <Dropdown
                   value={formData.parentSiteId}
@@ -256,8 +423,8 @@ const SiteForm = ({ site, onSave, onCancel }) => {
                     const e = { target: { name: 'parentSiteId', value: val } };
                     handleChange(e);
                   }}
-                  options={allSites.map(s => ({ value: s.id, label: s.siteName }))}
-                  placeholder="-- Choose Terminal Master --"
+                  options={allSites.map(s => ({ value: s.id, label: `Master: ${s.siteName}` }))}
+                  placeholder="-- Identify Parent Infrastructure --"
                 />
               </div>
             )}
@@ -265,35 +432,33 @@ const SiteForm = ({ site, onSave, onCancel }) => {
         </div>
       </div>
 
-      <div className="bg-white p-8 rounded-2xl border border-zinc-100 relative">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-50/50 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none rounded-2xl"></div>
-
-        <h3 className="text-p1 text-zinc-900 mb-2 relative z-10 font-bold">Code-Based Pay Rates</h3>
-        <p className="text-p3 text-zinc-500 font-medium mb-6 relative z-10">Configure default pay rates for specific Role Codes on this site.</p>
+      <div className="notion-card p-10 relative">
+        <h3 className="text-display-secondary text-notion-black tracking-notion-display mb-2">Role Allocation Matrix</h3>
+        <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mb-10">Define fixed payroll rates for specific personnel role codes on this site.</p>
 
         {/* Add Entry Card */}
-        <div className="bg-zinc-50/50 p-6 rounded-2xl border border-zinc-200 mb-6 relative z-50">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5 items-end">
+        <div className="bg-notion-warm-white/50 p-8 rounded-comfortable whisper-border mb-10 relative z-50 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 items-end">
             <div className="lg:col-span-1">
-              <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Contractor Code</label>
+              <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-3 block">Role Designation</label>
               <input
                 type="text"
                 value={newRateCode}
                 onChange={(e) => setNewRateCode(e.target.value)}
-                placeholder="e.g. PTE-2"
-                className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl focus:ring-2 focus:ring-primary-100 focus:border-primary-500 font-semibold text-zinc-900 transition-all uppercase tracking-widest text-sm"
+                placeholder="e.g. PTE-A"
+                className="w-full px-4 py-2.5 bg-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black transition-all uppercase tracking-widest text-badge"
               />
             </div>
             {['weekday', 'saturday', 'sunday', 'publicHoliday'].map(type => (
               <div key={type}>
-                <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">{type}</label>
+                <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-3 block truncate">{type === 'publicHoliday' ? 'P. Holiday' : type}</label>
                 <div className="relative group/input">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-300 font-bold group-focus-within/input:text-primary-500 transition-colors">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-notion-warm-gray-100 font-bold group-focus-within/input:text-notion-blue transition-colors">$</span>
                   <input
                     type="number"
                     value={newRates[type]}
                     onChange={(e) => setNewRates({ ...newRates, [type]: parseFloat(e.target.value) || 0 })}
-                    className="w-full pl-6 pr-3 py-2.5 bg-white border border-zinc-200 rounded-xl focus:ring-2 focus:ring-primary-100 focus:border-primary-500 font-semibold text-zinc-900 transition-all"
+                    className="w-full pl-7 pr-3 py-2.5 bg-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black transition-all tabular-nums"
                   />
                 </div>
               </div>
@@ -303,72 +468,257 @@ const SiteForm = ({ site, onSave, onCancel }) => {
             type="button"
             onClick={handleAddCodeRate}
             disabled={!newRateCode.trim()}
-            className="mt-6 w-full lg:w-auto px-6 py-3 bg-zinc-900 text-white rounded-xl font-semibold hover:bg-zinc-800 transition disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
+            className="mt-8 w-full lg:w-auto px-10 py-3 bg-notion-black text-white rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-black transition shadow-notion-deep disabled:opacity-20 hover:-translate-y-0.5 active:translate-y-0"
           >
-            + Add Code Rate
+            + Register Role Rate
           </button>
         </div>
 
         {/* List of overrides */}
-        <div className="space-y-3 relative z-10">
+        <div className="space-y-4 relative z-10">
           {(formData.codeRates || []).length > 0 && (
-            <div className="grid grid-cols-5 gap-4 px-4 py-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-              <div className="col-span-1">Code</div>
-              <div className="col-span-3 grid grid-cols-4 gap-4 text-center">
-                <span>Mon-Fri</span>
+            <div className="grid grid-cols-5 gap-6 px-6 py-2 text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest">
+              <div className="col-span-1">Designation Code</div>
+              <div className="col-span-3 grid grid-cols-4 gap-6 text-center">
+                <span>W.Day</span>
                 <span>Sat</span>
                 <span>Sun</span>
-                <span>PH</span>
+                <span>P.H</span>
               </div>
-              <div className="col-span-1 text-right">Action</div>
+              <div className="col-span-1 text-right">Operation</div>
             </div>
           )}
           {(formData.codeRates || []).map(rate => (
-            <div key={rate.code} className="grid grid-cols-5 gap-4 items-center p-4 bg-white border border-zinc-100 rounded-xl hover:border-primary-200 transition-all group">
+            <div key={rate.code} className="grid grid-cols-5 gap-6 items-center p-6 bg-notion-warm-white/30 whisper-border rounded-comfortable hover:shadow-notion-card transition-all group">
               <div className="col-span-1">
-                <div className="text-sm font-bold text-zinc-900 truncate tracking-widest">{rate.code}</div>
+                <div className="text-body-semibold text-notion-black uppercase tracking-widest truncate">{rate.code}</div>
               </div>
-              <div className="col-span-3 grid grid-cols-4 gap-4">
-                <div className="text-center"><span className="text-xs font-semibold text-zinc-700 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">${rate.weekday}</span></div>
-                <div className="text-center"><span className="text-xs font-semibold text-zinc-700 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">${rate.saturday}</span></div>
-                <div className="text-center"><span className="text-xs font-semibold text-zinc-700 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">${rate.sunday}</span></div>
-                <div className="text-center"><span className="text-xs font-semibold text-zinc-700 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">${rate.publicHoliday}</span></div>
+              <div className="col-span-3 grid grid-cols-4 gap-6">
+                <div className="text-center font-bold text-notion-black tabular-nums bg-white whisper-border px-3 py-1.5 rounded-micro shadow-sm">${rate.weekday.toFixed(2)}</div>
+                <div className="text-center font-bold text-notion-black tabular-nums bg-white whisper-border px-3 py-1.5 rounded-micro shadow-sm">${rate.saturday.toFixed(2)}</div>
+                <div className="text-center font-bold text-notion-black tabular-nums bg-white whisper-border px-3 py-1.5 rounded-micro shadow-sm">${rate.sunday.toFixed(2)}</div>
+                <div className="text-center font-bold text-notion-black tabular-nums bg-white whisper-border px-3 py-1.5 rounded-micro shadow-sm">${rate.publicHoliday.toFixed(2)}</div>
               </div>
               <div className="col-span-1 text-right">
                 <button
                   type="button"
                   onClick={() => removeCodeRate(rate.code)}
-                  className="p-2 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
-                  title="Remove Code Rate"
+                  className="p-2.5 text-notion-warm-gray-100 hover:text-rose-600 hover:bg-notion-badge-rose-bg rounded-micro transition-all shadow-sm bg-white whisper-border"
+                  title="Purge Rate"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
               </div>
             </div>
           ))}
           {(formData.codeRates || []).length === 0 && (
-            <div className="text-center py-12 border border-dashed border-zinc-200 rounded-2xl bg-zinc-50/30">
-              <div className="mb-2 text-4xl opacity-20">🏷️</div>
-              <div className="text-zinc-500 font-medium text-sm">No code-based rates configured</div>
-              <div className="text-zinc-400 text-xs mt-1">Add rates for specific worker codes</div>
+            <div className="text-center py-16 whisper-border border-dashed rounded-comfortable bg-notion-warm-white/10">
+              <div className="mb-4 text-4xl opacity-10">🏷️</div>
+              <div className="text-notion-warm-gray-300 font-bold text-badge uppercase tracking-widest">No code-based rates identified</div>
+              <div className="text-notion-warm-gray-100 text-badge font-bold uppercase tracking-widest mt-2">Initialize role codes to enable automated payroll synthesis</div>
             </div>
           )}
         </div>
       </div>
 
-      <div className="flex justify-end space-x-4 pt-4">
+      <div className="notion-card p-10 relative">
+        <h3 className="text-display-secondary text-notion-black tracking-notion-display mb-2">Periodical Tasks</h3>
+        <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mb-10">Define maintenance routines, cleaning schedules, and their period budgets for this site.</p>
+
+        {/* Add Task Card */}
+        <div className="bg-notion-warm-white/50 p-8 rounded-comfortable whisper-border mb-10 relative z-50 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end mb-6">
+            <div className="md:col-span-1">
+              <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-3 block">Task Code</label>
+              <input
+                type="text"
+                value={newTask.taskCode}
+                onChange={(e) => setNewTask({ ...newTask, taskCode: e.target.value })}
+                placeholder="e.g. RWC001"
+                className="w-full px-4 py-2.5 bg-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black transition-all uppercase tracking-widest text-badge"
+              />
+            </div>
+            <div className="md:col-span-1">
+              <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-3 block">Task Name</label>
+              <input
+                type="text"
+                value={newTask.taskName}
+                onChange={(e) => setNewTask({ ...newTask, taskName: e.target.value })}
+                placeholder="Shampoo Carpets"
+                className="w-full px-4 py-2.5 bg-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black transition-all text-badge"
+              />
+            </div>
+            <div className="md:col-span-1">
+              <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-3 block">Frequency</label>
+              <Dropdown
+                value={newTask.frequency}
+                onChange={handleTaskFrequencyChange}
+                options={[
+                  { value: 'Weekly', label: 'Weekly' },
+                  { value: 'Monthly', label: 'Monthly' },
+                  { value: 'Quarterly', label: 'Quarterly' },
+                  { value: '6 Monthly', label: '6 Monthly' },
+                  { value: 'Yearly', label: 'Yearly' }
+                ]}
+              />
+            </div>
+            <div className="md:col-span-1">
+              <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-3 block">Contract Type</label>
+              <Dropdown
+                value={newTask.contractType}
+                onChange={(val) => setNewTask({ ...newTask, contractType: val })}
+                options={[
+                  { value: 'AD/HOC', label: 'AD/HOC' },
+                  { value: 'On Request', label: 'On Request' },
+                  { value: 'Scheduled', label: 'Scheduled' }
+                ]}
+              />
+            </div>
+          </div>
+
+          {/* Starting Month Selector */}
+          {['Quarterly', '6 Monthly', 'Yearly'].includes(newTask.frequency) && (
+            <div className="mb-4 p-4 bg-notion-badge-blue-bg/30 rounded-micro border border-notion-blue/20">
+              <label className="text-badge font-bold text-notion-blue uppercase tracking-widest mb-2 block">Starting Month</label>
+              <p className="text-[10px] text-notion-warm-gray-500 mb-2">
+                The schedule will begin from this month and repeat based on the selected frequency.
+              </p>
+              <div className="w-48">
+                <Dropdown
+                  value={newTask.startingMonth}
+                  onChange={(val) => setNewTask({ ...newTask, startingMonth: parseInt(val) })}
+                  options={[
+                    { value: 0, label: 'January' }, { value: 1, label: 'February' }, { value: 2, label: 'March' },
+                    { value: 3, label: 'April' }, { value: 4, label: 'May' }, { value: 5, label: 'June' },
+                    { value: 6, label: 'July' }, { value: 7, label: 'August' }, { value: 8, label: 'September' },
+                    { value: 9, label: 'October' }, { value: 10, label: 'November' }, { value: 11, label: 'December' }
+                  ]}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Dynamic Period Inputs for Task */}
+          <div className="border-t border-notion-warm-gray-200 pt-6 mt-6">
+            <h4 className="text-badge font-bold text-notion-blue uppercase tracking-widest mb-4">Period Budget Breakdown</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {newTask.periods.map((period, index) => (
+                <div key={index} className="p-3 bg-white whisper-border rounded-micro shadow-sm">
+                  <h5 className="font-bold text-[11px] text-notion-black mb-2 border-b border-notion-warm-gray-200 pb-1">{period.name}</h5>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Hours</label>
+                      <input
+                        type="number"
+                        value={period.hours || ''}
+                        onChange={(e) => handleTaskPeriodChange(index, 'hours', e.target.value)}
+                        className="w-full px-2 py-1 bg-notion-warm-white whisper-border rounded text-[11px] font-bold tabular-nums outline-none focus:border-notion-blue"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Pricing ($)</label>
+                      <input
+                        type="number"
+                        value={period.pricing || ''}
+                        onChange={(e) => handleTaskPeriodChange(index, 'pricing', e.target.value)}
+                        className="w-full px-2 py-1 bg-notion-warm-white whisper-border rounded text-[11px] font-bold tabular-nums outline-none focus:border-notion-blue"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex items-center gap-6 mt-6 p-4 bg-notion-badge-blue-bg/30 rounded-micro border border-notion-blue/20">
+               <div className="text-sm">
+                  <span className="font-bold text-notion-warm-gray-500 uppercase tracking-widest text-[10px] block">Total Hours Per Annum</span>
+                  <span className="font-bold text-notion-black">{calculateTaskTotals(newTask.periods).totalHours.toFixed(2)} hrs</span>
+               </div>
+               <div className="text-sm">
+                  <span className="font-bold text-notion-warm-gray-500 uppercase tracking-widest text-[10px] block">Total Price Per Annum</span>
+                  <span className="font-bold text-notion-black">${calculateTaskTotals(newTask.periods).totalPrice.toFixed(2)}</span>
+               </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleAddTask}
+            disabled={!newTask.taskCode.trim() || !newTask.taskName.trim()}
+            className="mt-8 w-full lg:w-auto px-10 py-3 bg-notion-blue text-white rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-notion-blue-active transition shadow-notion-deep disabled:opacity-20 hover:-translate-y-0.5 active:translate-y-0"
+          >
+            {editingTaskId ? 'Update Task' : '+ Register Task'}
+          </button>
+        </div>
+
+        {/* List of Tasks */}
+        <div className="space-y-4 relative z-10">
+          {tasks.length > 0 && (
+            <div className="grid grid-cols-6 gap-6 px-6 py-2 text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest">
+              <div className="col-span-1">Code</div>
+              <div className="col-span-2">Task Name</div>
+              <div className="col-span-1">Frequency</div>
+              <div className="col-span-1">Budget</div>
+              <div className="col-span-1 text-right">Operation</div>
+            </div>
+          )}
+          {tasks.map(task => (
+            <div key={task.id} className="grid grid-cols-6 gap-6 items-center p-6 bg-notion-warm-white/30 whisper-border rounded-comfortable hover:shadow-notion-card transition-all group">
+              <div className="col-span-1">
+                <div className="text-body-semibold text-notion-black uppercase tracking-widest truncate">{task.taskCode}</div>
+              </div>
+              <div className="col-span-2">
+                <div className="text-body-semibold text-notion-black">{task.taskName}</div>
+                <div className="text-[10px] text-notion-warm-gray-300 uppercase tracking-widest mt-1">{task.contractType}</div>
+              </div>
+              <div className="col-span-1">
+                <div className="text-badge font-bold text-notion-warm-gray-500 uppercase tracking-widest">{task.frequency}</div>
+              </div>
+              <div className="col-span-1">
+                <div className="text-center font-bold text-amber-900 tabular-nums bg-amber-100 whisper-border px-3 py-1.5 rounded-micro shadow-sm inline-block whitespace-nowrap">{task.budgetHours?.toFixed(2)} hrs <span className="text-notion-blue ml-1">${task.budgetPrice?.toFixed(2)}</span></div>
+              </div>
+              <div className="col-span-1 text-right flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleEditTask(task.id)}
+                  className="p-2.5 text-notion-blue hover:text-notion-blue-active hover:bg-notion-badge-blue-bg rounded-micro transition-all shadow-sm bg-white whisper-border"
+                  title="Modify Task"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeTask(task.id)}
+                  className="p-2.5 text-notion-warm-gray-100 hover:text-rose-600 hover:bg-notion-badge-rose-bg rounded-micro transition-all shadow-sm bg-white whisper-border"
+                  title="Purge Task"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+              </div>
+            </div>
+          ))}
+          {tasks.length === 0 && (
+            <div className="text-center py-16 whisper-border border-dashed rounded-comfortable bg-notion-warm-white/10">
+              <div className="mb-4 text-4xl opacity-10">📋</div>
+              <div className="text-notion-warm-gray-300 font-bold text-badge uppercase tracking-widest">No periodical tasks identified</div>
+              <div className="text-notion-warm-gray-100 text-badge font-bold uppercase tracking-widest mt-2">Initialize tasks to display on the Task Matrix</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex justify-end items-center gap-6 pt-10">
         <button
           type="button"
           onClick={onCancel}
-          className="px-6 py-3 text-zinc-600 bg-white border border-zinc-200 rounded-xl font-semibold hover:bg-zinc-50 hover:border-zinc-300 transition"
+          className="px-8 py-4 text-notion-black bg-white whisper-border rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-notion-warm-white transition shadow-sm"
         >
-          Cancel
+          Abort Protocol
         </button>
         <button
           type="submit"
-          className="px-8 py-3 text-white bg-primary-600 rounded-xl font-semibold hover:bg-primary-700 hover:-translate-y-0.5 transition-all"
+          className="px-12 py-4 text-white bg-notion-blue rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-notion-blue-active transition-all shadow-notion-card hover:-translate-y-0.5 active:translate-y-0"
         >
-          {site ? 'Update Changes' : 'Create Site'}
+          {site ? 'Commit Architecture' : 'Initialize Terminal'}
         </button>
       </div>
     </form>

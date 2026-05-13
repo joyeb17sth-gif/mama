@@ -83,8 +83,8 @@ const ContractorList = ({ contractors, onEdit, onDelete }) => {
                 </td>
                 <td className="px-6 py-5 whitespace-nowrap">
                   <div className="flex flex-col">
-                    <span className="text-xs font-bold text-zinc-900 font-mono tracking-widest">{contractor.bsb}</span>
-                    <span className="text-xs text-zinc-400 font-mono tracking-tighter">{contractor.accountNumber}</span>
+                    <span className="text-xs font-bold text-zinc-900 font-mono tracking-widest">***{(contractor.bsb || '').slice(-3)}</span>
+                    <span className="text-xs text-zinc-400 font-mono tracking-tighter">****{(contractor.accountNumber || '').slice(-4)}</span>
                   </div>
                 </td>
                 <td className="px-6 py-5 whitespace-nowrap text-sm">

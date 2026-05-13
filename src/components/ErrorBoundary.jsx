@@ -15,8 +15,10 @@ class ErrorBoundary extends React.Component {
             error: error,
             errorInfo: errorInfo
         });
-        // Log to console for debugging
-        console.error('ErrorBoundary caught an error:', error, errorInfo);
+        // Log to console for debugging only in development to prevent leaking sensitive info
+        if (import.meta.env.DEV) {
+            console.error('ErrorBoundary caught an error:', error, errorInfo);
+        }
     }
 
     handleRetry = () => {
@@ -58,11 +60,11 @@ class ErrorBoundary extends React.Component {
                             </button>
                         </div>
 
-                        {this.props.showDetails && this.state.error && (
+                        {this.props.showDetails && import.meta.env.DEV && this.state.error && (
                             <div className="mt-6 text-left">
                                 <details className="bg-gray-50 rounded-xl p-4">
                                     <summary className="cursor-pointer text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                        Error Details
+                                        Error Details (Dev Only)
                                     </summary>
                                     <pre className="mt-3 text-xs text-red-600 overflow-auto max-h-32 bg-red-50 p-3 rounded-lg">
                                         {this.state.error.toString()}

@@ -1,7 +1,8 @@
 import { useState, useEffect, Fragment } from 'react';
 import { generatePeriodDates, formatDateDisplay } from '../utils/dateUtils';
 import { checkBudgetStatus, calculateTimesheetPay } from '../utils/payrollCalculations';
-import { getTimesheets, saveSites, getSites, saveContractors, getContractors, logAction, getPublicHolidays } from '../utils/storage';
+import { getTimesheets, saveSites, getSites, saveContractors, getContractors, logAction, getPublicHolidays, getGlobalRates } from '../utils/storage';
+import { TimesheetSchema, validateData } from '../utils/validation';
 import ContractorForm from './ContractorForm';
 import Toast from './Toast';
 import Dropdown from './Dropdown';
@@ -22,7 +23,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
   const [publicHolidays, setPublicHolidays] = useState([]);
   const subSites = allSites.filter(s => s.isSubSite && s.parentSiteId === site.id);
 
-  const getEffectiveRates = (contractorId, targetSiteId) => {
+  const getEffectiveRates = (contractorId, targetSiteId, entryRateCode = null) => {
     const contractor = contractors.find(c => c.id === contractorId);
     const useSiteId = targetSiteId || site.id;
     const customRate = contractor?.customRates?.find(r => r.siteId === useSiteId);
@@ -39,15 +40,37 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
 
     const targetSiteObj = allSites.find(s => s.id === useSiteId);
     if (targetSiteObj && targetSiteObj.codeRates && contractor) {
-      const codeRate = targetSiteObj.codeRates.find(r => r.code === contractor.contractorId);
-      if (codeRate) {
-        return {
-          weekday: codeRate.weekday || 0,
-          saturday: codeRate.saturday || 0,
-          sunday: codeRate.sunday || 0,
-          publicHoliday: codeRate.publicHoliday || 0,
-          isCustom: true
-        };
+      // If a specific rateCode is provided (from multi-code deployment), use that
+      const codeToMatch = entryRateCode || null;
+      
+      if (codeToMatch) {
+        const codeRate = targetSiteObj.codeRates.find(r => r.code === codeToMatch);
+        if (codeRate) {
+          return {
+            weekday: codeRate.weekday || 0,
+            saturday: codeRate.saturday || 0,
+            sunday: codeRate.sunday || 0,
+            publicHoliday: codeRate.publicHoliday || 0,
+            isCustom: true,
+            matchedCode: codeToMatch
+          };
+        }
+      }
+      
+      // Fall back: check all contractor codes against site codeRates
+      const contractorCodes = (contractor.contractorId || '').split(',').map(c => c.trim()).filter(Boolean);
+      for (const code of contractorCodes) {
+        const codeRate = targetSiteObj.codeRates.find(r => r.code === code);
+        if (codeRate) {
+          return {
+            weekday: codeRate.weekday || 0,
+            saturday: codeRate.saturday || 0,
+            sunday: codeRate.sunday || 0,
+            publicHoliday: codeRate.publicHoliday || 0,
+            isCustom: true,
+            matchedCode: code
+          };
+        }
       }
     }
 
@@ -57,7 +80,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
   useEffect(() => {
     if (entries.length > 0) {
       const totals = entries.reduce((acc, entry) => {
-        const effectiveRates = getEffectiveRates(entry.contractorId, entry.siteId);
+        const effectiveRates = getEffectiveRates(entry.contractorId, entry.siteId, entry.rateCode);
         const calc = calculateTimesheetPay(entry, effectiveRates, publicHolidays);
         return {
           hours: acc.hours + calc.totalHours,
@@ -129,18 +152,39 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
         );
 
         const initialEntries = [
-          ...subSitesAllocated.map(({ contractor, siteId, siteName }) => ({
-            contractorId: contractor.id,
-            contractorName: contractor.name,
-            siteId: siteId,
-            siteName: siteName,
-            dailyHours: periodDates.map(d => ({ date: d.date, hours: 0, isTraining: false })),
-            manualLumpSumHours: null,
-            extraHours: 0,
-            allowance: 0,
-            otherPay: 0,
-            deduction: 0
-          }))
+          ...subSitesAllocated.flatMap(({ contractor, siteId, siteName }) => {
+            const codes = (contractor.contractorId || '').split(',').map(c => c.trim()).filter(Boolean);
+            if (codes.length === 0) {
+              return [{
+                contractorId: contractor.id,
+                contractorName: contractor.name,
+                rateCode: null,
+                siteId: siteId,
+                siteName: siteName,
+                dailyHours: periodDates.map(d => ({ date: d.date, hours: 0, isTraining: false })),
+                manualLumpSumHours: null,
+                extraHours: 0,
+                allowance: 0,
+                otherPay: 0,
+                customAddition: 0,
+                deduction: 0
+              }];
+            }
+            return codes.map(code => ({
+              contractorId: contractor.id,
+              contractorName: contractor.name,
+              rateCode: code,
+              siteId: siteId,
+              siteName: siteName,
+              dailyHours: periodDates.map(d => ({ date: d.date, hours: 0, isTraining: false })),
+              manualLumpSumHours: null,
+              extraHours: 0,
+              allowance: 0,
+              otherPay: 0,
+              customAddition: 0,
+              deduction: 0
+            }));
+          })
         ];
 
         setEntries(initialEntries);
@@ -150,7 +194,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
 
 
 
-  const handleQuickAddStaff = (contractorId, contractorObj = null, targetSiteId) => {
+  const handleQuickAddStaff = (contractorId, contractorObj = null, targetSiteId, rateCode = null) => {
     const useSiteId = targetSiteId || site.id;
     const allSitesRaw = getSites();
     const updatedSites = allSitesRaw.map(s => {
@@ -170,14 +214,15 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
 
     const contractor = contractorObj || contractors.find(c => c.id === contractorId);
 
-    // Check if entry already exists for this contractor and site
-    const exists = entries.some(e => e.contractorId === contractorId && e.siteId === useSiteId);
+    // Check if entry already exists for this contractor and site and rateCode
+    const exists = entries.some(e => e.contractorId === contractorId && e.siteId === useSiteId && (e.rateCode || null) === (rateCode || null));
 
     if (contractor && !exists) {
       const targetSiteName = updatedSites.find(s => s.id === useSiteId)?.siteName;
       setEntries([...entries, {
         contractorId: contractor.id,
         contractorName: contractor.name,
+        rateCode: rateCode,
         siteId: useSiteId,
         siteName: targetSiteName,
         dailyHours: dates.map(d => ({ date: d.date, hours: 0, isTraining: false })),
@@ -185,30 +230,37 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
         extraHours: 0,
         allowance: 0,
         otherPay: 0,
+        customAddition: 0,
         deduction: 0
       }]);
     }
     setToastMsg("Allocation updated.");
     setShowToast(true);
   };
-  const handleQuickRemoveStaff = (contractorId, targetSiteId) => {
+  const handleQuickRemoveStaff = (contractorId, targetSiteId, rateCode = null) => {
     const useSiteId = targetSiteId || site.id;
-    const allSitesRaw = getSites();
-    const updatedSites = allSitesRaw.map(s => {
-      if (s.id === useSiteId) {
-        const allocated = s.allocatedContractors || [];
-        return { ...s, allocatedContractors: allocated.filter(id => id !== contractorId) };
-      }
-      return s;
-    });
-
-    saveSites(updatedSites);
-    setAllSites(updatedSites);
-    const updatedSite = updatedSites.find(s => s.id === site.id);
-    setSite(updatedSite);
-
+    
     // Remove from active grid
-    setEntries(entries.filter(e => !(e.contractorId === contractorId && e.siteId === useSiteId)));
+    setEntries(entries.filter(e => !(e.contractorId === contractorId && e.siteId === useSiteId && (e.rateCode || null) === (rateCode || null))));
+    
+    // Only remove from site allocation if NO MORE entries exist for this contractor on this site
+    const remainingEntries = entries.filter(e => e.contractorId === contractorId && e.siteId === useSiteId && (e.rateCode || null) !== (rateCode || null));
+    if (remainingEntries.length === 0) {
+      const allSitesRaw = getSites();
+      const updatedSites = allSitesRaw.map(s => {
+        if (s.id === useSiteId) {
+          const allocated = s.allocatedContractors || [];
+          return { ...s, allocatedContractors: allocated.filter(id => id !== contractorId) };
+        }
+        return s;
+      });
+
+      saveSites(updatedSites);
+      setAllSites(updatedSites);
+      const updatedSite = updatedSites.find(s => s.id === site.id);
+      setSite(updatedSite);
+    }
+    
     setToastMsg("Staff allocation updated.");
     setShowToast(true);
   };
@@ -236,13 +288,13 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
       setToastMsg(`Contractor ${newContractor.name} hiring completed.`);
       setShowToast(true);
     } catch (e) {
-      console.error(e);
+      if (import.meta.env.DEV) console.error(e);
       alert("Error saving contractor: " + e.message);
     }
   };
 
-  const handleHoursChange = (contractorId, date, value, targetSiteId) => {
-    const rates = getEffectiveRates(contractorId, targetSiteId);
+  const handleHoursChange = (contractorId, date, value, targetSiteId, rateCode = null) => {
+    const rates = getEffectiveRates(contractorId, targetSiteId, rateCode);
     const hasRates = rates.weekday > 0 || rates.saturday > 0 || rates.sunday > 0 || rates.publicHoliday > 0;
 
     if (!hasRates) {
@@ -259,7 +311,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
     }
 
     setEntries(entries.map(entry => {
-      if (entry.contractorId === contractorId && entry.siteId === targetSiteId) {
+      if (entry.contractorId === contractorId && entry.siteId === targetSiteId && (entry.rateCode || null) === (rateCode || null)) {
         return {
           ...entry,
           dailyHours: entry.dailyHours.map(dh =>
@@ -271,7 +323,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
     }));
   };
 
-  const handleTrainingToggle = (contractorId, date, targetSiteId) => {
+  const handleTrainingToggle = (contractorId, date, targetSiteId, rateCode = null) => {
     const allTimesheets = getTimesheets();
     const otherTimesheets = allTimesheets.filter(ts => ts.id !== initialData?.id);
 
@@ -282,7 +334,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
       }, 0);
 
     setEntries(entries.map(entry => {
-      if (entry.contractorId === contractorId && entry.siteId === targetSiteId) {
+      if (entry.contractorId === contractorId && entry.siteId === targetSiteId && (entry.rateCode || null) === (rateCode || null)) {
         const currentTimesheetTrainingDays = entry.dailyHours.filter(d => d.isTraining).length;
         const isCurrentDayTraining = entry.dailyHours.find(d => d.date === date)?.isTraining;
 
@@ -302,18 +354,18 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
     }));
   };
 
-  const handleLumpSumToggle = (contractorId, isChecked, targetSiteId) => {
+  const handleLumpSumToggle = (contractorId, isChecked, targetSiteId, rateCode = null) => {
     const defaultValue = isChecked ? { weekday: 0, saturday: 0, sunday: 0, publicHoliday: 0 } : null;
     setEntries(entries.map(entry => {
-      if (entry.contractorId === contractorId && entry.siteId === targetSiteId) {
+      if (entry.contractorId === contractorId && entry.siteId === targetSiteId && (entry.rateCode || null) === (rateCode || null)) {
         return { ...entry, manualLumpSumHours: defaultValue };
       }
       return entry;
     }));
   };
 
-  const handleLumpSumChange = (contractorId, type, value, targetSiteId) => {
-    const rates = getEffectiveRates(contractorId, targetSiteId);
+  const handleLumpSumChange = (contractorId, type, value, targetSiteId, rateCode = null) => {
+    const rates = getEffectiveRates(contractorId, targetSiteId, rateCode);
     const hasRates = rates.weekday > 0 || rates.saturday > 0 || rates.sunday > 0 || rates.publicHoliday > 0;
 
     if (!hasRates) {
@@ -325,7 +377,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
 
     const numValue = Math.max(0, parseFloat(value) || 0);
     setEntries(entries.map(entry => {
-      if (entry.contractorId === contractorId && entry.siteId === targetSiteId) {
+      if (entry.contractorId === contractorId && entry.siteId === targetSiteId && (entry.rateCode || null) === (rateCode || null)) {
         const currentManual = entry.manualLumpSumHours || { weekday: 0, saturday: 0, sunday: 0, publicHoliday: 0 };
         return {
           ...entry,
@@ -336,8 +388,8 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
     }));
   };
 
-  const handleExtraHoursChange = (contractorId, value, targetSiteId) => {
-    const rates = getEffectiveRates(contractorId, targetSiteId);
+  const handleExtraHoursChange = (contractorId, value, targetSiteId, rateCode = null) => {
+    const rates = getEffectiveRates(contractorId, targetSiteId, rateCode);
     const hasRates = rates.weekday > 0 || rates.saturday > 0 || rates.sunday > 0 || rates.publicHoliday > 0;
 
     if (!hasRates) {
@@ -347,28 +399,29 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
       return;
     }
 
-    const numValue = Math.max(0, parseFloat(value) || 0);
+    // Enforce upper boundary to prevent accidental/malicious logic errors
+    const numValue = Math.min(100, Math.max(0, parseFloat(value) || 0));
     setEntries(entries.map(entry => {
-      if (entry.contractorId === contractorId && entry.siteId === targetSiteId) {
+      if (entry.contractorId === contractorId && entry.siteId === targetSiteId && (entry.rateCode || null) === (rateCode || null)) {
         return { ...entry, extraHours: numValue };
       }
       return entry;
     }));
   };
 
-  const handlePaymentFieldChange = (contractorId, field, value, targetSiteId) => {
+  const handlePaymentFieldChange = (contractorId, field, value, targetSiteId, rateCode = null) => {
     const numValue = Math.max(0, parseFloat(value) || 0);
     setEntries(entries.map(entry => {
-      if (entry.contractorId === contractorId && entry.siteId === targetSiteId) {
+      if (entry.contractorId === contractorId && entry.siteId === targetSiteId && (entry.rateCode || null) === (rateCode || null)) {
         return { ...entry, [field]: numValue };
       }
       return entry;
     }));
   };
 
-  const handleRemoveEntry = (contractorId, siteId) => {
-    // For now, allow removing any row.
-    setEntries(entries.filter(e => !(e.contractorId === contractorId && e.siteId === siteId)));
+  const handleRemoveEntry = (contractorId, siteId, rateCode = null) => {
+    // Only call handleQuickRemoveStaff to properly update site allocation checks
+    handleQuickRemoveStaff(contractorId, siteId, rateCode);
   };
 
   const handleSave = () => {
@@ -387,7 +440,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
       periodStart,
       periodEnd,
       entries: entries.map(entry => {
-        const effectiveRates = getEffectiveRates(entry.contractorId, entry.siteId);
+        const effectiveRates = getEffectiveRates(entry.contractorId, entry.siteId, entry.rateCode);
         return {
           ...entry,
           rates: effectiveRates,
@@ -399,11 +452,19 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
       updatedAt: new Date().toISOString(),
     };
 
-    onSave(timesheet);
+    // Strict Input Validation
+    const validationResult = validateData(TimesheetSchema, timesheet);
+    if (!validationResult.success) {
+      setToastMsg(`Validation Error: ${validationResult.error}`);
+      setShowToast(true);
+      return;
+    }
+
+    onSave(validationResult.data);
   };
 
   return (
-    <div className="bg-white rounded-lg p-6">
+    <div className="space-y-8 animate-fade-in-up">
       {showToast && (
         <Toast
           message={toastMsg || `Timesheet updated for ${site.siteName}!`}
@@ -414,29 +475,29 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
 
       {/* Budget Status Banner */}
       {budgetStatus && (!budgetStatus.withinBudget) && (
-        <div className="mb-10 bg-rose-50/50 border border-rose-100 rounded-[2.5rem] p-8 backdrop-blur-sm">
+        <div className="bg-notion-badge-rose-bg border whisper-border rounded-comfortable p-6 shadow-notion-card">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-center gap-5">
-              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-rose-500">
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              <div className="w-12 h-12 bg-white rounded-micro whisper-border flex items-center justify-center text-rose-500 shadow-notion-card">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
               </div>
               <div>
-                <h3 className="text-p1 font-bold text-rose-900 tracking-tight">Terminal Alert: Budget Violation</h3>
-                <p className="text-xs text-rose-500 font-bold mt-1">Resource expenditure beyond authorized limits.</p>
+                <h3 className="text-body-semibold text-rose-900 tracking-tight">Terminal Alert: Budget Violation</h3>
+                <p className="text-caption text-rose-500 font-bold mt-1 uppercase tracking-widest">Resource expenditure beyond authorized limits.</p>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-3">
               {budgetStatus.hoursOver > 0 && (
-                <div className="bg-white/80 border border-rose-100 px-4 py-3 rounded-2xl flex flex-col">
-                  <span className="text-[9px] font-bold text-rose-300 leading-none mb-1">Hours Overflow</span>
-                  <span className="text-sm font-bold text-rose-600">+{budgetStatus.hoursOver.toFixed(1)} hrs</span>
+                <div className="bg-white whisper-border px-4 py-2 rounded-micro flex flex-col shadow-sm">
+                  <span className="text-[9px] font-bold text-rose-300 uppercase leading-none mb-1 tracking-widest">Hours Overflow</span>
+                  <span className="text-sm font-bold text-rose-600 tabular-nums">+{budgetStatus.hoursOver.toFixed(1)}h</span>
                 </div>
               )}
               {budgetStatus.amountOver > 0 && (
-                <div className="bg-white/80 border border-rose-100 px-4 py-3 rounded-2xl flex flex-col">
-                  <span className="text-[9px] font-bold text-rose-300 leading-none mb-1">Financial Load Over</span>
-                  <span className="text-sm font-bold text-rose-600">${budgetStatus.amountOver.toFixed(2)}</span>
+                <div className="bg-white whisper-border px-4 py-2 rounded-micro flex flex-col shadow-sm">
+                  <span className="text-[9px] font-bold text-rose-300 uppercase leading-none mb-1 tracking-widest">Financial Load</span>
+                  <span className="text-sm font-bold text-rose-600 tabular-nums">${budgetStatus.amountOver.toFixed(2)}</span>
                 </div>
               )}
             </div>
@@ -445,151 +506,148 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
       )}
 
       {/* Premium Statistics Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-2xl border border-zinc-100 p-6 flex items-center justify-between group transition-all hover:border-primary-100">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="notion-card p-6 flex items-center justify-between group transition-all hover:border-notion-blue/20">
           <div>
-            <span className="block text-[11px] font-bold text-zinc-400 mb-1">Cumulative Hours</span>
-            <span className={`text-h2 font-bold tracking-tight ${budgetStatus?.hoursOver > 0 ? 'text-rose-600' : 'text-zinc-900 group-hover:text-primary-600'}`}>
+            <span className="block text-badge text-notion-warm-gray-300 mb-1 uppercase tracking-widest">Cumulative Hours</span>
+            <span className={`text-display-secondary font-bold tracking-notion-display ${budgetStatus?.hoursOver > 0 ? 'text-rose-600' : 'text-notion-black'}`}>
               {totalStats.hours.toFixed(2)}
-              {totalStats.budgetedHours > 0 && <span className="text-xs font-bold text-zinc-300 ml-1.5">/ {totalStats.budgetedHours}</span>}
+              {totalStats.budgetedHours > 0 && <span className="text-xs font-bold text-notion-warm-gray-300 ml-2">/ {totalStats.budgetedHours}h</span>}
             </span>
           </div>
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${budgetStatus?.hoursOver > 0 ? 'bg-rose-50 text-rose-600' : 'bg-zinc-50 text-zinc-400 group-hover:bg-primary-50 group-hover:text-primary-600'}`}>
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <div className={`w-10 h-10 rounded-micro flex items-center justify-center transition-all ${budgetStatus?.hoursOver > 0 ? 'bg-rose-50 text-rose-600' : 'bg-notion-warm-white text-notion-warm-gray-300 group-hover:bg-notion-blue/10 group-hover:text-notion-blue'}`}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-zinc-100 p-6 flex items-center justify-between group transition-all hover:border-emerald-100">
+        <div className="notion-card p-6 flex items-center justify-between group transition-all hover:border-emerald-200">
           <div>
-            <span className="block text-[11px] font-bold text-zinc-400 mb-1">Financial Load</span>
-            <span className={`text-h2 font-bold tracking-tight ${budgetStatus?.amountOver > 0 ? 'text-rose-600' : 'text-emerald-600 group-hover:text-emerald-500'}`}>
+            <span className="block text-badge text-notion-warm-gray-300 mb-1 uppercase tracking-widest">Financial Load</span>
+            <span className={`text-display-secondary font-bold tracking-notion-display ${budgetStatus?.amountOver > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
               ${totalStats.pay.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-              {totalStats.budgetedAmount > 0 && <span className="text-xs font-bold text-zinc-300 ml-1.5">/ ${totalStats.budgetedAmount}</span>}
+              {totalStats.budgetedAmount > 0 && <span className="text-xs font-bold text-notion-warm-gray-300 ml-2">/ ${totalStats.budgetedAmount.toLocaleString()}</span>}
             </span>
           </div>
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${budgetStatus?.amountOver > 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-50 group-hover:text-emerald-500'}`}>
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <div className={`w-10 h-10 rounded-micro flex items-center justify-center transition-all ${budgetStatus?.amountOver > 0 ? 'bg-rose-50 text-rose-600' : 'bg-notion-warm-white text-emerald-600 group-hover:bg-emerald-50'}`}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-zinc-100 p-6 flex items-center justify-between group transition-all">
+        <div className="notion-card p-6 flex items-center justify-between group transition-all">
           <div>
-            <span className="block text-[11px] font-bold text-zinc-400 mb-1">Site Health</span>
+            <span className="block text-badge text-notion-warm-gray-300 mb-1 uppercase tracking-widest">Site Health</span>
             <div className="flex items-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full ${!budgetStatus || budgetStatus.withinBudget ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500 animate-pulse'}`}></span>
-              <span className={`text-lg font-bold tracking-tight ${!budgetStatus || budgetStatus.withinBudget ? 'text-emerald-700' : 'text-rose-700'}`}>
-                {!budgetStatus || budgetStatus.withinBudget ? 'Verified' : 'Over Budget'}
+              <span className={`w-2 h-2 rounded-full ${!budgetStatus || budgetStatus.withinBudget ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse'}`}></span>
+              <span className={`text-body-semibold tracking-tight ${!budgetStatus || budgetStatus.withinBudget ? 'text-emerald-700' : 'text-rose-700'}`}>
+                {!budgetStatus || budgetStatus.withinBudget ? 'Operational' : 'Limit Exceeded'}
               </span>
             </div>
           </div>
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${!budgetStatus || budgetStatus.withinBudget ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={!budgetStatus || budgetStatus.withinBudget ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"} />
-            </svg>
+          <div className={`w-10 h-10 rounded-micro flex items-center justify-center ${!budgetStatus || budgetStatus.withinBudget ? 'bg-emerald-50 text-emerald-600 font-bold' : 'bg-rose-50 text-rose-600'}`}>
+            {!budgetStatus || budgetStatus.withinBudget ? 'OK' : '!'}
           </div>
         </div>
 
-        <div className="bg-zinc-900 rounded-2xl p-6 flex items-center justify-between group transition-all">
+        <div className="bg-notion-black rounded-comfortable p-6 flex items-center justify-between group shadow-notion-deep">
           <div className="flex flex-col gap-1">
-            <span className="block text-[11px] font-bold text-zinc-500">Active Workforce</span>
-            <span className="text-2xl font-bold text-white tracking-tight">{entries.length} Workers</span>
+            <span className="block text-badge text-notion-warm-gray-300 uppercase tracking-widest">Workforce</span>
+            <span className="text-display-secondary font-bold text-white tracking-notion-display">{entries.length} Nodes</span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-white">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+          <div className="w-10 h-10 rounded-micro bg-white/10 flex items-center justify-center text-white">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
           </div>
         </div>
       </div>
 
       <div className="mb-8 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 p-2">
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h3 className="text-h1 font-bold text-zinc-900 tracking-tight">{site.siteName}</h3>
-              <div className="px-2.5 py-1 bg-primary-50 text-primary-600 rounded-xl text-[10px] font-bold border border-primary-100">Active Site</div>
+              <h3 className="text-display-secondary text-notion-black tracking-notion-display underline decoration-notion-blue/20 underline-offset-8 decoration-2">{site.siteName}</h3>
+              <div className="px-2 py-0.5 bg-notion-badge-blue-bg text-notion-blue rounded-micro text-badge font-bold whisper-border uppercase tracking-widest">Active Terminal</div>
             </div>
-            <p className="text-sm text-zinc-400 font-bold flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            <p className="text-caption text-notion-warm-gray-300 font-bold flex items-center gap-2 uppercase tracking-tight">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
               {formatDateDisplay(periodStart)} — {formatDateDisplay(periodEnd)}
             </p>
           </div>
-
-
         </div>
 
         <div className="flex flex-wrap gap-3 w-full xl:w-auto">
-
           <button
             onClick={() => setShowNewContractorModal(true)}
-            className="flex-1 xl:flex-none px-5 py-3 bg-white text-zinc-600 border border-zinc-100 rounded-2xl hover:bg-zinc-50 transition-all flex items-center justify-center gap-2.5 text-[11px] font-bold hover:-translate-y-0.5 active:translate-y-0"
+            className="flex-1 xl:flex-none px-4 py-2 bg-notion-warm-white text-notion-black rounded-micro hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 text-badge font-bold uppercase tracking-widest shadow-sm whisper-border"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            <svg className="w-3 h-3 text-notion-warm-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
             Onboard
           </button>
           <button
             onClick={() => setShowStaffModal(true)}
-            className="flex-1 xl:flex-none px-5 py-3 bg-white text-zinc-600 border border-zinc-100 rounded-2xl hover:bg-zinc-50 transition-all flex items-center justify-center gap-2.5 text-[11px] font-bold hover:-translate-y-0.5 active:translate-y-0"
+            className="flex-1 xl:flex-none px-4 py-2 bg-notion-warm-white text-notion-black rounded-micro hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 text-badge font-bold uppercase tracking-widest shadow-sm whisper-border"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2" /></svg>
+            <svg className="w-3 h-3 text-notion-warm-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2" /></svg>
             Allocate
           </button>
           <button
             onClick={handleSave}
-            className="flex-1 xl:flex-none px-8 py-3 bg-primary-600 text-white rounded-2xl hover:bg-primary-700 transition-all flex items-center justify-center gap-3 text-[11px] font-bold hover:-translate-y-1 active:translate-y-0"
+            className="flex-1 xl:flex-none px-6 py-2 bg-notion-blue text-white rounded-micro hover:bg-notion-blue-active transition-all flex items-center justify-center gap-2 text-badge font-bold uppercase tracking-widest shadow-notion-card"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
             Publish Entry
           </button>
         </div>
       </div>
 
-      <div className="overflow-auto rounded-[2rem] border border-zinc-100 max-h-[75vh] custom-scrollbar relative bg-white">
+      <div className="overflow-auto rounded-comfortable whisper-border max-h-[75vh] custom-scrollbar relative bg-white shadow-notion-deep">
         <table className="min-w-full border-collapse table-fixed md:table-auto">
-          <thead className="bg-zinc-900 sticky top-0 z-[2000]">
-            <tr className="divide-x divide-zinc-800">
-              <th className="px-6 py-5 text-left text-p3 font-bold text-zinc-400 sticky left-0 top-0 bg-zinc-900 z-[2010] w-[220px]">Employee Profile</th>
+          <thead className="bg-notion-warm-white sticky top-0 z-[2000]">
+            <tr className="divide-x whisper-border">
+              <th className="px-6 py-4 text-left text-caption font-bold text-notion-warm-gray-300 uppercase tracking-widest sticky left-0 top-0 bg-notion-warm-white z-[2010] w-[220px]">Employee Profile</th>
               {dates.map(date => {
                 const isPH = publicHolidays.includes(date.date);
                 const holidayName = getPublicHolidays().find(h => h.date === date.date)?.name;
                 return (
                   <th
                     key={date.date}
-                    className={`px-1 py-5 text-center text-[11px] font-bold min-w-[90px] ${isPH ? 'bg-primary-900/50 text-primary-200' : 'text-zinc-400'}`}
+                    className={`px-1 py-4 text-center text-badge font-bold min-w-[90px] uppercase tracking-tighter ${isPH ? 'bg-orange-50 text-orange-600' : 'text-notion-warm-gray-300'}`}
                     title={isPH ? `Global Holiday: ${holidayName}` : ''}
                   >
                     {formatDateDisplay(date.date)}
-                    {isPH && <div className="text-[8px] text-primary-400 font-bold block mt-1">PH</div>}
+                    {isPH && <div className="text-[8px] text-orange-400 font-bold block mt-1 tracking-widest">HOLIDAY</div>}
                   </th>
                 );
               })}
+              <th className="px-3 py-4 text-center text-badge font-bold text-notion-black bg-slate-100 min-w-[80px] uppercase tracking-widest">Total Hrs</th>
               {(() => {
                 const showLumpSum = site.isTrainingSite || entries.some(e => e.manualLumpSumHours !== null);
                 const showExtraCol = entries.some(e => e.extraHours > 0 || e.isExtraMode);
                 return (
                   <>
-                    {showLumpSum && <th className="px-3 py-5 text-center text-[11px] font-bold text-amber-500 bg-amber-500/5 min-w-[120px]">Escrow Release</th>}
-                    {showExtraCol && <th className="px-3 py-5 text-center text-[11px] font-bold text-primary-400 bg-primary-400/5 min-w-[100px]">Extra Hours</th>}
+                    {showLumpSum && <th className="px-3 py-4 text-center text-badge font-bold text-orange-500 bg-orange-50 min-w-[120px] uppercase tracking-widest">Escrow Release</th>}
+                    {showExtraCol && <th className="px-3 py-4 text-center text-badge font-bold text-notion-blue bg-notion-badge-blue-bg min-w-[100px] uppercase tracking-widest">Extra Hours</th>}
                   </>
                 );
               })()}
-              <th className="px-3 py-5 text-center text-[11px] font-bold text-zinc-500 min-w-[80px]">Allow. (h)</th>
-              <th className="px-3 py-5 text-center text-[11px] font-bold text-zinc-500 min-w-[80px]">Other (d)</th>
-              <th className="px-3 py-5 text-center text-[11px] font-bold text-rose-500 bg-rose-500/5 min-w-[90px]">Deductions</th>
-              <th className="px-3 py-5 text-center text-p3 font-bold text-zinc-400 min-w-[110px]">Gross Pay</th>
-              <th className="px-3 py-5 text-center text-[11px] font-bold text-emerald-500 bg-emerald-500/10 min-w-[120px] sticky right-0 z-[2010] bg-zinc-900">Net Settlement</th>
-              <th className="px-3 py-5 text-center text-[11px] font-bold text-amber-500 min-w-[90px]">Escrow (T)</th>
+              <th className="px-3 py-4 text-center text-badge font-bold text-notion-warm-gray-300 min-w-[80px] uppercase tracking-widest">Allow. (h)</th>
+              <th className="px-3 py-4 text-center text-badge font-bold text-notion-warm-gray-300 min-w-[80px] uppercase tracking-widest">Other (d)</th>
+              <th className="px-3 py-4 text-center text-badge font-bold text-notion-blue bg-notion-badge-blue-bg min-w-[90px] uppercase tracking-widest">Extras ($)</th>
+              <th className="px-3 py-4 text-center text-badge font-bold text-rose-500 bg-notion-badge-rose-bg min-w-[90px] uppercase tracking-widest">Deductions</th>
+              <th className="px-3 py-4 text-center text-caption font-bold text-notion-warm-gray-300 min-w-[110px] uppercase tracking-widest">Gross Pay</th>
+              <th className="px-3 py-4 text-center text-badge font-bold text-emerald-600 bg-emerald-50 min-w-[120px] sticky right-0 z-[2010] bg-notion-warm-white uppercase tracking-widest">Net Settlement</th>
+              <th className="px-3 py-4 text-center text-badge font-bold text-orange-500 min-w-[90px] uppercase tracking-widest">Escrow (T)</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-50">
+          <tbody className="divide-y whisper-border">
             {(() => {
               const showLumpSum = site.isTrainingSite || entries.some(e => e.manualLumpSumHours !== null);
               const relevantSites = [site, ...subSites];
-              const totalCols = dates.length + (showLumpSum ? 1 : 0) + (entries.some(e => e.extraHours > 0 || e.isExtraMode) ? 1 : 0) + 6;
+              const totalCols = dates.length + 1 + (showLumpSum ? 1 : 0) + (entries.some(e => e.extraHours > 0 || e.isExtraMode) ? 1 : 0) + 6;
 
               if (entries.length === 0 && relevantSites.every(s => !(s.allocatedContractors?.length > 0))) {
                 return (
                   <tr>
-                    <td colSpan={totalCols + 1} className="py-20 text-center text-zinc-400 font-medium text-xs italic">
-                      No staff assigned. Use the dropdowns below or buttons above to add workers.
+                    <td colSpan={totalCols + 1} className="py-24 text-center text-notion-warm-gray-300 font-bold text-badge uppercase tracking-widest italic">
+                      Zero Resources Allocated. Use operational controls for deployment.
                     </td>
                   </tr>
                 );
@@ -626,38 +684,53 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                     {/* Site Header Row */}
                     <tr style={{ backgroundColor: isPrimary ? undefined : tint }}>
                       {/* FIXED LEFT: Site Title */}
-                      <td className="px-6 py-4 border-y border-zinc-100 sticky left-0" style={{ backgroundColor: isPrimary ? '#fafafa' : tint, borderLeftWidth: isPrimary ? 0 : 3, borderLeftColor: borderTint, borderLeftStyle: 'solid', zIndex: baseZ }}>
+                      <td className="px-6 py-3.5 border-y whisper-border sticky left-0 shadow-sm" style={{ backgroundColor: isPrimary ? '#fcfcfc' : tint, borderLeftWidth: isPrimary ? 0 : 3, borderLeftColor: borderTint, borderLeftStyle: 'solid', zIndex: baseZ }}>
                         <div className="flex items-center gap-3 min-w-[380px]">
-                          <div className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${isPrimary ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-500 border-zinc-200'}`}>
-                            {isPrimary ? 'Terminal' : 'Sub-Hub'}
+                          <div className={`px-2 py-0.5 rounded-micro text-[10px] font-bold border whisper-border uppercase tracking-widest ${isPrimary ? 'bg-notion-black text-white' : 'bg-white text-notion-warm-gray-300'}`}>
+                            {isPrimary ? 'TERMINAL' : 'SUB-HUB'}
                           </div>
-                          <span className="text-xs font-bold text-zinc-900 whitespace-nowrap">{currentSite.siteName}</span>
+                          <span className="text-body-semibold text-notion-black whitespace-nowrap">{currentSite.siteName}</span>
                         </div>
                       </td>
 
                       {/* SPACER: Middle Columns */}
-                      <td colSpan={totalCols - 1} className="border-y border-zinc-100" style={{ backgroundColor: isPrimary ? undefined : tint }}></td>
+                      <td colSpan={totalCols - 1} className="border-y whisper-border shadow-sm" style={{ backgroundColor: isPrimary ? '#fcfcfc' : tint }}></td>
 
                       {/* FIXED RIGHT: Actions (only for sub-sites) */}
-                      <td className="px-6 py-4 border-y border-zinc-100 sticky right-0 text-right" style={{ backgroundColor: isPrimary ? '#fafafa' : tint, zIndex: baseZ }}>
+                      <td className="px-6 py-3.5 border-y whisper-border sticky right-0 text-right shadow-sm" style={{ backgroundColor: isPrimary ? '#fcfcfc' : tint, zIndex: baseZ }}>
                         {!isPrimary && (
                           <div className="flex items-center justify-end gap-3">
                             <Dropdown
                               value=""
                               onChange={(val) => {
                                 if (val) {
-                                  handleQuickAddStaff(val, null, currentSite.id);
+                                  let [cid, rcode] = val.split('::');
+                                  if (rcode === 'undefined') rcode = null;
+                                  handleQuickAddStaff(cid, null, currentSite.id, rcode || null);
                                 }
                               }}
                               options={contractors
                                 .filter(c => c.status === 'active')
-                                .filter(c => !siteEntries.some(e => e.contractorId === c.id))
-                                .map(c => ({ value: c.id, label: c.name }))
+                                .reduce((acc, c) => {
+                                  const codes = (c.contractorId || '').split(',').map(code => code.trim()).filter(Boolean);
+                                  if (codes.length === 0) {
+                                    if (!siteEntries.some(e => e.contractorId === c.id && !e.rateCode)) {
+                                      acc.push({ value: c.id, label: c.name });
+                                    }
+                                  } else {
+                                    codes.forEach(code => {
+                                      if (!siteEntries.some(e => e.contractorId === c.id && e.rateCode === code)) {
+                                        acc.push({ value: `${c.id}::${code}`, label: `${c.name} (${code})` });
+                                      }
+                                    });
+                                  }
+                                  return acc;
+                                }, [])
                               }
-                              placeholder="+ Deploy Resource..."
+                              placeholder="+ DEPLOY RESOURCE..."
                               variant="compact"
                               showSelected={false}
-                              className="w-48"
+                              className="w-56"
                             />
                           </div>
                         )}
@@ -670,31 +743,33 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                         <td colSpan={totalCols + 1} className="px-4 py-4 text-center text-[10px] text-slate-400 italic">No workers assigned to this site yet.</td>
                       </tr>
                     ) : siteEntries.map((entry, index) => {
-                      const effectiveRates = getEffectiveRates(entry.contractorId, entry.siteId);
+                      const effectiveRates = getEffectiveRates(entry.contractorId, entry.siteId, entry.rateCode);
                       const calculation = calculateTimesheetPay(entry, effectiveRates, publicHolidays);
                       const isManual = entry.manualLumpSumHours !== null;
                       return (
                         <tr
-                          key={`${entry.contractorId}-${entry.siteId}`}
-                          className="hover:brightness-[0.97] transition-all group/row border-b border-zinc-50"
+                          key={`${entry.contractorId}-${entry.siteId}-${entry.rateCode || 'none'}`}
+                          className="hover:brightness-[0.98] transition-all group/row border-b whisper-border"
                           style={{ backgroundColor: tint }}
                         >
-                          <td className="px-6 py-4 sticky left-0 transition-colors" style={{ backgroundColor: tint, borderLeftWidth: 3, borderLeftColor: borderTint, borderLeftStyle: 'solid', zIndex: baseZ - 10 - index }}>
+                          <td className="px-6 py-4 sticky left-0 transition-colors shadow-sm" style={{ backgroundColor: tint, borderLeftWidth: 3, borderLeftColor: borderTint, borderLeftStyle: 'solid', zIndex: baseZ - 10 - index }}>
                             <div className="flex flex-col gap-3">
                               <div className="flex items-center justify-between gap-3">
-                                <div className="font-bold text-zinc-900 text-sm tracking-tight group-hover/row:text-primary-600 transition-colors">{entry.contractorName}</div>
+                                <div className="text-body-semibold text-notion-black tracking-tight group-hover/row:text-notion-blue transition-colors">
+                                  {entry.contractorName} {entry.rateCode && <span className="ml-1 px-1.5 py-0.5 bg-notion-warm-white text-notion-warm-gray-300 rounded-micro text-badge font-mono tracking-widest whisper-border">{entry.rateCode}</span>}
+                                </div>
                                 <button
-                                  onClick={() => handleRemoveEntry(entry.contractorId, entry.siteId)}
-                                  className="w-6 h-6 flex items-center justify-center rounded-lg text-zinc-300 hover:text-rose-600 hover:bg-rose-50 transition-all opacity-0 group-hover/row:opacity-100"
+                                  onClick={() => handleRemoveEntry(entry.contractorId, entry.siteId, entry.rateCode)}
+                                  className="w-6 h-6 flex items-center justify-center rounded-micro text-notion-warm-gray-300 hover:text-rose-600 hover:bg-rose-50 transition-all opacity-0 group-hover/row:opacity-100"
                                   title="De-allocate Resource"
                                 >
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
                                 </button>
                               </div>
 
                               {effectiveRates.isCustom && (
                                 <div className="flex items-center gap-1.5">
-                                  <div className="px-1.5 py-0.5 bg-primary-50 text-primary-600 rounded text-[8px] font-bold border border-primary-100/50">Custom Override</div>
+                                  <div className="px-1.5 py-0.5 bg-notion-badge-blue-bg text-notion-blue rounded-micro text-[8px] font-bold whisper-border uppercase tracking-widest">Custom Rate</div>
                                 </div>
                               )}
 
@@ -704,11 +779,11 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                                     <input
                                       type="checkbox"
                                       checked={isManual}
-                                      onChange={(e) => handleLumpSumToggle(entry.contractorId, e.target.checked, entry.siteId)}
-                                      className="peer h-3.5 w-3.5 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900 transition-all cursor-pointer"
+                                      onChange={(e) => handleLumpSumToggle(entry.contractorId, e.target.checked, entry.siteId, entry.rateCode)}
+                                      className="peer h-3 w-3 rounded-micro border-notion-warm-gray-300 text-notion-black focus:ring-0 transition-all cursor-pointer"
                                     />
                                   </div>
-                                  <span className="text-[10px] font-bold text-zinc-400 peer-checked:text-zinc-900 transition-colors">Manual</span>
+                                  <span className="text-[10px] font-bold text-notion-warm-gray-300 peer-checked:text-notion-black uppercase tracking-widest transition-colors">Manual</span>
                                 </label>
                                 <label className="flex items-center gap-1.5 cursor-pointer group/extra">
                                   <div className="relative flex items-center">
@@ -716,12 +791,12 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                                       type="checkbox"
                                       checked={entry.isExtraMode}
                                       onChange={(e) => {
-                                        setEntries(entries.map(ent => (ent.contractorId === entry.contractorId && ent.siteId === entry.siteId) ? { ...ent, isExtraMode: e.target.checked } : ent));
+                                        setEntries(entries.map(ent => (ent.contractorId === entry.contractorId && ent.siteId === entry.siteId && (ent.rateCode || null) === (entry.rateCode || null)) ? { ...ent, isExtraMode: e.target.checked } : ent));
                                       }}
-                                      className="peer h-3.5 w-3.5 rounded border-zinc-300 text-primary-600 focus:ring-primary-100 transition-all cursor-pointer"
+                                      className="peer h-3 w-3 rounded-micro border-notion-warm-gray-300 text-notion-blue focus:ring-0 transition-all cursor-pointer"
                                     />
                                   </div>
-                                  <span className="text-[10px] font-bold text-zinc-400 peer-checked:text-primary-600 transition-colors">Extra</span>
+                                  <span className="text-[10px] font-bold text-notion-warm-gray-300 peer-checked:text-notion-blue uppercase tracking-widest transition-colors">Extra</span>
                                 </label>
                               </div>
                             </div>
@@ -734,46 +809,49 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                             return (
                               <td
                                 key={date.date}
-                                className={`px-1 py-4 transition-colors ${isManual ? 'bg-zinc-50/30' : ''} ${isPH ? 'bg-primary-50/20' : ''}`}
+                                className={`px-1 py-4 transition-colors whisper-border ${isManual ? 'bg-notion-warm-white/20' : ''} ${isPH ? 'bg-orange-50/20' : ''}`}
                               >
                                 <div className="flex flex-col items-center gap-1.5">
                                   <input
                                     type="number"
                                     value={dayEntry?.hours || ''}
-                                    onChange={(e) => handleHoursChange(entry.contractorId, date.date, e.target.value, entry.siteId)}
+                                    onChange={(e) => handleHoursChange(entry.contractorId, date.date, e.target.value, entry.siteId, entry.rateCode)}
                                     disabled={isManual}
-                                    className={`w-full text-center py-1.5 text-sm font-bold outline-none focus:ring-2 focus:ring-zinc-900/5 rounded-xl disabled:opacity-20 transition-all ${isPH ? 'text-primary-700' : 'text-zinc-900 bg-transparent hover:bg-zinc-50/50 focus:bg-white'}`}
+                                    className={`w-full text-center py-1 text-sm font-bold tabular-nums outline-none rounded-micro disabled:opacity-20 transition-all ${isPH ? 'text-orange-600' : 'text-notion-black bg-transparent hover:bg-zinc-100 focus:bg-white focus:shadow-sm'}`}
                                     placeholder="0"
                                   />
                                   <div className="flex items-center justify-center gap-2 min-h-[14px]">
                                     {(site?.isTrainingSite || allSites.find(s => s.id === entry.siteId)?.isTrainingSite) && (
                                       <button
                                         onClick={() => !isManual && handleTrainingToggle(entry.contractorId, date.date, entry.siteId)}
-                                        className={`flex items-center justify-center w-3.5 h-3.5 rounded border transition-all ${dayEntry?.isTraining ? 'bg-amber-500 border-amber-600 text-white' : 'bg-transparent border-zinc-200 text-zinc-300 hover:border-amber-400'}`}
+                                        className={`flex items-center justify-center w-3 h-3 rounded-micro border transition-all ${dayEntry?.isTraining ? 'bg-orange-500 border-orange-600 text-white' : 'bg-transparent border-notion-warm-gray-300 text-notion-warm-gray-300 hover:border-orange-400'}`}
                                         disabled={isManual}
                                       >
                                         <span className="text-[7px] font-bold">T</span>
                                       </button>
                                     )}
-                                    {isPH && <span className="text-[8px] font-bold text-primary-400/60 tracking-tighter">PH</span>}
                                   </div>
                                 </div>
                               </td>
                             );
                           })}
 
+                          <td className="px-2 py-4 text-center text-sm font-bold text-notion-black bg-slate-50 whisper-border tabular-nums">
+                            {calculation.totalHours + calculation.trainingHours > 0 ? (calculation.totalHours + calculation.trainingHours).toFixed(2).replace(/\.00$/, '') : '—'}
+                          </td>
+
                           {showLumpSum && (
-                            <td className="px-2 py-4 min-w-[150px] bg-amber-50/5">
+                            <td className="px-2 py-4 min-w-[150px] bg-orange-50/10 whisper-border">
                               {isManual && (
                                 <div className="grid grid-cols-2 gap-2 p-1">
                                   {['weekday', 'saturday', 'sunday', 'publicHoliday'].map(type => (
                                     <div key={type} className="flex flex-col gap-0.5">
-                                      <div className="text-[7px] font-bold uppercase text-amber-500/70 text-center tracking-widest">{type.substring(0, 3)}</div>
+                                      <div className="text-[7px] font-bold uppercase text-orange-400 text-center tracking-widest">{type.substring(0, 3)}</div>
                                       <input
                                         type="number"
                                         value={entry.manualLumpSumHours[type] || ''}
-                                        onChange={(e) => handleLumpSumChange(entry.contractorId, type, e.target.value, entry.siteId)}
-                                        className="w-full text-[10px] text-center font-bold text-amber-900 bg-white border border-amber-100 rounded-lg outline-none py-1.5 focus:ring-2 focus:ring-amber-200"
+                                        onChange={(e) => handleLumpSumChange(entry.contractorId, type, e.target.value, entry.siteId, entry.rateCode)}
+                                        className="w-full text-badge text-center font-bold text-orange-900 bg-white whisper-border rounded-micro outline-none py-1 tabular-nums focus:shadow-sm"
                                         placeholder="0"
                                       />
                                     </div>
@@ -784,50 +862,56 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                           )}
 
                           {entries.some(e => e.extraHours > 0 || e.isExtraMode) && (
-                            <td className="px-3 py-4 bg-primary-50/10">
+                            <td className="px-3 py-4 bg-notion-badge-blue-bg/20 whisper-border">
                               {(entry.isExtraMode || entry.extraHours > 0) ? (
                                 <input
                                   type="number"
                                   value={entry.extraHours || ''}
-                                  onChange={(e) => handleExtraHoursChange(entry.contractorId, e.target.value, entry.siteId)}
-                                  className="w-full text-center py-1.5 text-sm font-bold text-primary-600 bg-white border border-primary-100 rounded-xl outline-none focus:ring-2 focus:ring-primary-100"
+                                  onChange={(e) => handleExtraHoursChange(entry.contractorId, e.target.value, entry.siteId, entry.rateCode)}
+                                  className="w-full text-center py-1 text-sm font-bold text-notion-blue bg-white whisper-border rounded-micro outline-none tabular-nums"
                                   placeholder="+ Hrs"
                                 />
                               ) : (
-                                <div className="text-[10px] text-zinc-300 font-bold text-center tracking-widest">—</div>
+                                <div className="text-badge text-notion-warm-gray-300 font-bold text-center tracking-widest">—</div>
                               )}
                             </td>
                           )}
 
-                          <td className="px-2 py-4">
-                            <div className="relative" title="$2.80 per hour">
-                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-400">h</span>
-                              <input type="number" value={entry.allowance ? parseFloat((entry.allowance / 2.8).toFixed(2)) : ''} onChange={(e) => handlePaymentFieldChange(entry.contractorId, 'allowance', (parseFloat(e.target.value) || 0) * 2.8, entry.siteId)} className="w-full pl-5 pr-2 py-2 text-[11px] font-bold text-zinc-600 outline-none rounded-xl bg-zinc-50 border-transparent border focus:bg-white focus:border-zinc-200 transition-all" placeholder="0" />
+                          <td className="px-2 py-4 whisper-border">
+                            <div className="relative group/field" title={`$${getGlobalRates().allowancePerHour.toFixed(2)} per hour`}>
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-notion-warm-gray-300">H</span>
+                              <input type="number" value={entry.allowance ? parseFloat((entry.allowance / getGlobalRates().allowancePerHour).toFixed(2)) : ''} onChange={(e) => handlePaymentFieldChange(entry.contractorId, 'allowance', (parseFloat(e.target.value) || 0) * getGlobalRates().allowancePerHour, entry.siteId, entry.rateCode)} className="w-full pl-5 pr-2 py-1.5 text-badge font-bold text-notion-warm-gray-300 outline-none rounded-micro bg-notion-warm-white border-transparent border focus:bg-white focus:whisper-border transition-all tabular-nums" placeholder="0" />
                             </div>
                           </td>
-                          <td className="px-2 py-4">
-                            <div className="relative" title="$10.00 per day">
-                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-400">d</span>
-                              <input type="number" value={entry.otherPay ? parseFloat((entry.otherPay / 10).toFixed(2)) : ''} onChange={(e) => handlePaymentFieldChange(entry.contractorId, 'otherPay', (parseFloat(e.target.value) || 0) * 10, entry.siteId)} className="w-full pl-5 pr-2 py-2 text-[11px] font-bold text-zinc-600 outline-none rounded-xl bg-zinc-50 border-transparent border focus:bg-white focus:border-zinc-200 transition-all" placeholder="0" />
+                          <td className="px-2 py-4 whisper-border">
+                            <div className="relative group/field" title={`$${getGlobalRates().otherPerDay.toFixed(2)} per day`}>
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-notion-warm-gray-300">D</span>
+                              <input type="number" value={entry.otherPay ? parseFloat((entry.otherPay / getGlobalRates().otherPerDay).toFixed(2)) : ''} onChange={(e) => handlePaymentFieldChange(entry.contractorId, 'otherPay', (parseFloat(e.target.value) || 0) * getGlobalRates().otherPerDay, entry.siteId, entry.rateCode)} className="w-full pl-5 pr-2 py-1.5 text-badge font-bold text-notion-warm-gray-300 outline-none rounded-micro bg-notion-warm-white border-transparent border focus:bg-white focus:whisper-border transition-all tabular-nums" placeholder="0" />
                             </div>
                           </td>
-                          <td className="px-2 py-4">
-                            <div className="relative">
+                          <td className="px-2 py-4 whisper-border">
+                            <div className="relative group/field">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-notion-blue">+</span>
+                              <input type="number" value={entry.customAddition || ''} onChange={(e) => handlePaymentFieldChange(entry.contractorId, 'customAddition', e.target.value, entry.siteId, entry.rateCode)} className="w-full pl-5 pr-2 py-1.5 text-badge font-bold text-notion-blue bg-notion-badge-blue-bg/10 border-transparent border outline-none rounded-micro focus:bg-white focus:whisper-border transition-all tabular-nums" placeholder="0" />
+                            </div>
+                          </td>
+                          <td className="px-2 py-4 whisper-border">
+                            <div className="relative group/field">
                               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-rose-300">-</span>
-                              <input type="number" value={entry.deduction || ''} onChange={(e) => handlePaymentFieldChange(entry.contractorId, 'deduction', e.target.value, entry.siteId)} className="w-full pl-5 pr-2 py-2 text-[11px] font-bold text-rose-500 bg-rose-50/5 border-transparent border outline-none rounded-xl focus:bg-white focus:border-rose-100 transition-all" placeholder="0" />
+                              <input type="number" value={entry.deduction || ''} onChange={(e) => handlePaymentFieldChange(entry.contractorId, 'deduction', e.target.value, entry.siteId, entry.rateCode)} className="w-full pl-5 pr-2 py-1.5 text-badge font-bold text-rose-500 bg-notion-badge-rose-bg/10 border-transparent border outline-none rounded-micro focus:bg-white focus:whisper-border transition-all tabular-nums" placeholder="0" />
                             </div>
                           </td>
-                          <td className="px-4 py-4 text-center font-bold text-xs text-zinc-400 tracking-tight">${calculation.totalPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                          <td className="px-4 py-4 text-center sticky right-0" style={{ backgroundColor: tint, zIndex: baseZ - 10 - index }}>
-                            <span className="font-bold text-sm text-emerald-600">${calculation.netPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          <td className="px-4 py-4 text-center font-bold text-badge text-notion-warm-gray-300 tabular-nums whisper-border">${calculation.totalPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                          <td className="px-4 py-4 text-center sticky right-0 shadow-sm whisper-border" style={{ backgroundColor: tint, zIndex: baseZ - 10 - index }}>
+                            <span className="font-bold text-sm text-emerald-600 tabular-nums">${calculation.netPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                           </td>
-                          <td className="px-4 py-4 text-center">
+                          <td className="px-4 py-4 text-center whisper-border">
                             {calculation.trainingPay > 0 ? (
-                              <span className="px-2 py-1 bg-amber-50 text-amber-600 rounded-lg font-bold text-[10px] tracking-tight border border-amber-100">
+                              <span className="px-2 py-1 bg-orange-50 text-orange-600 rounded-micro font-bold text-badge whisper-border uppercase tracking-widest">
                                 ${calculation.trainingPay.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                               </span>
                             ) : (
-                              <span className="text-[10px] font-bold text-zinc-200 tracking-widest">—</span>
+                              <span className="text-badge font-bold text-notion-warm-gray-100 tracking-widest">—</span>
                             )}
                           </td>
                         </tr>
@@ -844,20 +928,20 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
       {/* MODALS */}
       {
         showNewContractorModal && (
-          <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-in fade-in duration-300">
-            <div className="bg-white rounded-[2.5rem] w-full max-w-2xl max-h-[90vh] overflow-hidden border border-zinc-100 flex flex-col animate-in slide-in-from-bottom-8 duration-500">
+          <div className="fixed inset-0 bg-notion-black/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-fade-in">
+            <div className="bg-white rounded-comfortable w-full max-h-[90vh] overflow-hidden shadow-notion-deep border whisper-border flex flex-col animate-scale-in">
               {/* Header */}
-              <div className="p-8 border-b border-zinc-50 bg-gradient-to-br from-zinc-50 to-white relative overflow-hidden flex justify-between items-center">
+              <div className="p-8 pb-6 bg-notion-warm-white relative overflow-hidden flex justify-between items-center">
                 <div className="relative z-10">
-                  <div className="px-3 py-1 bg-primary-50 text-primary-600 rounded-lg text-[9px] font-bold uppercase tracking-widest border border-primary-100/50 mb-2 inline-block">Direct Onboarding</div>
-                  <h3 className="text-3xl font-bold text-zinc-900 tracking-tight">Fast-Track Hire</h3>
-                  <p className="text-zinc-500 font-medium pb-2">Initialize immediate resource allocation for this hub.</p>
+                  <div className="px-2 py-0.5 bg-notion-badge-blue-bg text-notion-blue rounded-micro text-badge font-bold uppercase tracking-widest whisper-border mb-3 inline-block">Direct Onboarding</div>
+                  <h3 className="text-display-secondary text-notion-black tracking-notion-display">Fast-Track Hire</h3>
+                  <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mt-1">Resource allocation for this terminal.</p>
                 </div>
                 <button
                   onClick={() => setShowNewContractorModal(false)}
-                  className="w-12 h-12 flex items-center justify-center bg-zinc-50 rounded-2xl text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-all border border-zinc-100"
+                  className="w-10 h-10 flex items-center justify-center bg-white rounded-micro text-notion-warm-gray-300 hover:text-notion-black transition-all shadow-sm whisper-border"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
 
@@ -871,21 +955,20 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
 
       {
         showStaffModal && (
-          <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300">
-            <div className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden border border-zinc-100 flex flex-col animate-in zoom-in-95 duration-300 max-h-[85vh]">
+          <div className="fixed inset-0 bg-notion-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-white rounded-comfortable w-full overflow-hidden shadow-notion-deep border whisper-border flex flex-col animate-scale-in max-h-[85vh]">
               {/* Header */}
-              <div className="p-8 border-b border-zinc-50 bg-gradient-to-br from-zinc-50 to-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50"></div>
+              <div className="p-8 bg-notion-warm-white relative overflow-hidden">
                 <div className="relative z-10">
-                  <h3 className="text-2xl font-bold text-zinc-900 tracking-tight">Workforce Orchestration</h3>
-                  <p className="text-sm text-zinc-500 font-medium">Manage deployment for {site.siteName}</p>
+                  <h3 className="text-display-secondary text-notion-black tracking-notion-display">Workforce Orchestration</h3>
+                  <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mt-1">Manage deployment for {site.siteName}</p>
                 </div>
               </div>
 
               <div className="p-8 overflow-y-auto custom-scrollbar flex-1 space-y-8">
                 {/* CURRENT STAFF */}
                 <div className="space-y-4">
-                  <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-[0.2em] flex items-center gap-3">
+                  <div className="text-badge font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                     Stationed Personnel
                   </div>
@@ -897,39 +980,38 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                         const availableSubSites = subSites.filter(ss => !contractorSubSites.some(css => css.id === ss.id));
 
                         return (
-                          <div key={c.id} className="p-5 bg-zinc-50/50 rounded-3xl border border-zinc-100 space-y-4 transition-all hover:bg-white group/worker">
+                          <div key={c.id} className="p-5 bg-notion-warm-white/50 rounded-comfortable whisper-border space-y-4 transition-all hover:bg-white group/worker">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-2xl bg-zinc-900 text-white flex items-center justify-center font-bold text-xs">
+                                <div className="w-10 h-10 rounded-micro bg-notion-black text-white flex items-center justify-center font-bold text-xs shadow-notion-card">
                                   {c.name[0]}
                                 </div>
                                 <div>
-                                  <div className="font-bold text-zinc-900 text-sm uppercase tracking-tight">{c.name}</div>
-                                  <div className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest mt-0.5">{c.contractorId}</div>
+                                  <div className="text-body-semibold text-notion-black uppercase tracking-tight">{c.name}</div>
+                                  <div className="text-[9px] text-notion-warm-gray-300 font-bold uppercase tracking-widest mt-0.5">{c.contractorId}</div>
                                 </div>
                               </div>
                               <button
                                 onClick={() => handleQuickRemoveStaff(c.id, site.id)}
-                                className="w-10 h-10 flex items-center justify-center bg-white text-rose-500 rounded-2xl border border-zinc-100 hover:bg-rose-500 hover:text-white hover:border-rose-500 transition-all active:scale-95"
+                                className="w-9 h-9 flex items-center justify-center bg-white text-rose-500 rounded-micro whisper-border hover:bg-rose-500 hover:text-white transition-all shadow-sm"
                                 title="Revoke Assignment"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                               </button>
                             </div>
 
-                            {/* SUB-SITE MANAGEMENT */}
-                            <div className="pt-4 border-t border-zinc-100">
-                              <div className="text-[9px] font-bold text-zinc-300 uppercase tracking-widest mb-3">Allocated Hubs</div>
+                            <div className="pt-4 border-t whisper-border">
+                              <div className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-3">Allocated Hubs</div>
                               <div className="flex flex-wrap gap-2 mb-4">
                                 {contractorSubSites.map(ss => (
-                                  <div key={ss.id} className="bg-white px-3 py-1.5 rounded-xl border border-zinc-100 text-[10px] font-bold text-zinc-600 flex items-center gap-2 group/hub">
+                                  <div key={ss.id} className="bg-white px-3 py-1.5 rounded-micro whisper-border shadow-sm text-badge font-bold text-notion-black flex items-center gap-2 group/hub">
                                     {ss.siteName}
-                                    <button onClick={() => handleQuickRemoveStaff(c.id, ss.id)} className="text-zinc-300 hover:text-rose-500 transition-colors">
+                                    <button onClick={() => handleQuickRemoveStaff(c.id, ss.id)} className="text-notion-warm-gray-100 hover:text-rose-500 transition-colors">
                                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
                                     </button>
                                   </div>
                                 ))}
-                                {contractorSubSites.length === 0 && <span className="text-[10px] text-zinc-300 font-bold italic">Hub-Locked</span>}
+                                {contractorSubSites.length === 0 && <span className="text-badge text-notion-warm-gray-100 font-bold italic">Terminal Locked</span>}
                               </div>
 
                               {availableSubSites.length > 0 && (
@@ -939,14 +1021,14 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                                       handleQuickAddStaff(c.id, null, e.target.value);
                                       e.target.value = '';
                                     }}
-                                    className="appearance-none w-full text-[9px] font-bold bg-white border border-zinc-100 rounded-xl px-4 py-2.5 outline-none focus:border-zinc-900 transition-all cursor-pointer text-zinc-500 hover:bg-zinc-50"
+                                    className="appearance-none w-full text-badge font-bold bg-white whisper-border rounded-micro px-4 py-2 outline-none focus:shadow-notion-card transition-all cursor-pointer text-notion-warm-gray-300 hover:bg-notion-warm-white"
                                   >
-                                    <option value="">Move to Alternate Hub...</option>
+                                    <option value="">RE-DEPLOY TO ALTERNATE HUB...</option>
                                     {availableSubSites.map(ss => (
                                       <option key={ss.id} value={ss.id}>{ss.siteName}</option>
                                     ))}
                                   </select>
-                                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-300">
+                                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-notion-warm-gray-100">
                                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
                                   </div>
                                 </div>
@@ -956,34 +1038,34 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                         );
                       })}
                     {contractors.filter(c => site.allocatedContractors?.includes(c.id)).length === 0 && (
-                      <div className="text-center py-10 bg-zinc-50/50 rounded-3xl border border-dashed border-zinc-200 text-zinc-300 text-[10px] font-bold">Station Empty</div>
+                      <div className="text-center py-10 bg-notion-warm-white/50 rounded-comfortable whisper-border text-notion-warm-gray-100 text-badge font-bold uppercase tracking-widest">Station Empty</div>
                     )}
                   </div>
                 </div>
 
                 {/* AVAILABLE STAFF */}
                 <div className="space-y-4">
-                  <div className="text-[10px] font-bold text-primary-500 flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-primary-500"></div>
+                  <div className="text-badge font-bold text-notion-blue flex items-center gap-3 uppercase tracking-widest">
+                    <div className="w-2 h-2 rounded-full bg-notion-blue"></div>
                     Pending Deployment
                   </div>
                   <div className="space-y-2">
                     {contractors
                       .filter(c => c.status === 'active' && !site.allocatedContractors?.includes(c.id))
                       .map(c => (
-                        <div key={c.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-zinc-100 hover:border-primary-100 transition-all group/avail">
+                        <div key={c.id} className="flex items-center justify-between p-4 bg-white rounded-comfortable whisper-border hover:shadow-notion-card transition-all group/avail">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-zinc-100 text-zinc-400 flex items-center justify-center font-bold text-[10px] group-hover/avail:bg-primary-50 group-hover/avail:text-primary-600 transition-colors">
+                            <div className="w-8 h-8 rounded-micro bg-notion-warm-white text-notion-warm-gray-300 flex items-center justify-center font-bold text-[10px] group-hover/avail:bg-notion-blue/10 group-hover/avail:text-notion-blue transition-colors">
                               {c.name[0]}
                             </div>
                             <div>
-                              <div className="font-bold text-zinc-900 text-sm tracking-tight">{c.name}</div>
-                              <div className="text-[9px] text-zinc-400 font-bold mt-0.5">{c.contractorId}</div>
+                              <div className="text-body-semibold text-notion-black tracking-tight">{c.name}</div>
+                              <div className="text-caption text-notion-warm-gray-300 font-bold mt-0.5">{c.contractorId}</div>
                             </div>
                           </div>
                           <button
                             onClick={() => handleQuickAddStaff(c.id)}
-                            className="w-9 h-9 flex items-center justify-center bg-zinc-50 text-zinc-400 rounded-xl hover:bg-primary-600 hover:text-white transition-all active:scale-95"
+                            className="w-9 h-9 flex items-center justify-center bg-notion-warm-white text-notion-warm-gray-300 rounded-micro hover:bg-notion-blue hover:text-white transition-all shadow-sm"
                             title="Assign to Site"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
@@ -991,16 +1073,16 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
                         </div>
                       ))}
                     {contractors.filter(c => c.status === 'active' && !site.allocatedContractors?.includes(c.id)).length === 0 && (
-                      <div className="text-center py-10 bg-zinc-50/50 rounded-3xl border border-dashed border-zinc-200 text-zinc-300 text-[10px] font-bold">Workforce Exhausted</div>
+                      <div className="text-center py-10 bg-notion-warm-white/50 rounded-comfortable whisper-border text-notion-warm-gray-100 text-badge font-bold uppercase tracking-widest">Workforce Exhausted</div>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="p-8 bg-zinc-50 border-t border-zinc-100">
+              <div className="p-8 bg-notion-warm-white border-t whisper-border">
                 <button
                   onClick={() => setShowStaffModal(false)}
-                  className="w-full py-4 bg-zinc-900 text-white font-bold text-[11px] rounded-2xl hover:bg-black transition-all hover:-translate-y-0.5"
+                  className="w-full py-4 bg-notion-black text-white font-bold text-badge uppercase tracking-widest rounded-micro shadow-notion-deep hover:-translate-y-0.5 transition-all"
                 >
                   Confirm Deployment Plan
                 </button>

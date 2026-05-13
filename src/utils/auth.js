@@ -1,18 +1,14 @@
-import { hashPassword, encryptData, decryptData } from './encryptionUtils';
-import { saveUserToCloud } from './storage';
 import { supabase } from './supabaseClient';
 
-// Login attempt tracking for rate limiting
+// Login attempt tracking for rate limiting (UI level)
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 30000; // 30 seconds
 let loginAttempts = 0;
 let lockoutUntil = null;
 
-// Check if account is locked due to too many failed attempts
 export const isAccountLocked = () => {
   if (!lockoutUntil) return false;
   if (Date.now() >= lockoutUntil) {
-    // Lockout expired, reset
     loginAttempts = 0;
     lockoutUntil = null;
     return false;
@@ -20,13 +16,11 @@ export const isAccountLocked = () => {
   return true;
 };
 
-// Get remaining lockout time in seconds
 export const getLockoutRemainingSeconds = () => {
   if (!lockoutUntil) return 0;
   return Math.max(0, Math.ceil((lockoutUntil - Date.now()) / 1000));
 };
 
-// Record a failed login attempt
 const recordFailedAttempt = () => {
   loginAttempts++;
   if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
@@ -34,331 +28,100 @@ const recordFailedAttempt = () => {
   }
 };
 
-// Reset login attempts on successful login
 const resetLoginAttempts = () => {
   loginAttempts = 0;
   lockoutUntil = null;
 };
 
-// Check if first-run setup is required for THIS device
 export const isFirstRun = () => {
-  const stored = localStorage.getItem('appCredentials');
-  return !stored;
+  return localStorage.getItem('isFirstRunComplete') !== 'true';
 };
 
-// Get stored credentials (Local Cache)
-export const getStoredCredentials = () => {
-  const stored = localStorage.getItem('appCredentials');
-  if (stored) {
-    const decrypted = decryptData(stored);
-    return decrypted || null;
-  }
-  return null;
-};
-
-// Save credentials (Local Cache)
-export const saveCredentials = (credentials) => {
-  const encrypted = encryptData(credentials);
-  if (encrypted) {
-    localStorage.setItem('appCredentials', encrypted);
-  }
+export const completeFirstRun = () => {
+  localStorage.setItem('isFirstRunComplete', 'true');
 };
 
 /**
- * REGISTER NEW ACCOUNT (Cloud + Local)
+ * REGISTER NEW ACCOUNT (Supabase Auth)
  */
-export const registerUser = async (username, password, securityQuestion, securityAnswer) => {
-  if (!username || !password || !securityQuestion || !securityAnswer) {
-    throw new Error('All fields are required');
+export const registerUser = async (email, password) => {
+  if (!email || !password) throw new Error('Email and password are required');
+  if (password.length < 6) throw new Error('Password must be at least 6 characters');
+
+  const { data, error } = await supabase.auth.signUp({
+    email: email.trim(),
+    password: password
+  });
+
+  if (error) {
+    let safeMessage = 'Registration failed. Please try again.';
+    if (error.message.includes('already registered')) safeMessage = 'This email is already registered.';
+    if (error.message.toLowerCase().includes('password')) safeMessage = error.message; // Allow password complexity rules
+    throw new Error(safeMessage);
   }
-
-  if (username.length < 3) {
-    throw new Error('Username must be at least 3 characters');
-  }
-
-  if (password.length < 6) {
-    throw new Error('Password must be at least 6 characters');
-  }
-
-  const userProfile = {
-    username: username.trim(),
-    password: hashPassword(password),
-    securityQuestion: securityQuestion.trim(),
-    securityAnswer: securityAnswer.toLowerCase().trim(),
-    role: 'admin', // Default role
-    createdAt: new Date().toISOString()
-  };
-
-  // 1. Check if user already exists in cloud? (Optional, saveUserToCloud conceptually upserts, but we might overwrite)
-  // Ideally we check first. For now, we trust the overwrite or use it as "claiming" the username.
-
-  // 2. Save to Cloud
-  try {
-    await saveUserToCloud(userProfile);
-  } catch (e) {
-    console.error("Failed to save user to cloud:", e);
-    // If cloud fails, should we fail registration? Yes for "Cloud First" apps.
-    // For now, let's allow offline registration fallback or throw?
-    // User requested "login from anywhere", so cloud is mandatory.
-    throw new Error("Could not connect to server. Please check your internet.");
-  }
-
-  // 3. Save Locally (Cache)
-  saveCredentials(userProfile);
-
+  
+  completeFirstRun();
   return true;
 };
 
 /**
- * LOGIN (Cloud First -> Local Fallback)
- * @returns {Promise<{success: boolean, error?: string, locked?: boolean, remainingSeconds?: number}>}
+ * LOGIN (Supabase Auth)
  */
-export const loginUser = async (username, password) => {
+export const loginUser = async (email, password) => {
   if (isAccountLocked()) {
     return { success: false, locked: true, remainingSeconds: getLockoutRemainingSeconds() };
   }
 
-  const inputHash = hashPassword(password);
-  let userProfile = null;
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.trim(),
+    password: password
+  });
 
-  // 1. Try Cloud Fetch
-  try {
-    const cloudUser = await getUserFromCloud(username);
-    if (cloudUser) {
-      userProfile = cloudUser;
-      // Update local cache on successful cloud fetch
-      saveCredentials(cloudUser);
+  if (error) {
+    recordFailedAttempt();
+    
+    // Sanitize error to prevent backend leakage
+    let safeMessage = 'Invalid login credentials.';
+    if (error.message.includes('Email not confirmed')) {
+        safeMessage = 'Email not confirmed. Please check your inbox.';
     }
-  } catch (e) {
-    console.warn("Cloud login failed, falling back to local cache", e);
+    
+    return { 
+      success: false, 
+      error: safeMessage,
+      attemptsRemaining: Math.max(0, MAX_LOGIN_ATTEMPTS - loginAttempts)
+    };
   }
 
-  // 2. Fallback to Local Cache if Cloud failed or didn't find user (maybe user created account on this device while offline?)
-  if (!userProfile) {
-    userProfile = getStoredCredentials();
-  }
-
-  if (!userProfile) {
-    return { success: false, error: 'User not found. Please create an account.' };
-  }
-
-  // 3. Verify Credentials
-  // Check strict username match (local cache might be a different user)
-  if (userProfile.username !== username) {
-    return { success: false, error: 'User not found on this device. connect to internet to find user.' };
-  }
-
-  if (userProfile.password === inputHash) {
-    resetLoginAttempts();
-    return { success: true, user: userProfile };
-  }
-
-  // Legacy plain text check
-  if (userProfile.password === password) {
-    // Auto-migrate
-    userProfile.password = inputHash;
-    saveCredentials(userProfile);
-    await saveUserToCloud(userProfile); // Try to update cloud too
-    resetLoginAttempts();
-    return { success: true, user: userProfile };
-  }
-
-  recordFailedAttempt();
-  return {
-    success: false,
-    error: 'Invalid password',
-    attemptsRemaining: Math.max(0, MAX_LOGIN_ATTEMPTS - loginAttempts)
-  };
+  resetLoginAttempts();
+  completeFirstRun();
+  return { success: true, user: data.user };
 };
 
-
-// Legacy synchronous verify for offline/compatibility (Deprecated)
-export const verifyLogin = (username, password) => {
-  // Redirect to async login logic if possible, otherwise simple local check
-  const credentials = getStoredCredentials();
-  if (!credentials) return { success: false, error: 'No local credentials' };
-
-  // ... (keep logic simple or just fail)
-  return { success: false, error: 'Please use async loginUser' };
+export const logoutUser = async () => {
+  await supabase.auth.signOut();
 };
 
-// Check if user is authenticated
-export const isAuthenticated = () => {
-  return localStorage.getItem('isAuthenticated') === 'true';
+export const isAuthenticated = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  return !!session;
 };
 
-// Set authentication status
 export const setAuthenticated = (status) => {
-  if (status) {
-    localStorage.setItem('isAuthenticated', 'true');
-  } else {
-    localStorage.removeItem('isAuthenticated');
-  }
+    // No-op. Session state is managed by Supabase Auth now.
 };
 
-// Verify security answer for password reset
-export const verifySecurityAnswer = (answer) => {
-  const credentials = getStoredCredentials();
-  if (!credentials || !credentials.securityAnswer) return false;
-  return credentials.securityAnswer.toLowerCase().trim() === answer.toLowerCase().trim();
+export const resetPasswordForEmail = async (email) => {
+  if (!email) throw new Error('Email is required');
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: window.location.origin + '/reset-password',
+  });
+  if (error) throw new Error(error.message);
 };
 
-// Get security question
-export const getSecurityQuestion = () => {
-  const credentials = getStoredCredentials();
-  return credentials?.securityQuestion || null;
+export const updatePassword = async (newPassword) => {
+  if (!newPassword || newPassword.length < 6) throw new Error('Password must be at least 6 characters');
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw new Error(error.message);
 };
 
-// Update password
-export const updatePassword = async (newPassword, passedCredentials = null) => {
-  if (!newPassword || newPassword.length < 6) {
-    throw new Error('Password must be at least 6 characters');
-  }
-  const credentials = passedCredentials || getStoredCredentials();
-  if (!credentials) throw new Error('No credentials found');
-
-  credentials.password = hashPassword(newPassword);
-  saveCredentials(credentials);
-  await saveUserToCloud(credentials);
-};
-
-// Update username
-export const updateUsername = async (newUsername) => {
-  if (!newUsername || newUsername.length < 3) {
-    throw new Error('Username must be at least 3 characters');
-  }
-  const credentials = getStoredCredentials();
-  if (!credentials) throw new Error('No credentials found');
-
-  credentials.username = newUsername.trim();
-  saveCredentials(credentials);
-  await saveUserToCloud(credentials);
-};
-
-export const updateSecurityQA = async (question, answer) => {
-  if (!question || !answer) {
-    throw new Error('Question and answer are required');
-  }
-  const credentials = getStoredCredentials();
-  if (!credentials) throw new Error('No credentials found');
-
-  credentials.securityQuestion = question.trim();
-  credentials.securityAnswer = answer.toLowerCase().trim();
-  saveCredentials(credentials);
-  await saveUserToCloud(credentials);
-};
-
-// Fetch user profile from Cloud (for forgotten passwords)
-export const getUserFromCloud = async (username) => {
-  if (!username) return null;
-  const usernameLower = username.toLowerCase().trim();
-  try {
-    const { data, error } = await supabase
-      .from('app_credentials')
-      .select('data');
-      
-    if (error) throw error;
-    if (!data || data.length === 0) return null;
-    
-    // Find the record matching the username
-    for (const row of data) {
-      if (row.data) {
-        const decrypted = decryptData(row.data);
-        if (decrypted && decrypted.username && decrypted.username.toLowerCase() === usernameLower) {
-          return decrypted;
-        }
-      }
-    }
-    return null;
-  } catch (err) {
-    console.error("Error fetching user from cloud:", err.message);
-    throw err;
-  }
-};
-
-// Admin: Fetch all users
-export const getAllUsers = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('app_credentials')
-      .select('id, data');
-      
-    if (error) throw error;
-    if (!data) return [];
-    
-    // Decrypt all
-    return data.map(row => {
-        if (!row.data) return null;
-        try {
-            const dec = decryptData(row.data);
-            return {
-                dbId: row.id, // Keep reference to Supabase ID for deletion
-                username: dec?.username || 'Unknown',
-                role: dec?.role || 'user',
-                lastUpdate: dec?.timestamp || null,
-                _raw: dec // Store entire decrypted object if we need it
-            };
-        } catch {
-            return null;
-        }
-    }).filter(Boolean);
-  } catch (err) {
-    console.error("Error fetching all users:", err.message);
-    throw err;
-  }
-};
-
-// Admin: forceful password reset by Admin
-export const adminResetPassword = async (targetUsername, newPassword) => {
-    if (!newPassword || newPassword.length < 6) {
-        throw new Error('Password must be at least 6 characters');
-    }
-    
-    // First we must find the user's actual record in DB
-    const { data, error } = await supabase.from('app_credentials').select('id, data');
-    if (error) throw error;
-    
-    let targetRow = null;
-    let decryptedTarget = null;
-    
-    for (const row of (data || [])) {
-        if (row.data) {
-            try {
-                const dec = decryptData(row.data);
-                if (dec && dec.username && dec.username.toLowerCase() === targetUsername.toLowerCase()) {
-                    targetRow = row;
-                    decryptedTarget = dec;
-                    break;
-                }
-            } catch {
-                 // skip parse errors
-            }
-        }
-    }
-    
-    if (!targetRow) throw new Error(`User "${targetUsername}" not found.`);
-    
-    // Modify their password
-    decryptedTarget.password = hashPassword(newPassword);
-    
-    // Re-encrypt and save that specific row
-    const encryptedData = encryptData(decryptedTarget);
-    const { error: updateErr } = await supabase
-        .from('app_credentials')
-        .update({ data: encryptedData })
-        .eq('id', targetRow.id);
-        
-    if (updateErr) throw updateErr;
-};
-
-// Admin: delete user completely
-export const deleteUser = async (targetDbId) => {
-    if (!targetDbId) throw new Error("Invalid User ID");
-    
-    const { error } = await supabase
-        .from('app_credentials')
-        .delete()
-        .eq('id', targetDbId);
-        
-    if (error) throw error;
-};

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
+import localforage from 'localforage';
+import { encryptData, decryptData } from '../utils/encryptionUtils';
 
 const PayslipForm = ({ employees, onGenerate, companyInfo }) => {
   const currentDate = new Date();
@@ -22,11 +24,12 @@ const PayslipForm = ({ employees, onGenerate, companyInfo }) => {
   });
 
   useEffect(() => {
-    const saved = localStorage.getItem('companyInfo');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setCompanyData(parsed);
-    }
+    localforage.getItem('companyInfo').then(stored => {
+      if (stored) {
+        const parsed = decryptData(stored);
+        if (parsed) setCompanyData(parsed);
+      }
+    });
   }, []);
 
   const months = [
@@ -49,7 +52,7 @@ const PayslipForm = ({ employees, onGenerate, companyInfo }) => {
       [e.target.name]: e.target.value,
     };
     setCompanyData(updated);
-    localStorage.setItem('companyInfo', JSON.stringify(updated));
+    localforage.setItem('companyInfo', encryptData(updated));
   };
 
   const handleSubmit = (e) => {

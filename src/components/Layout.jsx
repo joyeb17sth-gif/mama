@@ -30,6 +30,11 @@ const Layout = ({
             )
         },
         {
+            id: 'task-matrix', label: 'Task Matrix', icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+            )
+        },
+        {
             id: 'allocation', label: 'Allocation', icon: (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
             )
@@ -56,10 +61,17 @@ const Layout = ({
             )
         },
         {
+            id: 'settings', label: 'Global Rates', icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+            )
+        },
+        /*
+        {
             id: 'logs', label: 'Audit Logs', icon: (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
             )
         },
+        */
     ];
 
     const adminItems = [
@@ -73,37 +85,37 @@ const Layout = ({
     const activeNavItem = [...navItems, ...adminItems].find(item => item.id === activeTab) || navItems[0];
 
     return (
-        <div className="flex h-screen bg-[#FBFBFB] font-sans text-zinc-900 overflow-hidden">
+        <div className="flex h-screen bg-notion-warm-white font-sans text-notion-black overflow-hidden selection:bg-notion-blue/20">
 
             {/* Mobile Sidebar Overlay */}
             {isMobileMenuOpen && (
                 <div
-                    className="fixed inset-0 bg-zinc-900/50 z-20 lg:hidden transition-opacity backdrop-blur-sm"
+                    className="fixed inset-0 bg-notion-black/20 z-20 lg:hidden transition-opacity backdrop-blur-sm"
                     onClick={() => setIsMobileMenuOpen(false)}
                 ></div>
             )}
 
             {/* Sidebar Navigation */}
             <aside
-                className={`fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-zinc-200 transform transition-transform duration-300 cubic-bezier(0.4, 0, 0.2, 1) lg:translate-x-0 lg:static lg:inset-0
+                className={`fixed inset-y-0 left-0 z-30 w-64 bg-white whisper-border transform transition-transform duration-300 cubic-bezier(0.4, 0, 0.2, 1) lg:translate-x-0 lg:static lg:inset-0
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
             >
                 <div className="flex flex-col h-full">
                     {/* Brand Logo area */}
-                    <div className="flex items-center mx-6 h-20">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center text-white font-bold">
+                    <div className="flex items-center mx-6 h-16">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-micro bg-notion-blue flex items-center justify-center text-white font-bold text-sm">
                                 S
                             </div>
-                            <h1 className="text-p1 font-bold tracking-tight text-zinc-900">
+                            <h1 className="text-body-semibold tracking-tight text-notion-black">
                                 SitalPayslip
                             </h1>
                         </div>
                     </div>
 
                     {/* Nav Links */}
-                    <div className="flex-1 overflow-y-auto px-4 py-2 space-y-0.5 custom-scrollbar">
-                        <div className="text-p3 font-bold text-zinc-400 px-3 mb-3 mt-2 uppercase tracking-widest">
+                    <div className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5 custom-scrollbar">
+                        <div className="text-[11px] font-bold text-notion-warm-gray-300 px-3 mb-2 mt-2 uppercase tracking-widest">
                             Overview
                         </div>
                         {navItems.map((item) => (
@@ -113,25 +125,25 @@ const Layout = ({
                                     setActiveTab(item.id);
                                     setIsMobileMenuOpen(false);
                                 }}
-                                className={`w-full flex items-center px-3 py-2.5 text-p3 font-bold rounded-lg transition-all duration-200 group relative
+                                className={`w-full flex items-center px-3 py-1.5 text-nav-button rounded-micro transition-all duration-200 group relative
                    ${activeTab === item.id
-                                        ? 'bg-primary-50 text-primary-700'
-                                        : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900'
+                                        ? 'bg-notion-blue/5 text-notion-blue'
+                                        : 'text-notion-warm-gray-500 hover:bg-notion-warm-white hover:text-notion-black'
                                     }`}
                             >
-                                <span className={`mr-3 transition-colors ${activeTab === item.id ? 'text-primary-600' : 'text-zinc-400 group-hover:text-zinc-500'}`}>
+                                <span className={`mr-2.5 transition-colors ${activeTab === item.id ? 'text-notion-blue' : 'text-notion-warm-gray-300 group-hover:text-notion-warm-gray-500'}`}>
                                     {item.icon}
                                 </span>
                                 {item.label}
                                 {activeTab === item.id && (
-                                    <span className="absolute right-2 w-1.5 h-1.5 rounded-full bg-primary-600"></span>
+                                    <div className="absolute left-0 w-0.5 h-4 bg-notion-blue rounded-r-full"></div>
                                 )}
                             </button>
                         ))}
 
                         {isAdmin && (
                             <>
-                                <div className="text-p3 font-bold text-zinc-400 px-3 mb-3 mt-8 uppercase tracking-widest">
+                                <div className="text-[11px] font-bold text-notion-warm-gray-300 px-3 mb-2 mt-6 uppercase tracking-widest">
                                     Management
                                 </div>
                                 {adminItems.map((item) => (
@@ -141,18 +153,18 @@ const Layout = ({
                                             setActiveTab(item.id);
                                             setIsMobileMenuOpen(false);
                                         }}
-                                        className={`w-full flex items-center px-3 py-2.5 text-p3 font-bold rounded-lg transition-all duration-200 group relative
+                                        className={`w-full flex items-center px-3 py-1.5 text-nav-button rounded-micro transition-all duration-200 group relative
                                             ${activeTab === item.id
-                                                ? 'bg-zinc-900 text-white'
-                                                : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900'
+                                                ? 'bg-notion-blue/5 text-notion-blue'
+                                                : 'text-notion-warm-gray-500 hover:bg-notion-warm-white hover:text-notion-black'
                                             }`}
                                     >
-                                        <span className={`mr-3 transition-colors ${activeTab === item.id ? 'text-zinc-100' : 'text-zinc-400 group-hover:text-zinc-500'}`}>
+                                        <span className={`mr-2.5 transition-colors ${activeTab === item.id ? 'text-notion-blue' : 'text-notion-warm-gray-300 group-hover:text-notion-warm-gray-500'}`}>
                                             {item.icon}
                                         </span>
                                         {item.label}
                                         {activeTab === item.id && (
-                                            <span className="absolute right-2 w-1.5 h-1.5 rounded-full bg-zinc-100"></span>
+                                            <div className="absolute left-0 w-0.5 h-4 bg-notion-blue rounded-r-full"></div>
                                         )}
                                     </button>
                                 ))}
@@ -161,18 +173,18 @@ const Layout = ({
                     </div>
 
                     {/* User Profile / Bottom Actions */}
-                    <div className="p-4 border-t border-zinc-100 bg-zinc-50/50">
+                    <div className="p-4 border-t border-zinc-100 bg-white">
                         <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-zinc-200 to-zinc-100 border border-white flex items-center justify-center text-zinc-600 font-bold text-xs ring-2 ring-zinc-50">
+                            <div className="w-8 h-8 rounded-full bg-notion-warm-white flex items-center justify-center text-notion-warm-gray-500 font-bold text-xs">
                                 {userProfile.name.charAt(0)}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-zinc-900 truncate">{userProfile.name}</p>
-                                <p className="text-xs text-zinc-500 truncate">{userProfile.role}</p>
+                                <p className="text-xs font-semibold text-notion-black truncate">{userProfile.name}</p>
+                                <p className="text-[10px] text-notion-warm-gray-500 truncate">{userProfile.role}</p>
                             </div>
                             <button
                                 onClick={onLogout}
-                                className="p-2 text-zinc-400 hover:text-rose-600 hover:bg-white rounded-lg transition-all border border-transparent hover:border-zinc-200"
+                                className="p-1.5 text-notion-warm-gray-300 hover:text-rose-600 hover:bg-rose-50 rounded-micro transition-all"
                                 title="Logout"
                             >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
@@ -186,28 +198,28 @@ const Layout = ({
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
 
                 {/* Top Header */}
-                <header className="bg-white/80 backdrop-blur-md border-b border-zinc-100 h-16 flex items-center justify-between px-8 sticky top-0 z-10 transition-all">
+                <header className="bg-white/80 backdrop-blur-md border-b border-zinc-100 h-14 flex items-center justify-between px-6 sticky top-0 z-10 transition-all">
                     <div className="flex items-center gap-4">
                         {/* Mobile Menu Button */}
                         <button
                             onClick={() => setIsMobileMenuOpen(true)}
-                            className="lg:hidden p-2 text-zinc-500 hover:bg-zinc-100 rounded-md"
+                            className="lg:hidden p-1.5 text-notion-warm-gray-500 hover:bg-notion-warm-white rounded-micro"
                         >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                         </button>
 
                         {/* Breadcrumb / Title */}
                         <div>
-                            <h2 className="text-h1 font-bold text-zinc-900 tracking-tight">
+                            <h2 className="text-body-semibold text-notion-black tracking-tight">
                                 {activeNavItem.label}
                             </h2>
                         </div>
                     </div>
 
                     {/* Right Header Controls */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                         {isSyncing ? (
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-primary-50 text-primary-700 rounded-full text-xs font-semibold border border-primary-100 animate-pulse">
+                            <div className="flex items-center gap-2 px-2.5 py-1 bg-notion-badge-blue-bg text-notion-badge-blue-text rounded-pill text-[11px] font-semibold whisper-border animate-pulse">
                                 <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -215,10 +227,10 @@ const Layout = ({
                                 <span>Syncing...</span>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-2 px-3 py-1.5 text-emerald-600 bg-emerald-50 rounded-full text-xs font-semibold border border-emerald-100 group cursor-default transition-all">
-                                <span className="relative flex h-2 w-2 mr-1">
+                            <div className="flex items-center gap-2 px-2.5 py-1 text-emerald-600 bg-emerald-50 rounded-pill text-[11px] font-semibold border border-emerald-100 group cursor-default transition-all">
+                                <span className="relative flex h-1.5 w-1.5 mr-0.5">
                                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                                 </span>
                                 <span className="hidden sm:inline">Live Mode</span>
                             </div>
@@ -227,8 +239,8 @@ const Layout = ({
                 </header>
 
                 {/* Scrollable Content */}
-                <main className="flex-1 overflow-y-auto focus:outline-none p-6 md:p-8 scroll-smooth">
-                    <div className="max-w-7xl mx-auto w-full">
+                <main className="flex-1 overflow-y-auto focus:outline-none p-6 scroll-smooth">
+                    <div className="w-full">
                         {children}
                     </div>
                 </main>

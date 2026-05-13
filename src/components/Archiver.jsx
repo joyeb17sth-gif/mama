@@ -5,7 +5,7 @@ const Archiver = () => {
     const [years, setYears] = useState([]);
     const [selectedYear, setSelectedYear] = useState('');
     const [stats, setStats] = useState(null);
-    const [isExported, setIsExported] = useState(false);
+    const [exportedYear, setExportedYear] = useState(null);
     const [isPurging, setIsPurging] = useState(false);
 
     useEffect(() => {
@@ -19,14 +19,13 @@ const Archiver = () => {
     const handleYearChange = (year) => {
         setSelectedYear(year);
         setStats(getArchiveStatsForYear(year));
-        setIsExported(false);
     };
 
     const handleExport = () => {
         if (!selectedYear) return;
         const success = downloadArchiveJSON(selectedYear);
         if (success) {
-            setIsExported(true);
+            setExportedYear(selectedYear);
         }
     };
 
@@ -48,7 +47,7 @@ const Archiver = () => {
                 setSelectedYear('');
                 setStats(null);
             }
-            setIsExported(false);
+            setExportedYear(null);
             setIsPurging(false);
             alert(`Archived data for ${selectedYear} has been successfully purged.`);
         }
@@ -130,8 +129,8 @@ const Archiver = () => {
                             
                             <button
                                 onClick={handlePurge}
-                                disabled={!isExported || isPurging}
-                                className={`flex-1 flex justify-center items-center gap-2 px-6 py-3 rounded-xl font-bold transition shadow-sm ${isExported && !isPurging ? 'bg-rose-600 text-white hover:bg-rose-700 hover:shadow-md' : 'bg-zinc-100 text-zinc-400 cursor-not-allowed border border-zinc-200'}`}
+                                disabled={exportedYear !== selectedYear || isPurging}
+                                className={`flex-1 flex justify-center items-center gap-2 px-6 py-3 rounded-xl font-bold transition shadow-sm ${exportedYear === selectedYear && !isPurging ? 'bg-rose-600 text-white hover:bg-rose-700 hover:shadow-md' : 'bg-zinc-100 text-zinc-400 cursor-not-allowed border border-zinc-200'}`}
                             >
                                 {isPurging ? (
                                     <>

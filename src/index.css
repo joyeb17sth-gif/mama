@@ -4,46 +4,45 @@
 
 @layer base {
   body {
-    @apply font-sans antialiased text-zinc-900 bg-[#FBFBFB];
+    @apply font-sans antialiased text-notion-black bg-white;
   }
 
   h1 {
-    @apply text-zinc-900;
-    font-size: 24px;
-    line-height: 22px;
-    letter-spacing: 0.04em;
-    font-weight: 800;
+    @apply text-display-hero text-notion-black;
   }
 
   h2 {
-    @apply text-zinc-900;
-    font-size: 22px;
-    line-height: 20px;
-    letter-spacing: 0.04em;
-    font-weight: 700;
+    @apply text-display-secondary text-notion-black;
   }
 
-  h3,
-  h4,
-  h5,
-  h6 {
-    @apply text-zinc-900;
-    font-size: 18px;
-    line-height: 1.5;
-    font-weight: 600;
+  h3 {
+    @apply text-section-heading text-notion-black;
+  }
+
+  h4 {
+    @apply text-sub-heading text-notion-black;
   }
 
   p {
-    @apply text-zinc-500 font-medium;
-    font-size: 16px;
-    line-height: 1.5;
+    @apply text-body-medium text-notion-warm-gray-500;
   }
 
   label {
-    @apply uppercase tracking-[0.15em] font-bold text-zinc-400;
-    font-size: 11px;
-    line-height: 1.5;
+    @apply text-badge text-notion-warm-gray-300 uppercase;
   }
+}
+
+/* Notion Whisper Border Utility */
+.whisper-border {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.notion-card {
+  @apply bg-white whisper-border rounded-comfortable shadow-notion-card;
+}
+
+.notion-pill {
+  @apply rounded-pill px-2 py-1 text-badge;
 }
 
 @keyframes slide-in {

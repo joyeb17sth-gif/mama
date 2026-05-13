@@ -20,6 +20,19 @@ const EmployeeForm = ({ employee, onSave, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Basic validation
+    if (!formData.name || formData.name.trim().length < 2) {
+      alert('Name must be at least 2 characters.');
+      return;
+    }
+    if (!formData.employeeId || formData.employeeId.trim().length < 1) {
+      alert('Employee ID is required.');
+      return;
+    }
+    if (formData.name.length > 100 || formData.employeeId.length > 50) {
+      alert('Input exceeds maximum length.');
+      return;
+    }
     onSave(formData);
   };
 
