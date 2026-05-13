@@ -39,11 +39,11 @@ const Dashboard = () => {
 
     // Helper: Get training balance for a contractor
     const getTrainingBalance = (contractorId) => {
-        const contractorTimesheets = timesheets.flatMap(ts => ts.entries)
+        const contractorTimesheets = (timesheets || []).flatMap(ts => ts.entries || [])
             .filter(entry => entry.contractorId === contractorId);
 
         const totalAccumulated = contractorTimesheets.reduce((sum, entry) => sum + (entry.trainingPay || 0), 0);
-        const contractorReleases = releases.filter(r => r.contractorId === contractorId);
+        const contractorReleases = (releases || []).filter(r => r.contractorId === contractorId);
         const totalReleased = contractorReleases.reduce((sum, r) => sum + r.amount, 0);
 
         const totalTrainingDays = contractorTimesheets.reduce((sum, entry) => {
@@ -59,9 +59,9 @@ const Dashboard = () => {
     };
 
     // 1. Calculate base stats for EVERY site (Actuals)
-    const baseSiteStats = sites.map(s => {
-        const siteTimesheets = timesheets.filter(ts => ts.siteId === s.id);
-        const entriesForSite = timesheets.flatMap(ts => ts.entries || []).filter(e => e.siteId === s.id);
+    const baseSiteStats = (sites || []).map(s => {
+        const siteTimesheets = (timesheets || []).filter(ts => ts.siteId === s.id);
+        const entriesForSite = (timesheets || []).flatMap(ts => ts.entries || []).filter(e => e.siteId === s.id);
 
         const totalHours = entriesForSite.reduce((sum, e) => sum + (e.totalHours || 0), 0);
         const totalCost = entriesForSite.reduce((sum, e) => sum + (e.totalPay || 0), 0);
@@ -103,8 +103,8 @@ const Dashboard = () => {
     });
 
     // Payroll Preview (Consolidated)
-    const consolidatedPayroll = contractors.filter(c => c.status === 'active').map(contractor => {
-        const contractorEntries = timesheets.flatMap(ts => ts.entries.map(e => ({ ...e, siteName: ts.siteName })))
+    const consolidatedPayroll = (contractors || []).filter(c => c.status === 'active').map(contractor => {
+        const contractorEntries = (timesheets || []).flatMap(ts => (ts.entries || []).map(e => ({ ...e, siteName: ts.siteName })))
             .filter(entry => entry.contractorId === contractor.id);
 
         const totalHours = contractorEntries.reduce((sum, e) => sum + (e.totalHours || 0), 0);
@@ -204,7 +204,7 @@ const Dashboard = () => {
             period: new Date().toISOString().slice(0, 7)
         };
 
-        const updatedReleases = [...releases, newRelease];
+        const updatedReleases = [...(releases || []), newRelease];
         saveTrainingReleases(updatedReleases);
         logAction('RELEASE_TRAINING_PAY', {
             contractorName: selectedContractor.name,
@@ -367,7 +367,7 @@ const Dashboard = () => {
             </div>
 
             {/* Dashboard Alerts */}
-            {contractors.some(c => getTrainingBalance(c.id).balance > 0) && (
+            {(contractors || []).some(c => getTrainingBalance(c.id).balance > 0) && (
                 <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 p-4 rounded-xl flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="p-2 bg-white/60 rounded-lg backdrop-blur-sm border border-amber-100">
@@ -417,7 +417,7 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 gap-10">
 
                 {/* Training Pay Oversight */}
-                {contractors.some(c => getTrainingBalance(c.id).balance > 0) ? (
+                {(contractors || []).some(c => getTrainingBalance(c.id).balance > 0) ? (
                     <div className="notion-card overflow-hidden flex flex-col h-[500px]">
                         <div className="px-6 py-4 border-b border-notion-warm-white flex justify-between items-center bg-white sticky top-0 z-10">
                             <div>
@@ -438,7 +438,7 @@ const Dashboard = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y whisper-border">
-                                    {contractors
+                                    {(contractors || [])
                                         .filter(c => getTrainingBalance(c.id).balance > 0)
                                         .map(c => {
                                             const training = getTrainingBalance(c.id);
@@ -562,7 +562,7 @@ const Dashboard = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y whisper-border">
-                            {contractors.filter(c => c.name.toLowerCase().includes(contractorSearch.toLowerCase())).slice(0, 10).map(c => (
+                            {(contractors || []).filter(c => c.name.toLowerCase().includes(contractorSearch.toLowerCase())).slice(0, 10).map(c => (
                                 <tr key={c.id} className="hover:bg-notion-warm-white transition-colors group">
                                     <td className="px-6 py-3.5 text-xs font-bold text-notion-warm-gray-300 uppercase tracking-tighter">{c.contractorId}</td>
                                     <td className="px-6 py-3.5">
@@ -595,10 +595,10 @@ const Dashboard = () => {
                 {/* Footer / Pagination hint */}
                 <div className="px-6 py-3 border-t whisper-border bg-notion-warm-white bg-opacity-30 flex justify-between items-center">
                     <span className="text-[10px] font-bold text-notion-warm-gray-300 uppercase tracking-widest">
-                        {contractors.filter(c => c.name.toLowerCase().includes(contractorSearch.toLowerCase())).length > 10 ? 'Apply filters for extended roster lookup' : 'Full roster visibility enabled'}
+                        {(contractors || []).filter(c => c.name.toLowerCase().includes(contractorSearch.toLowerCase())).length > 10 ? 'Apply filters for extended roster lookup' : 'Full roster visibility enabled'}
                     </span>
                     <span className="text-[10px] font-bold text-notion-warm-gray-300 uppercase tracking-widest">
-                        Node {Math.min(10, contractors.filter(c => c.name.toLowerCase().includes(contractorSearch.toLowerCase())).length)} / {contractors.length}
+                        Node {Math.min(10, (contractors || []).filter(c => c.name.toLowerCase().includes(contractorSearch.toLowerCase())).length)} / {(contractors || []).length}
                     </span>
                 </div>
             </div>
