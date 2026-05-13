@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Get Supabase credentials from environment variables
+// Get Supabase credentials from environment variables (Cache busting comment)
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
