@@ -132,6 +132,34 @@ const UserManagement = () => {
         return roleLower.includes('supervisor') || roleLower.includes('manager') || roleLower.includes('mod');
     });
 
+    const activeEntries = users.map(u => ({
+        id: u.id,
+        email: u.email,
+        role: u.role,
+        isPending: false,
+        name: ''
+    }));
+
+    activeEntries.forEach(entry => {
+        const matchingContractor = (getContractors() || []).find(c => c.email?.toLowerCase() === entry.email?.toLowerCase());
+        if (matchingContractor) {
+            entry.name = matchingContractor.name;
+        }
+    });
+
+    const pendingEntries = supervisorAndModContractors
+        .filter(c => c.email && !activeEmails.includes(c.email.toLowerCase()))
+        .map(c => ({
+            id: `pending-${c.id}`,
+            email: c.email,
+            role: c.role,
+            isPending: true,
+            name: c.name,
+            contractor: c
+        }));
+
+    const combinedEntries = [...activeEntries, ...pendingEntries];
+
     return (
         <div className="w-full space-y-12 animate-fade-in-up">
             <div className="notion-card overflow-hidden shadow-notion-deep">
@@ -231,7 +259,7 @@ const UserManagement = () => {
                 <div className="p-0">
                     {loadingUsers ? (
                         <div className="p-12 text-center text-notion-warm-gray-100 font-bold text-badge uppercase tracking-widest">Synchronizing credentials...</div>
-                    ) : users.length === 0 ? (
+                    ) : combinedEntries.length === 0 ? (
                         <div className="p-12 text-center text-notion-warm-gray-100 font-bold text-badge uppercase tracking-widest">No active secondary identities identified.</div>
                     ) : (
                         <div className="overflow-x-auto">
@@ -244,93 +272,52 @@ const UserManagement = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y whisper-border">
-                                    {users.map((user) => (
-                                        <tr key={user.id} className="hover:bg-zinc-50/30 transition-colors">
-                                            <td className="p-6 font-bold text-notion-black tracking-tight">{user.email}</td>
+                                    {combinedEntries.map((entry) => (
+                                        <tr key={entry.id} className="hover:bg-zinc-50/30 transition-colors">
+                                            <td className="p-6">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-notion-black tracking-tight">{entry.email}</span>
+                                                    {entry.name && (
+                                                        <span className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider mt-0.5">
+                                                            {entry.name} {entry.isPending && <span className="text-amber-600 font-semibold">(Pending Workforce Auth)</span>}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
                                             <td className="p-6 text-center">
-                                                <span className={`inline-flex items-center px-3 py-1 rounded-micro text-badge font-bold uppercase tracking-widest shadow-sm whisper-border ${getRoleBadgeColor(user.role)}`}>
-                                                    {getRoleLabel(user.role)}
-                                                </span>
+                                                {entry.isPending ? (
+                                                    <span className="inline-flex items-center px-3 py-1 rounded-micro text-badge font-bold uppercase tracking-widest shadow-sm bg-amber-50 text-amber-700 whisper-border border-amber-100">
+                                                        Setup Pending ({entry.role?.replace('/SUPERVISOR', '')})
+                                                    </span>
+                                                ) : (
+                                                    <span className={`inline-flex items-center px-3 py-1 rounded-micro text-badge font-bold uppercase tracking-widest shadow-sm whisper-border ${getRoleBadgeColor(entry.role)}`}>
+                                                        {getRoleLabel(entry.role)}
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="p-6 text-right">
-                                                <select 
-                                                    value={user.role || 'supervisor'}
-                                                    onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                                                    className="bg-white whisper-border text-badge font-bold rounded px-2 py-1 outline-none focus:border-notion-blue transition-all"
-                                                >
-                                                    <option value="admin">System Admin</option>
-                                                    <option value="supervisor">Supervisor</option>
-                                                    <option value="manager">Manager</option>
-                                                    <option value="payslip_management">Payslip Management</option>
-                                                </select>
+                                                {entry.isPending ? (
+                                                    <button
+                                                        onClick={() => handleInitializeFromContractor(entry.contractor)}
+                                                        className="px-3 py-1.5 bg-notion-black hover:bg-zinc-800 text-white rounded-micro text-badge font-bold uppercase tracking-widest shadow-sm transition-all"
+                                                    >
+                                                        Setup Access
+                                                    </button>
+                                                ) : (
+                                                    <select 
+                                                        value={entry.role || 'supervisor'}
+                                                        onChange={(e) => handleRoleChange(entry.id, e.target.value)}
+                                                        className="bg-white whisper-border text-badge font-bold rounded px-2 py-1 outline-none focus:border-notion-blue transition-all"
+                                                    >
+                                                        <option value="admin">System Admin</option>
+                                                        <option value="supervisor">Supervisor</option>
+                                                        <option value="manager">Manager</option>
+                                                        <option value="payslip_management">Payslip Management</option>
+                                                    </select>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            <div className="notion-card overflow-hidden shadow-notion-deep">
-                <div className="p-10 bg-notion-warm-white border-b whisper-border">
-                    <h2 className="text-display-secondary text-notion-black tracking-notion-display">Supervisor & MOD Contractor Directory</h2>
-                    <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mt-1">
-                        Eligible contractor staff from your workforce registry. Use quick-actions to authorize administrative logins.
-                    </p>
-                </div>
-                <div className="p-0">
-                    {supervisorAndModContractors.length === 0 ? (
-                        <div className="p-12 text-center text-notion-warm-gray-100 font-bold text-badge uppercase tracking-widest">
-                            No Supervisors or MOD contractors identified in workforce.
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-notion-warm-white text-notion-warm-gray-300 text-badge font-bold uppercase tracking-widest border-b whisper-border">
-                                        <th className="p-6">Contractor Name</th>
-                                        <th className="p-6">Email Address</th>
-                                        <th className="p-6 text-center">Contractor Role</th>
-                                        <th className="p-6 text-center">Access Status</th>
-                                        <th className="p-6 text-right">Quick Configuration</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y whisper-border">
-                                    {supervisorAndModContractors.map((contractor) => {
-                                        const hasActiveLogin = activeEmails.includes(contractor.email?.toLowerCase() || '');
-                                        return (
-                                            <tr key={contractor.id} className="hover:bg-zinc-50/30 transition-colors">
-                                                <td className="p-6 font-bold text-notion-black tracking-tight">{contractor.name}</td>
-                                                <td className="p-6 text-zinc-500 font-medium">{contractor.email || 'No email registered'}</td>
-                                                <td className="p-6 text-center text-xs font-bold text-primary-600 uppercase tracking-widest">{contractor.role}</td>
-                                                <td className="p-6 text-center">
-                                                    {hasActiveLogin ? (
-                                                        <span className="inline-flex items-center px-3 py-1 rounded-micro text-badge font-bold uppercase tracking-widest shadow-sm bg-emerald-50 text-emerald-700 whisper-border border-emerald-100">
-                                                            Active Login
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center px-3 py-1 rounded-micro text-badge font-bold uppercase tracking-widest shadow-sm bg-amber-50 text-amber-700 whisper-border border-amber-100">
-                                                            Setup Pending
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="p-6 text-right">
-                                                    {hasActiveLogin ? (
-                                                        <span className="text-badge text-zinc-400 font-bold uppercase tracking-widest pl-1">Configured</span>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => handleInitializeFromContractor(contractor)}
-                                                            className="px-3 py-1.5 bg-notion-black hover:bg-zinc-800 text-white rounded-micro text-badge font-bold uppercase tracking-widest shadow-sm transition-all"
-                                                        >
-                                                            Setup Login
-                                                        </button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
                                 </tbody>
                             </table>
                         </div>
