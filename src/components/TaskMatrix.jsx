@@ -221,6 +221,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                 <p><span className="text-notion-warm-gray-500 font-medium">Task:</span> <span className="font-semibold text-notion-black">{activePopup.task.taskName} ({activePopup.task.taskCode})</span></p>
                 <p><span className="text-notion-warm-gray-500 font-medium">Period:</span> <span className="font-semibold text-notion-black">{activePopup.monthDisplay}</span></p>
                 <p><span className="text-notion-warm-gray-500 font-medium">Exact Date:</span> <span className="font-semibold text-notion-black">{getExactDateForMonth(activePopup.task, activePopup.monthDate)}</span></p>
+                <p><span className="text-notion-warm-gray-500 font-medium">Assigned To:</span> <span className={`font-semibold ${activePopup.task.assignedTo ? 'text-notion-blue' : 'text-notion-warm-gray-300'}`}>{activePopup.task.assignedTo || 'Unassigned'}</span></p>
                 <p><span className="text-notion-warm-gray-500 font-medium">Current Status:</span> <span className="font-semibold text-notion-black">{activePopup.schedule.status}</span></p>
               </div>
               <div className="pt-2">

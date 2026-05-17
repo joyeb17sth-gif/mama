@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Dropdown from './Dropdown';
+import { supabase } from '../utils/supabaseClient';
 import { format, addMonths, startOfYear } from 'date-fns';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -7,6 +8,17 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => {
   const [tasks, setTasks] = useState(initialTasks || []);
   const [editingTaskId, setEditingTaskId] = useState(null);
+  const [profileUsers, setProfileUsers] = useState([]);
+
+  useEffect(() => {
+    const loadProfiles = async () => {
+      try {
+        const { data } = await supabase.from('profiles').select('id, email, role');
+        if (data) setProfileUsers(data);
+      } catch (e) { /* ignore */ }
+    };
+    loadProfiles();
+  }, []);
 
   const getInitialPeriods = (freq) => {
     if (freq === 'Quarterly') return [
@@ -32,6 +44,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
     taskName: '',
     frequency: 'Monthly',
     contractType: 'AD/HOC',
+    assignedTo: '',
     startingMonth: 0, // January = 0
     periods: getInitialPeriods('Monthly')
   });
@@ -95,6 +108,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
       taskName: taskToEdit.taskName || '',
       frequency: taskToEdit.frequency || 'Monthly',
       contractType: taskToEdit.contractType || 'AD/HOC',
+      assignedTo: taskToEdit.assignedTo || '',
       startingMonth: taskToEdit.startingMonth || 0,
       periods: taskToEdit.periodBudgets || getInitialPeriods(taskToEdit.frequency || 'Monthly')
     });
@@ -120,6 +134,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
         budgetPrice: totalPrice,
         periodBudgets: newTask.periods,
         contractType: newTask.contractType,
+        assignedTo: newTask.assignedTo,
         schedules: (freqChanged || monthChanged)
           ? generateSchedules(newTask.frequency, newTask.startingMonth)
           : existingTask.schedules
@@ -138,6 +153,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
         budgetPrice: totalPrice,
         periodBudgets: newTask.periods,
         contractType: newTask.contractType,
+        assignedTo: newTask.assignedTo,
         schedules: generateSchedules(newTask.frequency, newTask.startingMonth)
       };
       setTasks([...tasks, taskToAdd]);
@@ -148,6 +164,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
       taskName: '',
       frequency: 'Monthly',
       contractType: 'AD/HOC',
+      assignedTo: '',
       startingMonth: 0,
       periods: getInitialPeriods('Monthly')
     });
@@ -232,6 +249,18 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                     { value: 'On Request', label: 'On Request' },
                     { value: 'Scheduled', label: 'Scheduled' }
                   ]}
+                />
+              </div>
+              <div>
+                <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Assign To</label>
+                <Dropdown
+                  value={newTask.assignedTo}
+                  onChange={(val) => setNewTask({ ...newTask, assignedTo: val })}
+                  options={[
+                    { value: '', label: 'Unassigned' },
+                    ...profileUsers.map(u => ({ value: u.email, label: `${u.email} (${u.role})` }))
+                  ]}
+                  placeholder="Select a person..."
                 />
               </div>
             </div>
@@ -330,7 +359,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                   onClick={() => {
                     setEditingTaskId(null);
                     setNewTask({
-                      taskCode: '', taskName: '', frequency: 'Monthly', contractType: 'AD/HOC', startingMonth: 0,
+                      taskCode: '', taskName: '', frequency: 'Monthly', contractType: 'AD/HOC', assignedTo: '', startingMonth: 0,
                       periods: getInitialPeriods('Monthly')
                     });
                   }}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Dropdown from './Dropdown';
 import { getSites } from '../utils/storage';
+import { supabase } from '../utils/supabaseClient';
 import { SiteSchema, validateData } from '../utils/validation';
 import { format, addMonths, startOfYear } from 'date-fns';
 
@@ -25,12 +26,22 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
 
   // Periodical Tasks State
   const [tasks, setTasks] = useState(periodicalTasks);
+  const [profileUsers, setProfileUsers] = useState([]);
 
 
   useEffect(() => {
     // Load all sites to populate parent site dropdown
     const sites = getSites().filter(s => s.id !== site?.id && !s.isSubSite);
     setAllSites(sites);
+
+    // Load user profiles for task assignment
+    const loadProfiles = async () => {
+      try {
+        const { data } = await supabase.from('profiles').select('id, email, role');
+        if (data) setProfileUsers(data);
+      } catch (e) { /* ignore */ }
+    };
+    loadProfiles();
 
     // If site prop changes (e.g. clicking + Sub-Site while form is open), update local state
     if (site) {
@@ -133,6 +144,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
     taskName: '',
     frequency: 'Monthly',
     contractType: 'AD/HOC',
+    assignedTo: '',
     startingMonth: 0,
     periods: getInitialPeriods('Monthly')
   });
@@ -217,6 +229,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
       taskName: taskToEdit.taskName || '',
       frequency: taskToEdit.frequency || 'Monthly',
       contractType: taskToEdit.contractType || 'AD/HOC',
+      assignedTo: taskToEdit.assignedTo || '',
       startingMonth: taskToEdit.startingMonth || 0,
       periods: taskToEdit.periodBudgets || getInitialPeriods(taskToEdit.frequency || 'Monthly')
     });
@@ -244,6 +257,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
         budgetPrice: totalPrice,
         periodBudgets: newTask.periods,
         contractType: newTask.contractType,
+        assignedTo: newTask.assignedTo,
         schedules: (freqChanged || monthChanged || dateChanged)
           ? generateSchedules(newTask.frequency, newTask.startingMonth, newTask.periods)
           : existingTask.schedules
@@ -262,6 +276,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
         budgetPrice: totalPrice,
         periodBudgets: newTask.periods,
         contractType: newTask.contractType,
+        assignedTo: newTask.assignedTo,
         schedules: generateSchedules(newTask.frequency, newTask.startingMonth, newTask.periods)
       };
       setTasks([...tasks, taskToAdd]);
@@ -272,6 +287,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
       taskName: '',
       frequency: 'Monthly',
       contractType: 'AD/HOC',
+      assignedTo: '',
       startingMonth: 0,
       periods: getInitialPeriods('Monthly')
     });
@@ -590,6 +606,18 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
                   { value: 'On Request', label: 'On Request' },
                   { value: 'Scheduled', label: 'Scheduled' }
                 ]}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-3 block">Assign To</label>
+              <Dropdown
+                value={newTask.assignedTo}
+                onChange={(val) => setNewTask({ ...newTask, assignedTo: val })}
+                options={[
+                  { value: '', label: 'Unassigned' },
+                  ...profileUsers.map(u => ({ value: u.email, label: `${u.email} (${u.role})` }))
+                ]}
+                placeholder="Select a person..."
               />
             </div>
           </div>
