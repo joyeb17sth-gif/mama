@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { registerUser } from '../utils/auth';
+import { getContractors } from '../utils/storage';
 
 const UserManagement = () => {
     const [formData, setFormData] = useState({
@@ -33,6 +34,21 @@ const UserManagement = () => {
     useEffect(() => {
         loadUsers();
     }, []);
+
+    const handleInitializeFromContractor = (contractor) => {
+        let assignedRole = 'supervisor';
+        const roleLower = contractor.role?.toLowerCase() || '';
+        if (roleLower.includes('manager') || roleLower.includes('mod')) {
+            assignedRole = 'manager';
+        }
+        setFormData({
+            email: contractor.email || '',
+            password: '',
+            confirmPassword: '',
+            role: assignedRole
+        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -109,6 +125,12 @@ const UserManagement = () => {
             default: return 'bg-zinc-100 text-zinc-600';
         }
     };
+
+    const activeEmails = users.map(u => u.email?.toLowerCase() || '');
+    const supervisorAndModContractors = (getContractors() || []).filter(c => {
+        const roleLower = c.role?.toLowerCase() || '';
+        return roleLower.includes('supervisor') || roleLower.includes('manager') || roleLower.includes('mod');
+    });
 
     return (
         <div className="w-full space-y-12 animate-fade-in-up">
@@ -244,6 +266,71 @@ const UserManagement = () => {
                                             </td>
                                         </tr>
                                     ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="notion-card overflow-hidden shadow-notion-deep">
+                <div className="p-10 bg-notion-warm-white border-b whisper-border">
+                    <h2 className="text-display-secondary text-notion-black tracking-notion-display">Supervisor & MOD Contractor Directory</h2>
+                    <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mt-1">
+                        Eligible contractor staff from your workforce registry. Use quick-actions to authorize administrative logins.
+                    </p>
+                </div>
+                <div className="p-0">
+                    {supervisorAndModContractors.length === 0 ? (
+                        <div className="p-12 text-center text-notion-warm-gray-100 font-bold text-badge uppercase tracking-widest">
+                            No Supervisors or MOD contractors identified in workforce.
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-notion-warm-white text-notion-warm-gray-300 text-badge font-bold uppercase tracking-widest border-b whisper-border">
+                                        <th className="p-6">Contractor Name</th>
+                                        <th className="p-6">Email Address</th>
+                                        <th className="p-6 text-center">Contractor Role</th>
+                                        <th className="p-6 text-center">Access Status</th>
+                                        <th className="p-6 text-right">Quick Configuration</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y whisper-border">
+                                    {supervisorAndModContractors.map((contractor) => {
+                                        const hasActiveLogin = activeEmails.includes(contractor.email?.toLowerCase() || '');
+                                        return (
+                                            <tr key={contractor.id} className="hover:bg-zinc-50/30 transition-colors">
+                                                <td className="p-6 font-bold text-notion-black tracking-tight">{contractor.name}</td>
+                                                <td className="p-6 text-zinc-500 font-medium">{contractor.email || 'No email registered'}</td>
+                                                <td className="p-6 text-center text-xs font-bold text-primary-600 uppercase tracking-widest">{contractor.role}</td>
+                                                <td className="p-6 text-center">
+                                                    {hasActiveLogin ? (
+                                                        <span className="inline-flex items-center px-3 py-1 rounded-micro text-badge font-bold uppercase tracking-widest shadow-sm bg-emerald-50 text-emerald-700 whisper-border border-emerald-100">
+                                                            Active Login
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center px-3 py-1 rounded-micro text-badge font-bold uppercase tracking-widest shadow-sm bg-amber-50 text-amber-700 whisper-border border-amber-100">
+                                                            Setup Pending
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="p-6 text-right">
+                                                    {hasActiveLogin ? (
+                                                        <span className="text-badge text-zinc-400 font-bold uppercase tracking-widest pl-1">Configured</span>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleInitializeFromContractor(contractor)}
+                                                            className="px-3 py-1.5 bg-notion-black hover:bg-zinc-800 text-white rounded-micro text-badge font-bold uppercase tracking-widest shadow-sm transition-all"
+                                                        >
+                                                            Setup Login
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
