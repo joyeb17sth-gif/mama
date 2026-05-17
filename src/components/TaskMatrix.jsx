@@ -5,6 +5,7 @@ import Dropdown from './Dropdown';
 const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [activePopup, setActivePopup] = useState(null); // { task, schedule, monthDisplay }
+  const [popupScopeOfWork, setPopupScopeOfWork] = useState('');
 
   // Generate 12 months for the selected year
   const months = useMemo(() => {
@@ -176,7 +177,12 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                       return (
                         <td 
                           key={month.toISOString()} 
-                          onClick={() => schedule && setActivePopup({ task, schedule, monthDisplay: format(month, 'MMM yyyy'), monthDate: month })}
+                          onClick={() => {
+                            if (schedule) {
+                              setPopupScopeOfWork(schedule.scopeOfWork || '');
+                              setActivePopup({ task, schedule, monthDisplay: format(month, 'MMM yyyy'), monthDate: month });
+                            }
+                          }}
                           className={`border-r border-white border-b text-center cursor-pointer hover:opacity-80 transition-opacity ${
                             schedule ? getStatusColor(schedule.status) : 'bg-transparent border-r-notion-warm-gray-200'
                           }`}
@@ -218,13 +224,23 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                 <p><span className="text-notion-warm-gray-500 font-medium">Current Status:</span> <span className="font-semibold text-notion-black">{activePopup.schedule.status}</span></p>
               </div>
               <div className="pt-2">
+                <label className="block text-sm font-medium text-notion-warm-gray-500 mb-2">Scope of Work</label>
+                <textarea
+                  value={popupScopeOfWork}
+                  onChange={(e) => setPopupScopeOfWork(e.target.value)}
+                  placeholder="Describe the scope of work for this period..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-notion-warm-gray-200 rounded-lg text-sm outline-none focus:border-notion-blue transition resize-none"
+                />
+              </div>
+              <div className="pt-2">
                 <label className="block text-sm font-medium text-notion-warm-gray-500 mb-2">Change Status To:</label>
                 <div className="flex flex-col gap-2">
                   {['Scheduled', 'Completed', 'Completed Not Claimed'].map(status => (
                     <button
                       key={status}
                       onClick={() => {
-                        onToggleStatus(activePopup.task, activePopup.schedule, status);
+                        onToggleStatus(activePopup.task, activePopup.schedule, status, popupScopeOfWork);
                         setActivePopup(null);
                       }}
                       className={`px-4 py-2 text-left rounded-md text-sm transition-all border ${

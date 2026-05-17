@@ -107,22 +107,22 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
 
   const getInitialPeriods = (freq) => {
     if (freq === 'Quarterly') return [
-      { name: '1st Quarter', hours: 0, pricing: 0, exactDate: '' },
-      { name: '2nd Quarter', hours: 0, pricing: 0, exactDate: '' },
-      { name: '3rd Quarter', hours: 0, pricing: 0, exactDate: '' },
-      { name: '4th Quarter', hours: 0, pricing: 0, exactDate: '' }
+      { name: '1st Quarter', hours: 0, pricing: 0, exactDate: '', scopeOfWork: '' },
+      { name: '2nd Quarter', hours: 0, pricing: 0, exactDate: '', scopeOfWork: '' },
+      { name: '3rd Quarter', hours: 0, pricing: 0, exactDate: '', scopeOfWork: '' },
+      { name: '4th Quarter', hours: 0, pricing: 0, exactDate: '', scopeOfWork: '' }
     ];
     if (freq === 'Monthly') {
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return months.map(m => ({ name: m, hours: 0, pricing: 0, exactDate: '' }));
+      return months.map(m => ({ name: m, hours: 0, pricing: 0, exactDate: '', scopeOfWork: '' }));
     }
     if (freq === '6 Monthly') return [
-      { name: '1st Half', hours: 0, pricing: 0, exactDate: '' },
-      { name: '2nd Half', hours: 0, pricing: 0, exactDate: '' }
+      { name: '1st Half', hours: 0, pricing: 0, exactDate: '', scopeOfWork: '' },
+      { name: '2nd Half', hours: 0, pricing: 0, exactDate: '', scopeOfWork: '' }
     ];
-    if (freq === 'Yearly') return [{ name: 'Annual', hours: 0, pricing: 0, exactDate: '' }];
-    if (freq === 'Weekly') return [{ name: 'Weekly Average', hours: 0, pricing: 0, exactDate: '' }];
-    if (freq === 'Custom Date') return [{ name: 'Custom Schedule', hours: 0, pricing: 0, customDate: '' }];
+    if (freq === 'Yearly') return [{ name: 'Annual', hours: 0, pricing: 0, exactDate: '', scopeOfWork: '' }];
+    if (freq === 'Weekly') return [{ name: 'Weekly Average', hours: 0, pricing: 0, exactDate: '', scopeOfWork: '' }];
+    if (freq === 'Custom Date') return [{ name: 'Custom Schedule', hours: 0, pricing: 0, customDate: '', scopeOfWork: '' }];
     return [];
   };
 
@@ -148,7 +148,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
 
   const handleTaskPeriodChange = (index, field, value) => {
     const updatedPeriods = [...newTask.periods];
-    if (field === 'customDate' || field === 'exactDate') {
+    if (field === 'customDate' || field === 'exactDate' || field === 'scopeOfWork') {
       updatedPeriods[index][field] = value;
     } else {
       updatedPeriods[index][field] = parseFloat(value) || 0;
@@ -661,6 +661,16 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
                         value={period.pricing || ''}
                         onChange={(e) => handleTaskPeriodChange(index, 'pricing', e.target.value)}
                         className="w-full px-2 py-1 bg-notion-warm-white whisper-border rounded text-[11px] font-bold tabular-nums outline-none focus:border-notion-blue"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Scope of Work</label>
+                      <textarea
+                        value={period.scopeOfWork || ''}
+                        onChange={(e) => handleTaskPeriodChange(index, 'scopeOfWork', e.target.value)}
+                        placeholder="Describe scope..."
+                        rows={2}
+                        className="w-full px-2 py-1 bg-notion-warm-white whisper-border rounded text-[11px] font-bold outline-none focus:border-notion-blue resize-none"
                       />
                     </div>
                   </div>

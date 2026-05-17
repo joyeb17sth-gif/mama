@@ -383,7 +383,7 @@ function App() {
   };
 
   // Periodical Tasks toggle handler
-  const handleToggleTaskStatus = (task, schedule, specificStatus) => {
+  const handleToggleTaskStatus = (task, schedule, specificStatus, scopeOfWork) => {
     let newStatus = specificStatus;
     if (!newStatus) {
       if (schedule.status === 'Scheduled') newStatus = 'Completed';
@@ -394,7 +394,7 @@ function App() {
     const updatedTasks = periodicalTasks.map(t => {
       if (t.id === task.id) {
         const updatedSchedules = t.schedules.map(s => 
-          s.id === schedule.id ? { ...s, status: newStatus } : s
+          s.id === schedule.id ? { ...s, status: newStatus, scopeOfWork: scopeOfWork !== undefined ? scopeOfWork : (s.scopeOfWork || '') } : s
         );
         return { ...t, schedules: updatedSchedules };
       }
@@ -403,7 +403,7 @@ function App() {
 
     setPeriodicalTasks(updatedTasks);
     savePeriodicalTasks(updatedTasks);
-    logAction('UPDATE_TASK_STATUS', { taskId: task.id, scheduleId: schedule.id, newStatus });
+    logAction('UPDATE_TASK_STATUS', { taskId: task.id, scheduleId: schedule.id, newStatus, scopeOfWork: scopeOfWork || '' });
   };
 
   // Timesheet handler
