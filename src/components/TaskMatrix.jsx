@@ -51,31 +51,34 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
     return task.schedules?.find(s => s.targetPeriod === targetPeriod);
   };
 
-  const getTimingForMonth = (task, monthDate) => {
-    if (!monthDate) return 'Early';
+  const getExactDateForMonth = (task, monthDate) => {
+    if (!monthDate) return 'Not Set';
     const monthIndex = monthDate.getMonth();
     const periods = task.periodBudgets || [];
-    if (!periods.length) return 'Early';
+    if (!periods.length) return 'Not Set';
     
     if (task.frequency === 'Monthly') {
-       return periods[monthIndex]?.timing || 'Early';
+       return periods[monthIndex]?.exactDate || 'Not Set';
     }
     if (task.frequency === 'Quarterly') {
        let diff = monthIndex - (task.startingMonth || 0);
        if (diff < 0) diff += 12;
        const qIndex = Math.floor(diff / 3);
-       return periods[qIndex]?.timing || 'Early';
+       return periods[qIndex]?.exactDate || 'Not Set';
     }
     if (task.frequency === '6 Monthly') {
        let diff = monthIndex - (task.startingMonth || 0);
        if (diff < 0) diff += 12;
        const hIndex = Math.floor(diff / 6);
-       return periods[hIndex]?.timing || 'Early';
+       return periods[hIndex]?.exactDate || 'Not Set';
     }
     if (task.frequency === 'Yearly' || task.frequency === 'Weekly') {
-       return periods[0]?.timing || 'Early';
+       return periods[0]?.exactDate || 'Not Set';
     }
-    return 'Early';
+    if (task.frequency === 'Custom Date') {
+       return periods[0]?.customDate || 'Not Set';
+    }
+    return 'Not Set';
   };
 
   return (
@@ -211,7 +214,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
               <div className="space-y-1 text-sm">
                 <p><span className="text-notion-warm-gray-500 font-medium">Task:</span> <span className="font-semibold text-notion-black">{activePopup.task.taskName} ({activePopup.task.taskCode})</span></p>
                 <p><span className="text-notion-warm-gray-500 font-medium">Period:</span> <span className="font-semibold text-notion-black">{activePopup.monthDisplay}</span></p>
-                <p><span className="text-notion-warm-gray-500 font-medium">Timing:</span> <span className="font-semibold text-notion-black">{getTimingForMonth(activePopup.task, activePopup.monthDate)}</span></p>
+                <p><span className="text-notion-warm-gray-500 font-medium">Exact Date:</span> <span className="font-semibold text-notion-black">{getExactDateForMonth(activePopup.task, activePopup.monthDate)}</span></p>
                 <p><span className="text-notion-warm-gray-500 font-medium">Current Status:</span> <span className="font-semibold text-notion-black">{activePopup.schedule.status}</span></p>
               </div>
               <div className="pt-2">

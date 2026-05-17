@@ -65,13 +65,6 @@ const Layout = ({
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
             )
         },
-        /*
-        {
-            id: 'logs', label: 'Audit Logs', icon: (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-            )
-        },
-        */
     ];
 
     const adminItems = [
@@ -82,7 +75,30 @@ const Layout = ({
         },
     ];
 
-    const activeNavItem = [...navItems, ...adminItems].find(item => item.id === activeTab) || navItems[0];
+    // Filter Navigation Items based on Role
+    const getFilteredNavItems = () => {
+        const role = userProfile.role?.toLowerCase() || 'user';
+        if (role === 'admin') return navItems;
+
+        if (role === 'supervisor' || role === 'manager') {
+            return navItems.filter(item => ['task-matrix', 'sites'].includes(item.id));
+        }
+
+        if (role === 'payslip_management') {
+            return navItems.filter(item => item.id !== 'task-matrix');
+        }
+
+        return navItems;
+    };
+
+    const filteredNavItems = getFilteredNavItems();
+
+    const filteredAdminItems = adminItems.filter(item => {
+        const role = userProfile.role?.toLowerCase() || 'user';
+        return role === 'admin';
+    });
+
+    const activeNavItem = [...filteredNavItems, ...filteredAdminItems].find(item => item.id === activeTab) || filteredNavItems[0] || navItems[0];
 
     return (
         <div className="flex h-screen bg-notion-warm-white font-sans text-notion-black overflow-hidden selection:bg-notion-blue/20">
@@ -118,7 +134,7 @@ const Layout = ({
                         <div className="text-[11px] font-bold text-notion-warm-gray-300 px-3 mb-2 mt-2 uppercase tracking-widest">
                             Overview
                         </div>
-                        {navItems.map((item) => (
+                        {filteredNavItems.map((item) => (
                             <button
                                 key={item.id}
                                 onClick={() => {
@@ -146,7 +162,7 @@ const Layout = ({
                                 <div className="text-[11px] font-bold text-notion-warm-gray-300 px-3 mb-2 mt-6 uppercase tracking-widest">
                                     Management
                                 </div>
-                                {adminItems.map((item) => (
+                                {filteredAdminItems.map((item) => (
                                     <button
                                         key={item.id}
                                         onClick={() => {

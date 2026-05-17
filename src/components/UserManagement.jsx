@@ -7,6 +7,7 @@ const UserManagement = () => {
         email: '',
         password: '',
         confirmPassword: '',
+        role: 'supervisor' // Default role
     });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -19,7 +20,6 @@ const UserManagement = () => {
     const loadUsers = async () => {
         setLoadingUsers(true);
         try {
-            // Explicitly select columns to prevent over-fetching of potentially sensitive future columns
             const { data, error } = await supabase.from('profiles').select('id, email, role, created_at').order('created_at', { ascending: false });
             if (error) throw error;
             setUsers(data || []);
@@ -40,6 +40,17 @@ const UserManagement = () => {
         setSuccess('');
     };
 
+    const handleRoleChange = async (userId, newRole) => {
+        try {
+            const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId);
+            if (error) throw error;
+            setSuccess(`Permissions updated successfully.`);
+            loadUsers();
+        } catch (err) {
+            setError('Failed to update permissions: ' + err.message);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -54,17 +65,48 @@ const UserManagement = () => {
 
         try {
             await registerUser(formData.email, formData.password);
-            setSuccess(`Entity "${formData.email}" initialized successfully.`);
+            
+            // Wait a bit for trigger to create the profile entry
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Update role for the newly created user
+            const { data: newUser } = await supabase.from('profiles').select('id').eq('email', formData.email).single();
+            if (newUser) {
+                await supabase.from('profiles').update({ role: formData.role }).eq('id', newUser.id);
+            }
+
+            setSuccess(`Entity "${formData.email}" initialized successfully as ${formData.role}.`);
             setFormData({
                 email: '',
                 password: '',
                 confirmPassword: '',
+                role: 'supervisor'
             });
-            setTimeout(loadUsers, 2000); // Wait for trigger to create profile
+            loadUsers();
         } catch (err) {
             setError(err.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const getRoleLabel = (role) => {
+        switch(role?.toLowerCase()) {
+            case 'admin': return 'System Admin';
+            case 'supervisor': return 'Supervisor';
+            case 'manager': return 'Manager';
+            case 'payslip_management': return 'Payslip Management';
+            default: return 'User';
+        }
+    };
+
+    const getRoleBadgeColor = (role) => {
+        switch(role?.toLowerCase()) {
+            case 'admin': return 'bg-notion-badge-blue-bg text-notion-blue';
+            case 'supervisor': return 'bg-notion-badge-green-bg text-emerald-700';
+            case 'manager': return 'bg-notion-badge-purple-bg text-purple-700';
+            case 'payslip_management': return 'bg-notion-badge-rose-bg text-rose-700';
+            default: return 'bg-zinc-100 text-zinc-600';
         }
     };
 
@@ -73,7 +115,7 @@ const UserManagement = () => {
             <div className="notion-card overflow-hidden shadow-notion-deep">
                 <div className="p-10 bg-notion-warm-white border-b whisper-border">
                     <h2 className="text-display-secondary text-notion-black tracking-notion-display">Initialize Administrative Access</h2>
-                    <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mt-1">Configure secondary credentials for system orchestration.</p>
+                    <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mt-1">Configure secondary credentials with role-specific permissions.</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-10 space-y-8">
@@ -88,7 +130,7 @@ const UserManagement = () => {
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                         <div className="md:col-span-2">
                             <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest pl-1 mb-3 block">Authorization Email</label>
                             <input
@@ -100,6 +142,21 @@ const UserManagement = () => {
                                 className="w-full px-5 py-4 bg-notion-warm-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black transition-all"
                                 placeholder="new_admin@example.com"
                             />
+                        </div>
+
+                        <div className="md:col-span-2">
+                            <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest pl-1 mb-3 block">Designated Role</label>
+                            <select
+                                name="role"
+                                value={formData.role}
+                                onChange={handleChange}
+                                className="w-full px-5 py-4 bg-notion-warm-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black transition-all"
+                            >
+                                <option value="admin">System Admin</option>
+                                <option value="supervisor">Supervisor</option>
+                                <option value="manager">Manager</option>
+                                <option value="payslip_management">Payslip Management</option>
+                            </select>
                         </div>
 
                         <div>
@@ -141,15 +198,11 @@ const UserManagement = () => {
                 </form>
             </div>
 
-            {/* List of Invited Users */}
             <div className="notion-card overflow-hidden shadow-notion-deep">
                 <div className="p-10 bg-notion-warm-white border-b whisper-border flex justify-between items-start">
                     <div>
                         <h2 className="text-display-secondary text-notion-black tracking-notion-display">Personnel Access Matrix</h2>
-                        <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mt-1">Audit active administrative credentials.</p>
-                    </div>
-                    <div className="bg-amber-50 text-amber-700 px-3 py-1 rounded-micro text-badge font-bold uppercase border border-amber-200">
-                        Admin resets moved to Supabase Dashboard
+                        <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mt-1">Audit and modify administrative credentials.</p>
                     </div>
                 </div>
                 
@@ -164,8 +217,8 @@ const UserManagement = () => {
                                 <thead>
                                     <tr className="bg-notion-warm-white text-notion-warm-gray-300 text-badge font-bold uppercase tracking-widest border-b whisper-border">
                                         <th className="p-6">Authorization Email</th>
-                                        <th className="p-6 text-center">Protocol Level</th>
-                                        <th className="p-6 text-right">Added</th>
+                                        <th className="p-6 text-center">Current Role</th>
+                                        <th className="p-6 text-right">Switch Access Level</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y whisper-border">
@@ -173,12 +226,21 @@ const UserManagement = () => {
                                         <tr key={user.id} className="hover:bg-zinc-50/30 transition-colors">
                                             <td className="p-6 font-bold text-notion-black tracking-tight">{user.email}</td>
                                             <td className="p-6 text-center">
-                                                <span className={`inline-flex items-center px-3 py-1 rounded-micro text-badge font-bold uppercase tracking-widest shadow-sm whisper-border ${user.role === 'admin' ? 'bg-notion-badge-blue-bg text-notion-blue' : 'bg-notion-badge-green-bg text-emerald-700'}`}>
-                                                    {user.role === 'admin' ? 'System Admin' : 'User'}
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-micro text-badge font-bold uppercase tracking-widest shadow-sm whisper-border ${getRoleBadgeColor(user.role)}`}>
+                                                    {getRoleLabel(user.role)}
                                                 </span>
                                             </td>
-                                            <td className="p-6 text-right text-notion-warm-gray-300 font-bold text-badge">
-                                                {new Date(user.created_at).toLocaleDateString()}
+                                            <td className="p-6 text-right">
+                                                <select 
+                                                    value={user.role || 'supervisor'}
+                                                    onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                                                    className="bg-white whisper-border text-badge font-bold rounded px-2 py-1 outline-none focus:border-notion-blue transition-all"
+                                                >
+                                                    <option value="admin">System Admin</option>
+                                                    <option value="supervisor">Supervisor</option>
+                                                    <option value="manager">Manager</option>
+                                                    <option value="payslip_management">Payslip Management</option>
+                                                </select>
                                             </td>
                                         </tr>
                                     ))}

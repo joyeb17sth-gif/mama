@@ -59,7 +59,6 @@ export const registerUser = async (email, password) => {
     if (error.message.toLowerCase().includes('password')) safeMessage = error.message; // Allow password complexity rules
     throw new Error(safeMessage);
   }
-  
   completeFirstRun();
   return true;
 };
@@ -94,6 +93,7 @@ export const loginUser = async (email, password) => {
   }
 
   resetLoginAttempts();
+
   completeFirstRun();
   return { success: true, user: data.user };
 };

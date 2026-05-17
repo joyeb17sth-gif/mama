@@ -107,21 +107,22 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
 
   const getInitialPeriods = (freq) => {
     if (freq === 'Quarterly') return [
-      { name: '1st Quarter', hours: 0, pricing: 0 },
-      { name: '2nd Quarter', hours: 0, pricing: 0 },
-      { name: '3rd Quarter', hours: 0, pricing: 0 },
-      { name: '4th Quarter', hours: 0, pricing: 0 }
+      { name: '1st Quarter', hours: 0, pricing: 0, exactDate: '' },
+      { name: '2nd Quarter', hours: 0, pricing: 0, exactDate: '' },
+      { name: '3rd Quarter', hours: 0, pricing: 0, exactDate: '' },
+      { name: '4th Quarter', hours: 0, pricing: 0, exactDate: '' }
     ];
     if (freq === 'Monthly') {
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return months.map(m => ({ name: m, hours: 0, pricing: 0 }));
+      return months.map(m => ({ name: m, hours: 0, pricing: 0, exactDate: '' }));
     }
     if (freq === '6 Monthly') return [
-      { name: '1st Half', hours: 0, pricing: 0 },
-      { name: '2nd Half', hours: 0, pricing: 0 }
+      { name: '1st Half', hours: 0, pricing: 0, exactDate: '' },
+      { name: '2nd Half', hours: 0, pricing: 0, exactDate: '' }
     ];
-    if (freq === 'Yearly') return [{ name: 'Annual', hours: 0, pricing: 0 }];
-    if (freq === 'Weekly') return [{ name: 'Weekly Average', hours: 0, pricing: 0 }];
+    if (freq === 'Yearly') return [{ name: 'Annual', hours: 0, pricing: 0, exactDate: '' }];
+    if (freq === 'Weekly') return [{ name: 'Weekly Average', hours: 0, pricing: 0, exactDate: '' }];
+    if (freq === 'Custom Date') return [{ name: 'Custom Schedule', hours: 0, pricing: 0, customDate: '' }];
     return [];
   };
 
@@ -147,7 +148,11 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
 
   const handleTaskPeriodChange = (index, field, value) => {
     const updatedPeriods = [...newTask.periods];
-    updatedPeriods[index][field] = parseFloat(value) || 0;
+    if (field === 'customDate' || field === 'exactDate') {
+      updatedPeriods[index][field] = value;
+    } else {
+      updatedPeriods[index][field] = parseFloat(value) || 0;
+    }
     setNewTask({ ...newTask, periods: updatedPeriods });
   };
 
@@ -173,7 +178,17 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
     onSave(validationResult.data, tasks);
   };
 
-  const generateSchedules = (frequency, startingMonth = 0) => {
+  const generateSchedules = (frequency, startingMonth = 0, periods = []) => {
+    if (frequency === 'Custom Date') {
+      const schedules = [];
+      const customDate = periods[0]?.customDate;
+      if (customDate) {
+        const targetPeriod = customDate.substring(0, 7); // yyyy-MM
+        schedules.push({ id: Date.now().toString() + Math.random().toString(36).substr(2, 9), targetPeriod, exactDate: customDate, status: 'Scheduled' });
+      }
+      return schedules;
+    }
+
     let interval = 1;
     if (frequency === 'Weekly') interval = 1;
     if (frequency === 'Monthly') interval = 1;
@@ -217,6 +232,8 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
       const existingTask = tasks.find(t => t.id === editingTaskId);
       const freqChanged = existingTask.frequency !== newTask.frequency;
       const monthChanged = (existingTask.startingMonth || 0) !== newTask.startingMonth;
+      const dateChanged = newTask.frequency === 'Custom Date' && existingTask.periodBudgets?.[0]?.customDate !== newTask.periods[0]?.customDate;
+      
       const updatedTask = {
         ...existingTask,
         taskCode: newTask.taskCode.toUpperCase().trim(),
@@ -227,8 +244,8 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
         budgetPrice: totalPrice,
         periodBudgets: newTask.periods,
         contractType: newTask.contractType,
-        schedules: (freqChanged || monthChanged)
-          ? generateSchedules(newTask.frequency, newTask.startingMonth)
+        schedules: (freqChanged || monthChanged || dateChanged)
+          ? generateSchedules(newTask.frequency, newTask.startingMonth, newTask.periods)
           : existingTask.schedules
       };
       setTasks(tasks.map(t => t.id === editingTaskId ? updatedTask : t));
@@ -245,7 +262,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
         budgetPrice: totalPrice,
         periodBudgets: newTask.periods,
         contractType: newTask.contractType,
-        schedules: generateSchedules(newTask.frequency, newTask.startingMonth)
+        schedules: generateSchedules(newTask.frequency, newTask.startingMonth, newTask.periods)
       };
       setTasks([...tasks, taskToAdd]);
     }
@@ -558,7 +575,8 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
                   { value: 'Monthly', label: 'Monthly' },
                   { value: 'Quarterly', label: 'Quarterly' },
                   { value: '6 Monthly', label: '6 Monthly' },
-                  { value: 'Yearly', label: 'Yearly' }
+                  { value: 'Yearly', label: 'Yearly' },
+                  { value: 'Custom Date', label: 'Custom Date' }
                 ]}
               />
             </div>
@@ -605,6 +623,27 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
               {newTask.periods.map((period, index) => (
                 <div key={index} className="p-3 bg-white whisper-border rounded-micro shadow-sm">
                   <h5 className="font-bold text-[11px] text-notion-black mb-2 border-b border-notion-warm-gray-200 pb-1">{period.name}</h5>
+                  {newTask.frequency === 'Custom Date' ? (
+                    <div className="mb-2">
+                      <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Target Date <span className="text-notion-blue">*</span></label>
+                      <input
+                        type="date"
+                        value={period.customDate || ''}
+                        onChange={(e) => handleTaskPeriodChange(index, 'customDate', e.target.value)}
+                        className="w-full px-2 py-1 bg-notion-warm-white whisper-border rounded text-[11px] font-bold outline-none focus:border-notion-blue"
+                      />
+                    </div>
+                  ) : (
+                    <div className="mb-2">
+                      <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Exact Date</label>
+                      <input
+                        type="date"
+                        value={period.exactDate || ''}
+                        onChange={(e) => handleTaskPeriodChange(index, 'exactDate', e.target.value)}
+                        className="w-full px-2 py-1 bg-notion-warm-white whisper-border rounded text-[11px] font-bold outline-none focus:border-notion-blue"
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <div>
                       <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Hours</label>
@@ -643,7 +682,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
           <button
             type="button"
             onClick={handleAddTask}
-            disabled={!newTask.taskCode.trim() || !newTask.taskName.trim()}
+            disabled={!newTask.taskCode.trim() || !newTask.taskName.trim() || (newTask.frequency === 'Custom Date' && (!newTask.periods[0] || !newTask.periods[0].customDate))}
             className="mt-8 w-full lg:w-auto px-10 py-3 bg-notion-blue text-white rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-notion-blue-active transition shadow-notion-deep disabled:opacity-20 hover:-translate-y-0.5 active:translate-y-0"
           >
             {editingTaskId ? 'Update Task' : '+ Register Task'}

@@ -7,6 +7,7 @@ const Login = ({ onLogin }) => {
   // Form State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -32,6 +33,7 @@ const Login = ({ onLogin }) => {
     setError('');
     setSuccessMsg('');
     setPassword('');
+    setConfirmPassword('');
   };
 
   const toggleMode = () => {
@@ -45,16 +47,22 @@ const Login = ({ onLogin }) => {
     setSuccessMsg('');
 
     // Check lockout first (only relevant for login, but good practice)
-    if (isAccountLocked()) {
+    if (isLoginMode && isAccountLocked()) {
       setLockoutSeconds(getLockoutRemainingSeconds());
       setError(`Too many failed attempts. Please wait ${getLockoutRemainingSeconds()} seconds.`);
+      return;
+    }
+
+    if (!isLoginMode && password !== confirmPassword) {
+      setError('Passwords do not match');
       return;
     }
 
     setLoading(true);
 
     try {
-      // LOGIN FLOW
+      if (isLoginMode) {
+        // LOGIN FLOW
         const result = await loginUser(email, password);
 
         if (result.success) {
@@ -69,7 +77,12 @@ const Login = ({ onLogin }) => {
           setError((result.error || 'Login failed') + attemptsMsg);
           setPassword('');
         }
-
+      } else {
+        // SIGNUP FLOW
+        await registerUser(email, password);
+        setSuccessMsg('Account created successfully! You can now login.');
+        setIsLoginMode(true);
+      }
     } catch (err) {
       setError(err.message || "An unexpected error occurred");
     } finally {
@@ -153,26 +166,56 @@ const Login = ({ onLogin }) => {
           </div>
 
           {/* Signup Extra Fields */}
-
+          {!isLoginMode && (
+            <div>
+              <label className="block text-p3 font-bold text-gray-400 mb-2">
+                Confirm Password
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={6}
+                disabled={loading}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0 outline-none transition font-medium disabled:bg-gray-100 disabled:cursor-not-allowed"
+                placeholder="Confirm password"
+              />
+            </div>
+          )}
 
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading || isLocked}
+            disabled={loading || (isLoginMode && isLocked)}
             className={`w-full text-white py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition font-bold uppercase tracking-wider text-sm mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700`}
           >
-            {loading ? 'Logging in...' : isLocked ? `Locked (${lockoutSeconds}s)` : 'Login'}
+            {loading ? (isLoginMode ? 'Logging in...' : 'Creating Account...') : 
+             (isLoginMode && isLocked) ? `Locked (${lockoutSeconds}s)` : 
+             (isLoginMode ? 'Login' : 'Create Account')}
           </button>
         </form>
 
         <div className="mt-6 flex flex-col gap-3 text-center">
           <button
-            onClick={() => onLogin('forgot')}
-            disabled={isLocked || loading}
+            type="button"
+            onClick={toggleMode}
+            disabled={loading}
             className="text-sm text-gray-500 hover:text-gray-700 hover:underline disabled:opacity-50"
           >
-            Forgot Password?
+            {isLoginMode ? "Don't have an account? Create one" : "Already have an account? Login"}
           </button>
+          {isLoginMode && (
+            <button
+              type="button"
+              onClick={() => onLogin('forgot')}
+              disabled={isLocked || loading}
+              className="text-sm text-gray-500 hover:text-gray-700 hover:underline disabled:opacity-50"
+            >
+              Forgot Password?
+            </button>
+          )}
         </div>
       </div>
     </div>

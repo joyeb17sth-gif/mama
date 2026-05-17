@@ -10,20 +10,20 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
 
   const getInitialPeriods = (freq) => {
     if (freq === 'Quarterly') return [
-      { name: '1st Quarter', hours: 0, pricing: 0, timing: 'Early' },
-      { name: '2nd Quarter', hours: 0, pricing: 0, timing: 'Early' },
-      { name: '3rd Quarter', hours: 0, pricing: 0, timing: 'Early' },
-      { name: '4th Quarter', hours: 0, pricing: 0, timing: 'Early' }
+      { name: '1st Quarter', hours: 0, pricing: 0, exactDate: '' },
+      { name: '2nd Quarter', hours: 0, pricing: 0, exactDate: '' },
+      { name: '3rd Quarter', hours: 0, pricing: 0, exactDate: '' },
+      { name: '4th Quarter', hours: 0, pricing: 0, exactDate: '' }
     ];
     if (freq === 'Monthly') {
-      return MONTHS.map(m => ({ name: m.substring(0, 3), hours: 0, pricing: 0, timing: 'Early' }));
+      return MONTHS.map(m => ({ name: m.substring(0, 3), hours: 0, pricing: 0, exactDate: '' }));
     }
     if (freq === '6 Monthly') return [
-      { name: '1st Half', hours: 0, pricing: 0, timing: 'Early' },
-      { name: '2nd Half', hours: 0, pricing: 0, timing: 'Early' }
+      { name: '1st Half', hours: 0, pricing: 0, exactDate: '' },
+      { name: '2nd Half', hours: 0, pricing: 0, exactDate: '' }
     ];
-    if (freq === 'Yearly') return [{ name: 'Annual', hours: 0, pricing: 0, timing: 'Early' }];
-    if (freq === 'Weekly') return [{ name: 'Weekly Average', hours: 0, pricing: 0, timing: 'Early' }];
+    if (freq === 'Yearly') return [{ name: 'Annual', hours: 0, pricing: 0, exactDate: '' }];
+    if (freq === 'Weekly') return [{ name: 'Weekly Average', hours: 0, pricing: 0, exactDate: '' }];
     return [];
   };
 
@@ -47,7 +47,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
 
   const handleTaskPeriodChange = (index, field, value) => {
     const updatedPeriods = [...newTask.periods];
-    if (field === 'timing') {
+    if (field === 'exactDate') {
       updatedPeriods[index][field] = value;
     } else {
       updatedPeriods[index][field] = parseFloat(value) || 0;
@@ -262,16 +262,13 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                     <h5 className="font-bold text-[11px] text-notion-black mb-2 border-b border-notion-warm-gray-200 pb-1">{period.name}</h5>
                     <div className="space-y-2">
                       <div>
-                        <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Timing</label>
-                        <select
-                          value={period.timing || 'Early'}
-                          onChange={(e) => handleTaskPeriodChange(index, 'timing', e.target.value)}
+                        <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Exact Date</label>
+                        <input
+                          type="date"
+                          value={period.exactDate || ''}
+                          onChange={(e) => handleTaskPeriodChange(index, 'exactDate', e.target.value)}
                           className="w-full px-2 py-1 bg-notion-warm-white whisper-border rounded text-[11px] font-bold outline-none focus:border-notion-blue"
-                        >
-                          <option value="Early">Early</option>
-                          <option value="Mid">Mid</option>
-                          <option value="End">End</option>
-                        </select>
+                        />
                       </div>
                       <div>
                         <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Hours</label>

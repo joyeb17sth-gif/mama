@@ -58,6 +58,24 @@ function App() {
   const [isStorageReady, setIsStorageReady] = useState(false);
   const [syncVersion, setSyncVersion] = useState(0);
   const [userProfileData, setUserProfileData] = useState({ name: 'Loading...', role: 'user' });
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const hasPermission = (tab) => {
+    const role = userProfileData.role?.toLowerCase() || 'user';
+    if (role === 'admin') return true;
+
+    if (role === 'supervisor' || role === 'manager') {
+      return ['task-matrix', 'sites'].includes(tab);
+    }
+
+    if (role === 'payslip_management') {
+      // Payslip management can access all but task matrix and user management
+      return tab !== 'task-matrix' && tab !== 'users';
+    }
+
+    // Default basic role
+    return ['dashboard', 'timesheets'].includes(tab);
+  };
 
   // Contractors
   const [contractors, setContractors] = useState([]);
@@ -167,10 +185,13 @@ function App() {
   useEffect(() => {
     if (!isStorageReady) return;
 
+    // Initial setup logic removed - admin accounts managed directly
+    /*
     if (isFirstRun()) {
       setShowInitialSetup(true);
       return;
     }
+    */
 
     let intervalId;
 
@@ -184,11 +205,29 @@ function App() {
         if (session && session.user) {
           const email = session.user.email;
           let role = 'user';
+          if (email === 'jungjoyeb@gmail.com' || email.includes('joyeb')) role = 'admin';
+          
           try {
-             const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-             if (profile) role = profile.role;
-          } catch(e) {}
+             const { data: profile, error: profileError } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+             
+             if (profileError && profileError.code === 'PGRST116') {
+               // Profile doesn't exist, create it
+               await supabase.from('profiles').insert({
+                 id: session.user.id,
+                 email: email,
+                 role: (email === 'jungjoyeb@gmail.com' || email.includes('joyeb')) ? 'admin' : 'user'
+               });
+             } else if (profile && profile.role) {
+               role = profile.role;
+             }
+
+             // If this is the specific admin email, ensure it stays admin in state
+             if (email === 'jungjoyeb@gmail.com') role = 'admin';
+          } catch(e) {
+            if (import.meta.env.DEV) console.error('Profile check failed:', e);
+          }
           setUserProfileData({ name: email, role });
+          setIsAdmin(role === 'admin' || email.includes('joyeb'));
         }
 
         setContractors(getContractors());
@@ -452,7 +491,8 @@ function App() {
     );
   }
 
-  // Show initial setup if first run
+  // Show initial setup if first run - DISABLED
+  /*
   if (showInitialSetup) {
     return (
       <InitialSetup
@@ -464,6 +504,7 @@ function App() {
       />
     );
   }
+  */
 
   // Show login if not authenticated
   if (!authenticated) {
@@ -490,8 +531,8 @@ function App() {
         onLogout={handleLogout}
         isSyncing={isSyncing}
         syncData={syncData}
-        userProfile={{ name: userProfileData.name, role: userProfileData.role === 'admin' ? 'System Admin' : 'User' }}
-        isAdmin={userProfileData.role === 'admin' || userProfileData.name.includes('joyeb')}
+        userProfile={{ name: userProfileData.name, role: userProfileData.role }}
+        isAdmin={isAdmin}
       >
         <div className="print:hidden">
           {showToast && (
@@ -506,7 +547,7 @@ function App() {
         {/* Content Area */}
 
         {/* Tab Content */}
-        {activeTab === 'dashboard' && (
+        {activeTab === 'dashboard' && hasPermission('dashboard') && (
           <div className="space-y-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-display-secondary text-notion-black tracking-notion-display">System Overview</h2>
@@ -515,7 +556,7 @@ function App() {
           </div>
         )}
 
-        {activeTab === 'contractors' && (
+        {activeTab === 'contractors' && hasPermission('contractors') && (
           <div className="space-y-6">
             {!showContractorForm ? (
               <div>
@@ -568,7 +609,7 @@ function App() {
         )}
 
         {/* Sites Tab */}
-        {activeTab === 'sites' && (
+        {activeTab === 'sites' && hasPermission('sites') && (
           <div className="space-y-6">
             {!showSiteForm ? (
               <div>
@@ -626,7 +667,7 @@ function App() {
         )}
 
         {/* Allocation Tab */}
-        {activeTab === 'allocation' && (
+        {activeTab === 'allocation' && hasPermission('allocation') && (
           <div className="space-y-6">
             <h2 className="text-display-secondary text-notion-black tracking-notion-display mb-4">Contractor Allocation</h2>
             <SiteAllocation key={`${sites.length}-${syncVersion}`} />
@@ -634,7 +675,7 @@ function App() {
         )}
 
         {/* Task Matrix Tab */}
-        {activeTab === 'task-matrix' && (
+        {activeTab === 'task-matrix' && hasPermission('task-matrix') && (
           <div className="space-y-6">
             <h2 className="text-display-secondary text-notion-black tracking-notion-display mb-4">Contractor Periodicals & Budgets</h2>
             <TaskBudgetMatrix sites={sites} periodicalTasks={periodicalTasks} />
@@ -667,7 +708,7 @@ function App() {
 
 
         {/* Timesheets Tab */}
-        {activeTab === 'timesheets' && (
+        {activeTab === 'timesheets' && hasPermission('timesheets') && (
           <div className="space-y-6">
 
             {/* Create/Edit Timesheet Section */}
@@ -898,14 +939,14 @@ function App() {
         )}
 
         {/* Training Pay Tab */}
-        {activeTab === 'training' && (
+        {activeTab === 'training' && hasPermission('training') && (
           <div className="mt-6">
             <TrainingEscrowManager syncVersion={syncVersion} />
           </div>
         )}
 
         {/* Payment Summary Tab */}
-        {activeTab === 'payments' && (
+        {activeTab === 'payments' && hasPermission('payments') && (
           <div className="space-y-6">
             <h2 className="text-display-secondary text-notion-black tracking-notion-display mb-4">Payment Summary</h2>
             <PaymentSummary syncVersion={syncVersion} />
@@ -913,7 +954,7 @@ function App() {
         )}
 
         {/* Public Holidays Tab */}
-        {activeTab === 'holidays' && (
+        {activeTab === 'holidays' && hasPermission('holidays') && (
           <div className="mt-6">
             <PublicHolidayManager syncVersion={syncVersion} />
           </div>
@@ -929,7 +970,7 @@ function App() {
         )} */}
 
         {/* Global Rates Settings Tab */}
-        {activeTab === 'settings' && (
+        {activeTab === 'settings' && hasPermission('settings') && (
           <div className="space-y-6">
             <h2 className="text-display-secondary text-notion-black tracking-notion-display mb-4">Global Rates Configuration</h2>
             <GlobalRatesConfig syncVersion={syncVersion} />
@@ -937,7 +978,7 @@ function App() {
         )}
 
         {/* User Management Tab (Main Admin Only) */}
-        {activeTab === 'users' && (
+        {activeTab === 'users' && hasPermission('users') && (
           <div className="mt-6">
             <UserManagement />
           </div>
