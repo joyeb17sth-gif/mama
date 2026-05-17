@@ -255,11 +255,10 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
               <div className="pt-2">
                 <label className="block text-sm font-medium text-notion-warm-gray-500 mb-2">Scope of Work</label>
                 <textarea
-                  value={popupScopeOfWork}
-                  onChange={(e) => setPopupScopeOfWork(e.target.value)}
-                  placeholder="Describe the scope of work for this period..."
+                  value={popupScopeOfWork || 'No scope of work defined.'}
+                  readOnly
                   rows={3}
-                  className="w-full px-3 py-2 border border-notion-warm-gray-200 rounded-lg text-sm outline-none focus:border-notion-blue transition resize-none"
+                  className="w-full px-3 py-2 bg-zinc-50 border border-notion-warm-gray-200 rounded-lg text-sm outline-none text-zinc-500 cursor-default resize-none"
                 />
               </div>
               <div className="pt-2">
@@ -287,21 +286,12 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-notion-warm-gray-200 bg-notion-warm-white flex justify-end gap-2">
+            <div className="px-6 py-4 border-t border-notion-warm-gray-200 bg-notion-warm-white flex justify-end">
               <button
                 onClick={() => setActivePopup(null)}
-                className="px-4 py-2 border border-notion-warm-gray-200 rounded-lg text-sm font-medium text-notion-black hover:bg-notion-warm-white transition"
+                className="px-4 py-2 bg-notion-black hover:bg-zinc-800 text-white rounded-lg text-sm font-medium transition shadow-sm"
               >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  onToggleStatus(activePopup.task, activePopup.schedule, activePopup.schedule.status, popupScopeOfWork);
-                  setActivePopup(null);
-                }}
-                className="px-4 py-2 bg-notion-blue text-white rounded-lg text-sm font-medium hover:bg-notion-blue/90 transition shadow-sm"
-              >
-                Save
+                Close
               </button>
             </div>
           </div>
