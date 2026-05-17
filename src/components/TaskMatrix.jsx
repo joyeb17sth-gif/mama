@@ -82,6 +82,33 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
     return 'Not Set';
   };
 
+  const getDefaultScopeOfWorkForMonth = (task, monthDate) => {
+    if (!monthDate) return '';
+    const monthIndex = monthDate.getMonth();
+    const periods = task.periodBudgets || [];
+    if (!periods.length) return '';
+    
+    if (task.frequency === 'Monthly') {
+       return periods[monthIndex]?.scopeOfWork || '';
+    }
+    if (task.frequency === 'Quarterly') {
+       let diff = monthIndex - (task.startingMonth || 0);
+       if (diff < 0) diff += 12;
+       const qIndex = Math.floor(diff / 3);
+       return periods[qIndex]?.scopeOfWork || '';
+    }
+    if (task.frequency === '6 Monthly') {
+       let diff = monthIndex - (task.startingMonth || 0);
+       if (diff < 0) diff += 12;
+       const hIndex = Math.floor(diff / 6);
+       return periods[hIndex]?.scopeOfWork || '';
+    }
+    if (task.frequency === 'Yearly' || task.frequency === 'Weekly' || task.frequency === 'Custom Date') {
+       return periods[0]?.scopeOfWork || '';
+    }
+    return '';
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-notion-card border border-notion-warm-gray-200">
       {/* Header Controls */}
@@ -179,7 +206,8 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                           key={month.toISOString()} 
                           onClick={() => {
                             if (schedule) {
-                              setPopupScopeOfWork(schedule.scopeOfWork || '');
+                              const defaultScope = getDefaultScopeOfWorkForMonth(task, month);
+                              setPopupScopeOfWork(schedule.scopeOfWork || defaultScope);
                               setActivePopup({ task, schedule, monthDisplay: format(month, 'MMM yyyy'), monthDate: month });
                             }
                           }}
@@ -258,6 +286,23 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                   ))}
                 </div>
               </div>
+            </div>
+            <div className="px-6 py-4 border-t border-notion-warm-gray-200 bg-notion-warm-white flex justify-end gap-2">
+              <button
+                onClick={() => setActivePopup(null)}
+                className="px-4 py-2 border border-notion-warm-gray-200 rounded-lg text-sm font-medium text-notion-black hover:bg-notion-warm-white transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  onToggleStatus(activePopup.task, activePopup.schedule, activePopup.schedule.status, popupScopeOfWork);
+                  setActivePopup(null);
+                }}
+                className="px-4 py-2 bg-notion-blue text-white rounded-lg text-sm font-medium hover:bg-notion-blue/90 transition shadow-sm"
+              >
+                Save
+              </button>
             </div>
           </div>
         </div>
