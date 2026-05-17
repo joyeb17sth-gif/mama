@@ -49,7 +49,7 @@ BEGIN
         WHERE schemaname = 'public' AND tablename IN (
             'contractors', 'sites', 'timesheets', 'pay_rates', 
             'training_releases', 'audit_logs', 'payment_summaries', 
-            'public_holidays', 'global_rates'
+            'public_holidays', 'global_rates', 'periodical_tasks'
         )
     LOOP
         EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;', t_name);

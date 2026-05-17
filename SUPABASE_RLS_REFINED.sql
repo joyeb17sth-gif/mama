@@ -15,7 +15,9 @@ DECLARE
         'audit_logs', 
         'payment_summaries', 
         'app_credentials',
-        'public_holidays'
+        'public_holidays',
+        'global_rates',
+        'periodical_tasks'
     ];
     t text;
 BEGIN
