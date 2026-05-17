@@ -14,7 +14,13 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
     const loadProfiles = async () => {
       try {
         const { data } = await supabase.from('profiles').select('id, email, role');
-        if (data) setProfileUsers(data);
+        if (data) {
+          const filtered = data.filter(u => {
+            const role = u.role?.toLowerCase();
+            return role === 'manager' || role === 'supervisor';
+          });
+          setProfileUsers(filtered);
+        }
       } catch (e) { /* ignore */ }
     };
     loadProfiles();
