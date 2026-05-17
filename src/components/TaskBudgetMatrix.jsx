@@ -15,6 +15,7 @@ const TaskBudgetMatrix = ({ sites, periodicalTasks }) => {
     if (filterFreq === '6 Monthly') return ['1st Half', '2nd Half'];
     if (filterFreq === 'Yearly') return ['Annual'];
     if (filterFreq === 'Weekly') return ['Weekly Average'];
+    if (filterFreq === 'Custom Date') return ['Custom Schedule'];
     return [];
   }, [filterFreq]);
 
@@ -46,7 +47,7 @@ const TaskBudgetMatrix = ({ sites, periodicalTasks }) => {
       {/* Header Controls */}
       <div className="p-4 border-b border-notion-warm-gray-200 flex justify-between items-center bg-[#a8d08d] rounded-t-xl">
         <h3 className="font-bold text-notion-black text-lg">Task Budget Matrix</h3>
-        <div className="w-56">
+        <div className="w-64">
           <Dropdown
             value={filterFreq}
             onChange={(val) => setFilterFreq(val)}
@@ -55,7 +56,8 @@ const TaskBudgetMatrix = ({ sites, periodicalTasks }) => {
               { value: 'Monthly', label: 'Monthly Breakdown' },
               { value: 'Quarterly', label: 'Quarterly Breakdown' },
               { value: '6 Monthly', label: '6 Monthly Breakdown' },
-              { value: 'Yearly', label: 'Yearly Breakdown' }
+              { value: 'Yearly', label: 'Yearly Breakdown' },
+              { value: 'Custom Date', label: 'Custom Date Breakdown' }
             ]}
           />
         </div>
