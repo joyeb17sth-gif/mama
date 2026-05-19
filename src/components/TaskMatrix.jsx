@@ -6,6 +6,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [activePopup, setActivePopup] = useState(null); // { task, schedule, monthDisplay }
   const [popupScopeOfWork, setPopupScopeOfWork] = useState('');
+  const [popupStatus, setPopupStatus] = useState('');
 
   // Generate 12 months for the selected year
   const months = useMemo(() => {
@@ -112,15 +113,15 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
   return (
     <div className="bg-white rounded-xl shadow-notion-card border border-notion-warm-gray-200">
       {/* Header Controls */}
-      <div className="p-4 border-b border-notion-warm-gray-200 flex justify-between items-center bg-notion-warm-white rounded-t-xl">
-        <h3 className="font-bold text-notion-black text-lg">Periodical Task List</h3>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-xs">
+      <div className="p-4 border-b border-notion-warm-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-notion-warm-white rounded-t-xl">
+        <h3 className="font-bold text-notion-black text-base md:text-lg">Periodical Task List</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
             <div className="flex items-center gap-1"><div className="w-3 h-3 bg-[#00A2E8]"></div> Scheduled</div>
             <div className="flex items-center gap-1"><div className="w-3 h-3 bg-[#156082]"></div> Completed</div>
             <div className="flex items-center gap-1"><div className="w-3 h-3 bg-gray-400"></div> Completed, Not Claimed</div>
           </div>
-          <div className="w-32">
+          <div className="w-full sm:w-32">
             <Dropdown
               value={selectedYear}
               onChange={(val) => setSelectedYear(parseInt(val))}
@@ -135,9 +136,9 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
 
       {/* Matrix Table */}
       <div className="overflow-x-auto w-full custom-scrollbar">
-        <table className="w-full text-sm text-left whitespace-nowrap min-w-max border-collapse">
+        <table className="w-full text-xs md:text-sm text-left whitespace-nowrap min-w-max border-collapse">
           <thead>
-            <tr className="bg-notion-warm-white border-b border-notion-warm-gray-200 text-xs text-notion-warm-gray-500 font-semibold tracking-wider">
+            <tr className="bg-notion-warm-white border-b border-notion-warm-gray-200 text-[10px] md:text-xs text-notion-warm-gray-500 font-semibold tracking-wider">
               <th className="px-3 py-2 border-r border-notion-warm-gray-200 w-16">#</th>
               <th className="px-3 py-2 border-r border-notion-warm-gray-200 w-64">Location / Task</th>
               <th className="px-3 py-2 border-r border-notion-warm-gray-200">Frequency</th>
@@ -162,7 +163,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
             {Object.values(groupedTasks).map(({ site, tasks }) => (
               <React.Fragment key={site?.id || 'unknown'}>
                 {/* Site Header Row */}
-                <tr className="bg-[#a8d08d] text-notion-black border-b border-notion-warm-gray-200">
+                <tr className="bg-[#a8d08d] text-notion-black border-b border-notion-warm-gray-200 text-xs md:text-sm">
                   <td className="px-3 py-1 font-bold border-r border-notion-warm-gray-200"></td>
                   <td colSpan={3 + months.length} className="px-3 py-1 font-bold">
                     {site?.siteName || 'Unknown Site'}
@@ -182,16 +183,16 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                 {/* Task Rows */}
                 {tasks.map(task => (
                   <tr key={task.id} className="border-b border-notion-warm-gray-200 hover:bg-notion-warm-white transition-colors">
-                    <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 font-mono text-xs text-notion-warm-gray-500">
+                    <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 font-mono text-[10px] md:text-xs text-notion-warm-gray-500">
                       {task.taskCode}
                     </td>
                     <td className="px-3 py-1.5 border-r border-notion-warm-gray-200">
                       {task.taskName}
                     </td>
-                    <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-xs">
+                    <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-[10px] md:text-xs">
                       {task.frequency}
                     </td>
-                    <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-xs">
+                    <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-[10px] md:text-xs">
                       {task.contractType}
                     </td>
                     <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-center font-semibold bg-[#ffc000] text-amber-900 border-b border-white">
@@ -208,6 +209,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                             if (schedule) {
                               const defaultScope = getDefaultScopeOfWorkForMonth(task, month);
                               setPopupScopeOfWork(schedule.scopeOfWork || defaultScope);
+                              setPopupStatus(schedule.status);
                               setActivePopup({ task, schedule, monthDisplay: format(month, 'MMM yyyy'), monthDate: month });
                             }
                           }}
@@ -255,10 +257,11 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
               <div className="pt-2">
                 <label className="block text-sm font-medium text-notion-warm-gray-500 mb-2">Scope of Work</label>
                 <textarea
-                  value={popupScopeOfWork || 'No scope of work defined.'}
-                  readOnly
+                  value={popupScopeOfWork || ''}
+                  onChange={(e) => setPopupScopeOfWork(e.target.value)}
+                  placeholder="Describe scope of work..."
                   rows={3}
-                  className="w-full px-3 py-2 bg-zinc-50 border border-notion-warm-gray-200 rounded-lg text-sm outline-none text-zinc-500 cursor-default resize-none"
+                  className="w-full px-3 py-2 bg-white border border-notion-warm-gray-200 rounded-lg text-sm focus:border-notion-blue focus:ring-1 focus:ring-notion-blue outline-none text-notion-black transition-all"
                 />
               </div>
               <div className="pt-2">
@@ -267,12 +270,10 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                   {['Scheduled', 'Completed', 'Completed Not Claimed'].map(status => (
                     <button
                       key={status}
-                      onClick={() => {
-                        onToggleStatus(activePopup.task, activePopup.schedule, status, popupScopeOfWork);
-                        setActivePopup(null);
-                      }}
+                      type="button"
+                      onClick={() => setPopupStatus(status)}
                       className={`px-4 py-2 text-left rounded-md text-sm transition-all border ${
-                        activePopup.schedule.status === status 
+                        popupStatus === status 
                           ? 'border-notion-blue bg-blue-50 text-notion-blue font-semibold shadow-sm'
                           : 'border-notion-warm-gray-200 hover:bg-notion-warm-white hover:border-notion-warm-gray-300 text-notion-black'
                       }`}
@@ -286,12 +287,23 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-notion-warm-gray-200 bg-notion-warm-white flex justify-end">
+            <div className="px-6 py-4 border-t border-notion-warm-gray-200 bg-notion-warm-white flex justify-end gap-3">
               <button
+                type="button"
                 onClick={() => setActivePopup(null)}
-                className="px-4 py-2 bg-notion-black hover:bg-zinc-800 text-white rounded-lg text-sm font-medium transition shadow-sm"
+                className="px-4 py-2 bg-white whisper-border text-notion-warm-gray-500 hover:bg-notion-warm-white rounded-lg text-sm font-medium transition shadow-sm"
               >
-                Close
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onToggleStatus(activePopup.task, activePopup.schedule, popupStatus, popupScopeOfWork);
+                  setActivePopup(null);
+                }}
+                className="px-4 py-2 bg-notion-blue hover:bg-notion-blue-active text-white rounded-lg text-sm font-medium transition shadow-sm"
+              >
+                Save Changes
               </button>
             </div>
           </div>

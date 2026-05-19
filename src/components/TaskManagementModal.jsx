@@ -187,10 +187,10 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
   const showStartingMonth = ['Quarterly', '6 Monthly', 'Yearly'].includes(newTask.frequency);
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-start justify-center overflow-y-auto py-8">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl mx-4 animate-fade-in-up">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-start sm:items-center justify-center overflow-y-auto sm:py-8">
+      <div className="bg-white w-full h-full sm:h-auto sm:max-w-5xl sm:rounded-xl shadow-2xl animate-fade-in-up flex flex-col">
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-notion-warm-gray-200 bg-notion-warm-white rounded-t-xl">
+        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-notion-warm-gray-200 bg-notion-warm-white sm:rounded-t-xl shrink-0">
           <div>
             <h2 className="text-lg font-bold text-notion-black">Manage Periodical Tasks</h2>
             <p className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mt-1">{site?.siteName}</p>
@@ -204,13 +204,13 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+        <div className="p-4 sm:p-6 space-y-6 flex-1 overflow-y-auto sm:max-h-[75vh] custom-scrollbar">
           {/* Add/Edit Task Form */}
-          <div className="bg-notion-warm-white/50 p-6 rounded-comfortable whisper-border shadow-sm">
+          <div className="bg-notion-warm-white/50 p-4 sm:p-6 rounded-comfortable whisper-border shadow-sm">
             <h3 className="text-badge font-bold text-notion-black uppercase tracking-widest mb-4">
               {editingTaskId ? '✏️ Editing Task' : '➕ New Task'}
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end mb-4">
               <div>
                 <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Task Code</label>
                 <input
@@ -291,7 +291,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
             {/* Period Budget Breakdown */}
             <div className="border-t border-notion-warm-gray-200 pt-4 mt-4">
               <h4 className="text-badge font-bold text-notion-blue uppercase tracking-widest mb-3">Period Budget Breakdown</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 {newTask.periods.map((period, index) => (
                   <div key={index} className="p-3 bg-white whisper-border rounded-micro shadow-sm">
                     <h5 className="font-bold text-[11px] text-notion-black mb-2 border-b border-notion-warm-gray-200 pb-1">{period.name}</h5>
@@ -344,7 +344,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                   <span className="font-bold text-notion-black">{calculateTaskTotals(newTask.periods).totalHours.toFixed(2)} hrs</span>
                 </div>
                 <div className="text-sm">
-                  <span className="font-bold text-notion-warm-gray-500 uppercase tracking-widest text-[10px] block">Total Price</span>
+                  <span className="font-bold text-notion-black-500 uppercase tracking-widest text-[10px] block">Total Price</span>
                   <span className="font-bold text-notion-black">${calculateTaskTotals(newTask.periods).totalPrice.toFixed(2)}</span>
                 </div>
               </div>
@@ -377,58 +377,130 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
             </div>
           </div>
 
-          {/* Task List */}
+          {/* Task List Section */}
           <div className="space-y-3">
+            {/* Desktop Task List */}
             {tasks.length > 0 && (
-              <div className="grid grid-cols-7 gap-4 px-4 py-2 text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest">
-                <div className="col-span-1">Code</div>
-                <div className="col-span-2">Task Name</div>
-                <div className="col-span-1">Frequency</div>
-                <div className="col-span-1">Starts</div>
-                <div className="col-span-1">Budget</div>
-                <div className="col-span-1 text-right">Actions</div>
+              <div className="hidden md:block space-y-3">
+                <div className="grid grid-cols-7 gap-4 px-4 py-2 text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest">
+                  <div className="col-span-1">Code</div>
+                  <div className="col-span-2">Task Name</div>
+                  <div className="col-span-1">Frequency</div>
+                  <div className="col-span-1">Starts</div>
+                  <div className="col-span-1">Budget</div>
+                  <div className="col-span-1 text-right">Actions</div>
+                </div>
+                {tasks.map(task => (
+                  <div key={task.id} className={`grid grid-cols-7 gap-4 items-center p-4 whisper-border rounded-comfortable hover:shadow-notion-card transition-all group ${editingTaskId === task.id ? 'bg-notion-badge-blue-bg border-notion-blue' : 'bg-notion-warm-white/30'}`}>
+                    <div className="col-span-1">
+                      <div className="text-body-semibold text-notion-black uppercase tracking-widest truncate text-sm">{task.taskCode}</div>
+                    </div>
+                    <div className="col-span-2">
+                      <div className="text-body-semibold text-notion-black text-sm">{task.taskName}</div>
+                      <div className="text-[10px] text-notion-warm-gray-300 uppercase tracking-widest mt-0.5">{task.contractType}</div>
+                    </div>
+                    <div className="col-span-1">
+                      <div className="text-badge font-bold text-notion-warm-gray-500 uppercase tracking-widest">{task.frequency}</div>
+                    </div>
+                    <div className="col-span-1">
+                      <div className="text-badge font-bold text-notion-warm-gray-500">{MONTHS[task.startingMonth || 0]?.substring(0, 3)}</div>
+                    </div>
+                    <div className="col-span-1">
+                      <div className="text-center font-bold text-amber-900 tabular-nums bg-amber-100 whisper-border px-2 py-1 rounded-micro shadow-sm inline-block whitespace-nowrap text-xs">
+                        {task.budgetHours?.toFixed(1)}h <span className="text-notion-blue ml-1">${task.budgetPrice?.toFixed(0)}</span>
+                      </div>
+                    </div>
+                    <div className="col-span-1 text-right flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleEditTask(task.id)}
+                        className="p-2 text-notion-blue hover:text-notion-blue-active hover:bg-notion-badge-blue-bg rounded-micro transition-all shadow-sm bg-white whisper-border"
+                        title="Modify Task"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeTask(task.id)}
+                        className="p-2 text-notion-warm-gray-100 hover:text-rose-600 hover:bg-notion-badge-rose-bg rounded-micro transition-all shadow-sm bg-white whisper-border"
+                        title="Delete Task"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
-            {tasks.map(task => (
-              <div key={task.id} className={`grid grid-cols-7 gap-4 items-center p-4 whisper-border rounded-comfortable hover:shadow-notion-card transition-all group ${editingTaskId === task.id ? 'bg-notion-badge-blue-bg border-notion-blue' : 'bg-notion-warm-white/30'}`}>
-                <div className="col-span-1">
-                  <div className="text-body-semibold text-notion-black uppercase tracking-widest truncate text-sm">{task.taskCode}</div>
-                </div>
-                <div className="col-span-2">
-                  <div className="text-body-semibold text-notion-black text-sm">{task.taskName}</div>
-                  <div className="text-[10px] text-notion-warm-gray-300 uppercase tracking-widest mt-0.5">{task.contractType}</div>
-                </div>
-                <div className="col-span-1">
-                  <div className="text-badge font-bold text-notion-warm-gray-500 uppercase tracking-widest">{task.frequency}</div>
-                </div>
-                <div className="col-span-1">
-                  <div className="text-badge font-bold text-notion-warm-gray-500">{MONTHS[task.startingMonth || 0]?.substring(0, 3)}</div>
-                </div>
-                <div className="col-span-1">
-                  <div className="text-center font-bold text-amber-900 tabular-nums bg-amber-100 whisper-border px-2 py-1 rounded-micro shadow-sm inline-block whitespace-nowrap text-xs">
-                    {task.budgetHours?.toFixed(1)}h <span className="text-notion-blue ml-1">${task.budgetPrice?.toFixed(0)}</span>
+            
+            {/* Mobile Task List */}
+            {tasks.length > 0 && (
+              <div className="block md:hidden space-y-3">
+                {tasks.map(task => (
+                  <div 
+                    key={task.id} 
+                    className={`p-4 whisper-border rounded-comfortable hover:shadow-notion-card transition-all ${
+                      editingTaskId === task.id ? 'bg-notion-badge-blue-bg border-notion-blue' : 'bg-notion-warm-white/30'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <span className="px-2 py-0.5 bg-white whisper-border rounded text-[10px] font-bold text-notion-black uppercase tracking-widest mr-2">
+                          {task.taskCode}
+                        </span>
+                        <span className="font-bold text-notion-black text-sm">{task.taskName}</span>
+                      </div>
+                      <span className="text-[10px] text-notion-warm-gray-300 font-bold uppercase tracking-widest">
+                        {task.contractType}
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-xs border-t border-b border-notion-warm-gray-100/50 py-2 my-2">
+                      <div>
+                        <span className="text-[10px] font-semibold text-notion-warm-gray-400 block uppercase tracking-wider">Frequency</span>
+                        <span className="font-semibold text-notion-warm-gray-600">{task.frequency}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-semibold text-notion-warm-gray-400 block uppercase tracking-wider">Starts</span>
+                        <span className="font-semibold text-notion-warm-gray-600">{MONTHS[task.startingMonth || 0]}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center mt-2 pt-1">
+                      <div>
+                        <span className="text-[10px] font-semibold text-notion-warm-gray-400 block uppercase tracking-wider">Budget Allocation</span>
+                        <span className="font-bold text-amber-950 text-xs bg-amber-100 px-2 py-0.5 rounded border border-amber-200/50">
+                          {task.budgetHours?.toFixed(1)}h <span className="text-notion-blue ml-1">${task.budgetPrice?.toFixed(0)}</span>
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEditTask(task.id)}
+                          className="p-2 text-notion-blue hover:bg-notion-badge-blue-bg rounded-micro transition-all shadow-sm bg-white whisper-border"
+                          title="Modify Task"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeTask(task.id)}
+                          className="p-2 text-notion-warm-gray-100 hover:text-rose-600 hover:bg-notion-badge-rose-bg rounded-micro transition-all shadow-sm bg-white whisper-border"
+                          title="Delete Task"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="col-span-1 text-right flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleEditTask(task.id)}
-                    className="p-2 text-notion-blue hover:text-notion-blue-active hover:bg-notion-badge-blue-bg rounded-micro transition-all shadow-sm bg-white whisper-border"
-                    title="Modify Task"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeTask(task.id)}
-                    className="p-2 text-notion-warm-gray-100 hover:text-rose-600 hover:bg-notion-badge-rose-bg rounded-micro transition-all shadow-sm bg-white whisper-border"
-                    title="Delete Task"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  </button>
-                </div>
+                ))}
               </div>
-            ))}
+            )}
+
             {tasks.length === 0 && (
               <div className="text-center py-12 whisper-border border-dashed rounded-comfortable bg-notion-warm-white/10">
                 <div className="mb-3 text-3xl opacity-10">📋</div>
@@ -439,7 +511,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end items-center gap-4 p-6 border-t border-notion-warm-gray-200 bg-notion-warm-white rounded-b-xl">
+        <div className="flex justify-end items-center gap-3 p-4 sm:p-6 border-t border-notion-warm-gray-200 bg-notion-warm-white sm:rounded-b-xl shrink-0 flex-wrap sm:flex-nowrap">
           <button
             type="button"
             onClick={onClose}

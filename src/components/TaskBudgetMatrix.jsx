@@ -45,9 +45,9 @@ const TaskBudgetMatrix = ({ sites, periodicalTasks }) => {
   return (
     <div className="bg-white rounded-xl shadow-notion-card border border-notion-warm-gray-200 mt-8">
       {/* Header Controls */}
-      <div className="p-4 border-b border-notion-warm-gray-200 flex justify-between items-center bg-[#a8d08d] rounded-t-xl">
-        <h3 className="font-bold text-notion-black text-lg">Task Budget Matrix</h3>
-        <div className="w-64">
+      <div className="p-4 border-b border-notion-warm-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#a8d08d] rounded-t-xl">
+        <h3 className="font-bold text-notion-black text-base md:text-lg">Task Budget Matrix</h3>
+        <div className="w-full sm:w-64">
           <Dropdown
             value={filterFreq}
             onChange={(val) => setFilterFreq(val)}
@@ -65,7 +65,7 @@ const TaskBudgetMatrix = ({ sites, periodicalTasks }) => {
 
       {/* Matrix Table */}
       <div className="overflow-x-auto w-full custom-scrollbar">
-        <table className="w-full text-sm text-left whitespace-nowrap min-w-max border-collapse">
+        <table className="w-full text-xs md:text-sm text-left whitespace-nowrap min-w-max border-collapse">
           <thead>
             <tr className="bg-[#9bc2e6] border-b border-notion-warm-gray-300 text-notion-black font-bold text-center">
               <th rowSpan={2} className="px-3 py-2 border-r border-notion-warm-gray-300 text-left w-48 bg-[#a8d08d]">Location</th>
@@ -78,7 +78,7 @@ const TaskBudgetMatrix = ({ sites, periodicalTasks }) => {
               <th rowSpan={2} className="px-3 py-2 border-r border-notion-warm-gray-300 w-24">Total Hours Per Annum</th>
               <th rowSpan={2} className="px-3 py-2 border-r border-notion-warm-gray-300 w-32">Total Price Per Annum</th>
             </tr>
-            <tr className="bg-[#a8d08d] border-b border-notion-warm-gray-300 text-notion-black font-bold text-center text-xs">
+            <tr className="bg-[#a8d08d] border-b border-notion-warm-gray-300 text-notion-black font-bold text-center text-[10px] md:text-xs">
               {periodNames.map(name => (
                 <React.Fragment key={`${name}-sub`}>
                   <th className="px-3 py-1.5 border-r border-notion-warm-gray-300 w-20">Hours</th>
@@ -108,7 +108,7 @@ const TaskBudgetMatrix = ({ sites, periodicalTasks }) => {
                     {site?.siteName || 'Unknown'}
                   </td>
                   <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 truncate max-w-[200px]" title={task.taskName}>
-                    <span className="text-xs text-notion-warm-gray-500 mr-2">{task.taskCode}</span>
+                    <span className="text-[10px] md:text-xs text-notion-warm-gray-500 mr-2">{task.taskCode}</span>
                     {task.taskName}
                   </td>
                   
@@ -139,7 +139,7 @@ const TaskBudgetMatrix = ({ sites, periodicalTasks }) => {
 
             {/* Totals Row */}
             {filteredTasks.length > 0 && (
-              <tr className="bg-[#0070c0] text-white font-bold text-sm">
+              <tr className="bg-[#0070c0] text-white font-bold text-xs md:text-sm">
                 <td colSpan={2} className="px-3 py-2 border-r border-blue-400 text-right uppercase tracking-widest">
                   TOTAL:
                 </td>

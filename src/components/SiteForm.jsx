@@ -310,7 +310,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
           {validationError}
         </div>
       )}
-      <div className="notion-card p-10">
+      <div className="notion-card p-6 md:p-10">
         <h3 className="text-display-secondary text-notion-black tracking-notion-display mb-8">Infrastructure Identity</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
@@ -471,12 +471,12 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
         </div>
       </div>
 
-      <div className="notion-card p-10 relative">
+      <div className="notion-card p-6 md:p-10 relative">
         <h3 className="text-display-secondary text-notion-black tracking-notion-display mb-2">Role Allocation Matrix</h3>
         <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mb-10">Define fixed payroll rates for specific personnel role codes on this site.</p>
 
         {/* Add Entry Card */}
-        <div className="bg-notion-warm-white/50 p-8 rounded-comfortable whisper-border mb-10 relative z-50 shadow-sm">
+        <div className="bg-notion-warm-white/50 p-4 sm:p-8 rounded-comfortable whisper-border mb-10 relative z-50 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 items-end">
             <div className="lg:col-span-1">
               <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-3 block">Role Designation</label>
@@ -516,7 +516,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
         {/* List of overrides */}
         <div className="space-y-4 relative z-10">
           {(formData.codeRates || []).length > 0 && (
-            <div className="grid grid-cols-5 gap-6 px-6 py-2 text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest">
+            <div className="hidden md:grid grid-cols-5 gap-6 px-6 py-2 text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest">
               <div className="col-span-1">Designation Code</div>
               <div className="col-span-3 grid grid-cols-4 gap-6 text-center">
                 <span>W.Day</span>
@@ -528,17 +528,43 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
             </div>
           )}
           {(formData.codeRates || []).map(rate => (
-            <div key={rate.code} className="grid grid-cols-5 gap-6 items-center p-6 bg-notion-warm-white/30 whisper-border rounded-comfortable hover:shadow-notion-card transition-all group">
-              <div className="col-span-1">
+            <div key={rate.code} className="flex flex-col md:grid md:grid-cols-5 gap-4 md:gap-6 items-start md:items-center p-4 md:p-6 bg-notion-warm-white/30 whisper-border rounded-comfortable hover:shadow-notion-card transition-all group">
+              <div className="w-full md:col-span-1 flex justify-between items-center">
                 <div className="text-body-semibold text-notion-black uppercase tracking-widest truncate">{rate.code}</div>
+                {/* On mobile, show the delete button here next to the designation code */}
+                <div className="md:hidden">
+                  <button
+                    type="button"
+                    onClick={() => removeCodeRate(rate.code)}
+                    className="p-2 text-notion-warm-gray-100 hover:text-rose-600 hover:bg-notion-badge-rose-bg rounded-micro transition-all shadow-sm bg-white whisper-border"
+                    title="Purge Rate"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                </div>
               </div>
-              <div className="col-span-3 grid grid-cols-4 gap-6">
-                <div className="text-center font-bold text-notion-black tabular-nums bg-white whisper-border px-3 py-1.5 rounded-micro shadow-sm">${rate.weekday.toFixed(2)}</div>
-                <div className="text-center font-bold text-notion-black tabular-nums bg-white whisper-border px-3 py-1.5 rounded-micro shadow-sm">${rate.saturday.toFixed(2)}</div>
-                <div className="text-center font-bold text-notion-black tabular-nums bg-white whisper-border px-3 py-1.5 rounded-micro shadow-sm">${rate.sunday.toFixed(2)}</div>
-                <div className="text-center font-bold text-notion-black tabular-nums bg-white whisper-border px-3 py-1.5 rounded-micro shadow-sm">${rate.publicHoliday.toFixed(2)}</div>
+              
+              <div className="w-full md:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-1 md:hidden">W.Day</span>
+                  <div className="text-center font-bold text-notion-black tabular-nums bg-white whisper-border px-3 py-1.5 rounded-micro shadow-sm w-full">${rate.weekday.toFixed(2)}</div>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-1 md:hidden">Sat</span>
+                  <div className="text-center font-bold text-notion-black tabular-nums bg-white whisper-border px-3 py-1.5 rounded-micro shadow-sm w-full">${rate.saturday.toFixed(2)}</div>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-1 md:hidden">Sun</span>
+                  <div className="text-center font-bold text-notion-black tabular-nums bg-white whisper-border px-3 py-1.5 rounded-micro shadow-sm w-full">${rate.sunday.toFixed(2)}</div>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-1 md:hidden">P.H</span>
+                  <div className="text-center font-bold text-notion-black tabular-nums bg-white whisper-border px-3 py-1.5 rounded-micro shadow-sm w-full">${rate.publicHoliday.toFixed(2)}</div>
+                </div>
               </div>
-              <div className="col-span-1 text-right">
+
+              {/* On desktop, show the delete button in the last grid column */}
+              <div className="hidden md:block md:col-span-1 text-right w-full">
                 <button
                   type="button"
                   onClick={() => removeCodeRate(rate.code)}
@@ -560,12 +586,12 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
         </div>
       </div>
 
-      <div className="notion-card p-10 relative">
+      <div className="notion-card p-6 md:p-10 relative">
         <h3 className="text-display-secondary text-notion-black tracking-notion-display mb-2">Periodical Tasks</h3>
         <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mb-10">Define maintenance routines, cleaning schedules, and their period budgets for this site.</p>
 
         {/* Add Task Card */}
-        <div className="bg-notion-warm-white/50 p-8 rounded-comfortable whisper-border mb-10 relative z-50 shadow-sm">
+        <div className="bg-notion-warm-white/50 p-4 sm:p-8 rounded-comfortable whisper-border mb-10 relative z-50 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end mb-6">
             <div className="md:col-span-1">
               <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-3 block">Task Code</label>
@@ -736,7 +762,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
         {/* List of Tasks */}
         <div className="space-y-4 relative z-10">
           {tasks.length > 0 && (
-            <div className="grid grid-cols-6 gap-6 px-6 py-2 text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest">
+            <div className="hidden md:grid grid-cols-6 gap-6 px-6 py-2 text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest">
               <div className="col-span-1">Code</div>
               <div className="col-span-2">Task Name</div>
               <div className="col-span-1">Frequency</div>
@@ -745,21 +771,51 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
             </div>
           )}
           {tasks.map(task => (
-            <div key={task.id} className="grid grid-cols-6 gap-6 items-center p-6 bg-notion-warm-white/30 whisper-border rounded-comfortable hover:shadow-notion-card transition-all group">
-              <div className="col-span-1">
+            <div key={task.id} className="flex flex-col md:grid md:grid-cols-6 gap-4 md:gap-6 items-start md:items-center p-4 md:p-6 bg-notion-warm-white/30 whisper-border rounded-comfortable hover:shadow-notion-card transition-all group">
+              <div className="w-full md:col-span-1 flex justify-between items-center">
                 <div className="text-body-semibold text-notion-black uppercase tracking-widest truncate">{task.taskCode}</div>
+                {/* On mobile, show operations here next to the code */}
+                <div className="md:hidden flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleEditTask(task.id)}
+                    className="p-2 text-notion-blue hover:text-notion-blue-active hover:bg-notion-badge-blue-bg rounded-micro transition-all shadow-sm bg-white whisper-border"
+                    title="Modify Task"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeTask(task.id)}
+                    className="p-2 text-notion-warm-gray-100 hover:text-rose-600 hover:bg-notion-badge-rose-bg rounded-micro transition-all shadow-sm bg-white whisper-border"
+                    title="Purge Task"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                </div>
               </div>
-              <div className="col-span-2">
+              
+              <div className="w-full md:col-span-2">
                 <div className="text-body-semibold text-notion-black">{task.taskName}</div>
-                <div className="text-[10px] text-notion-warm-gray-300 uppercase tracking-widest mt-1">{task.contractType}</div>
+                <div className="text-[10px] text-notion-warm-gray-300 uppercase tracking-widest mt-1">
+                  Contract: <span className="text-zinc-600">{task.contractType}</span>
+                </div>
               </div>
-              <div className="col-span-1">
+              
+              <div className="w-full md:col-span-1 flex items-center justify-between md:block">
+                <span className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest md:hidden">Frequency</span>
                 <div className="text-badge font-bold text-notion-warm-gray-500 uppercase tracking-widest">{task.frequency}</div>
               </div>
-              <div className="col-span-1">
-                <div className="text-center font-bold text-amber-900 tabular-nums bg-amber-100 whisper-border px-3 py-1.5 rounded-micro shadow-sm inline-block whitespace-nowrap">{task.budgetHours?.toFixed(2)} hrs <span className="text-notion-blue ml-1">${task.budgetPrice?.toFixed(2)}</span></div>
+              
+              <div className="w-full md:col-span-1 flex items-center justify-between md:block">
+                <span className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest md:hidden">Budget</span>
+                <div className="text-center font-bold text-amber-900 tabular-nums bg-amber-100 whisper-border px-3 py-1.5 rounded-micro shadow-sm inline-block whitespace-nowrap">
+                  {task.budgetHours?.toFixed(2)} hrs <span className="text-notion-blue ml-1">${task.budgetPrice?.toFixed(2)}</span>
+                </div>
               </div>
-              <div className="col-span-1 text-right flex justify-end gap-2">
+
+              {/* On desktop, show operations here */}
+              <div className="hidden md:flex md:col-span-1 text-right justify-end gap-2 w-full">
                 <button
                   type="button"
                   onClick={() => handleEditTask(task.id)}

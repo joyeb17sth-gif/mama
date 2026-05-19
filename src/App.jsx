@@ -228,6 +228,11 @@ function App() {
           }
           setUserProfileData({ name: email, role });
           setIsAdmin(role === 'admin' || email.includes('joyeb'));
+          
+          const normalizedRole = role.toLowerCase();
+          if (normalizedRole === 'supervisor' || normalizedRole === 'manager') {
+            setActiveTab(prev => (prev === 'dashboard' ? 'task-matrix' : prev));
+          }
         }
 
         setContractors(getContractors());
