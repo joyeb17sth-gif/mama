@@ -20,11 +20,23 @@ export const memoryCache = {
   paymentSummaries: [],
   publicHolidays: [],
   periodicalTasks: [],
-  globalRates: { ...DEFAULT_GLOBAL_RATES }
+  globalRates: { ...DEFAULT_GLOBAL_RATES },
+  profiles: null
 };
+
+export const syncMetadata = {};
 
 // Initialize the storage on app start
 export const initStorage = async () => {
+  try {
+    const storedMetadata = await localforage.getItem('sync_metadata');
+    if (storedMetadata) {
+      Object.assign(syncMetadata, storedMetadata);
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) console.error("Error loading sync metadata:", e);
+  }
+
   const keys = Object.keys(memoryCache);
   for (const key of keys) {
     let stored = await localforage.getItem(key);
@@ -53,11 +65,20 @@ export const initStorage = async () => {
 // Helper to save data to Supabase
 const saveToCloud = async (table, id, data) => {
   const encrypted = encryptData(data);
-  const { error } = await supabase
+  const now = new Date().toISOString();
+  const { data: responseData, error } = await supabase
     .from(table)
-    .upsert({ id, data: encrypted, updated_at: new Date() });
+    .upsert({ id, data: encrypted, updated_at: now })
+    .select('updated_at')
+    .single();
 
-  if (error && import.meta.env.DEV) console.error(`Error saving to ${table}:`, error);
+  if (error) {
+    if (import.meta.env.DEV) console.error(`Error saving to ${table}:`, error);
+  } else if (responseData && responseData.updated_at) {
+    const cacheKey = `${table}_${id}`;
+    syncMetadata[cacheKey] = responseData.updated_at;
+    await localforage.setItem('sync_metadata', syncMetadata);
+  }
 };
 
 // Helper to get all data from a Supabase table
@@ -76,14 +97,64 @@ const getFromCloud = async (table) => {
 
 // Helper for single record tables (like credentials or global settings)
 const getSingleFromCloud = async (table, id) => {
-  const { data, error } = await supabase
-    .from(table)
-    .select('data')
-    .eq('id', id)
-    .single();
+  try {
+    // 1. Fetch only the updated_at timestamp to see if cloud has newer data
+    const { data: cloudRow, error: timeError } = await supabase
+      .from(table)
+      .select('updated_at')
+      .eq('id', id)
+      .single();
 
-  if (error) return null;
-  return decryptData(data.data);
+    if (timeError || !cloudRow) {
+      // Row doesn't exist yet, or other read issue: fall back to normal fetch
+      const { data, error } = await supabase
+        .from(table)
+        .select('data, updated_at')
+        .eq('id', id)
+        .single();
+
+      if (error) return null;
+      
+      const decrypted = decryptData(data.data);
+      if (data.updated_at) {
+        const cacheKey = `${table}_${id}`;
+        syncMetadata[cacheKey] = data.updated_at;
+        await localforage.setItem('sync_metadata', syncMetadata);
+      }
+      return decrypted;
+    }
+
+    const cloudTimestamp = cloudRow.updated_at;
+    const cacheKey = `${table}_${id}`;
+    const localTimestamp = syncMetadata[cacheKey];
+
+    // If local version matches or is newer, skip download and return undefined to signal "no change"
+    if (localTimestamp && cloudTimestamp) {
+      const localTime = new Date(localTimestamp).getTime();
+      const cloudTime = new Date(cloudTimestamp).getTime();
+      if (localTime >= cloudTime) {
+        return undefined;
+      }
+    }
+
+    // 2. Otherwise (no timestamp or older), fetch the actual data blob
+    const { data, error } = await supabase
+      .from(table)
+      .select('data, updated_at')
+      .eq('id', id)
+      .single();
+
+    if (error) return null;
+
+    if (data.updated_at) {
+      syncMetadata[cacheKey] = data.updated_at;
+      await localforage.setItem('sync_metadata', syncMetadata);
+    }
+    return decryptData(data.data);
+  } catch (err) {
+    if (import.meta.env.DEV) console.error(`Error in getSingleFromCloud for ${table}:`, err);
+    return null;
+  }
 };
 
 // --- CONTRACTORS ---
@@ -136,12 +207,10 @@ export const getTrainingReleases = () => memoryCache.trainingReleases;
 
 // --- AUDIT LOGS ---
 export const saveAuditLogs = async (logs) => {
-  memoryCache.auditLogs = logs;
-  await localforage.setItem('auditLogs', encryptData(logs));
-  await saveToCloud('audit_logs', 'main_list', logs);
+  // Audit logging removed to minimize Supabase egress
 };
-export const getAuditLogsAsync = () => getSingleFromCloud('audit_logs', 'main_list');
-export const getAuditLogs = () => memoryCache.auditLogs;
+export const getAuditLogsAsync = () => Promise.resolve(undefined);
+export const getAuditLogs = () => [];
 
 // --- PAYMENT SUMMARIES ---
 export const savePaymentSummaries = async (summaries) => {
@@ -183,77 +252,28 @@ export const getGlobalRates = () => ({ ...DEFAULT_GLOBAL_RATES, ...(memoryCache.
 
 // --- ACTIONS LOGGING ---
 export const logAction = async (action, details, user = null) => {
-  let finalUser = user;
-  if (!finalUser || finalUser === 'Admin') {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session && session.user) {
-        finalUser = session.user.email;
-      } else {
-        finalUser = 'System';
-      }
-    } catch(e) {
-      finalUser = 'System';
-    }
+  // Audit logging removed completely to eliminate Supabase egress/storage usage
+};
+
+// --- PROFILES CACHE & FETCH ---
+export const getProfilesAsync = async (forceRefresh = false) => {
+  if (memoryCache.profiles && !forceRefresh) {
+    return memoryCache.profiles;
   }
-
-  const newLog = {
-    id: Date.now().toString(),
-    timestamp: new Date().toISOString(),
-    user: finalUser,
-    action,
-    details
-  };
-
   try {
-    // Fetch the absolute latest logs from the cloud directly to prevent concurrency overwrite issues
-    const cloudLogs = await getSingleFromCloud('audit_logs', 'main_list');
-    
-    let latestLogs = [];
-    if (cloudLogs && Array.isArray(cloudLogs)) {
-      latestLogs = cloudLogs;
-    } else {
-      latestLogs = [...getAuditLogs()];
-    }
-
-    // Prepend the new log
-    latestLogs.unshift(newLog);
-
-    // Calculate the date 90 days ago
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-
-    // Filter to only keep logs from the last 90 days
-    let filteredLogs = latestLogs.filter(log => {
-      try {
-        return new Date(log.timestamp) >= ninetyDaysAgo;
-      } catch (e) {
-        return true; // if parsing fails, keep it just in case
-      }
-    });
-
-    // Keep unbounded growth in check - e.g., max 2000 items as secondary fallback
-    const trimmedLogs = filteredLogs.slice(0, 2000);
-
-    // Save back to cloud, localforage, and update cache
-    await saveAuditLogs(trimmedLogs);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, email, role, created_at')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    memoryCache.profiles = data || [];
+    return memoryCache.profiles;
   } catch (err) {
-    if (import.meta.env.DEV) console.error("Error writing audit log safely:", err);
-    // Fallback to purely local append
-    const logs = [...getAuditLogs()];
-    logs.unshift(newLog);
-
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-
-    let filteredLogs = logs.filter(log => {
-      try {
-        return new Date(log.timestamp) >= ninetyDaysAgo;
-      } catch (e) {
-        return true;
-      }
-    });
-
-    saveAuditLogs(filteredLogs.slice(0, 2000));
+    if (import.meta.env.DEV) console.error("Error fetching profiles:", err);
+    return memoryCache.profiles || [];
   }
+};
+
+export const clearProfilesCache = () => {
+  memoryCache.profiles = null;
 };

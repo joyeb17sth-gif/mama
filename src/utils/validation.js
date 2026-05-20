@@ -72,11 +72,14 @@ export const validateData = (schema, data) => {
     } catch (error) {
         if (error instanceof z.ZodError) {
             // Extract the first error message
-            const firstError = error.errors[0];
-            return { 
-                success: false, 
-                error: `${firstError.path.join('.')} - ${firstError.message}` 
-            };
+            const issues = error.errors || error.issues || [];
+            const firstError = issues[0];
+            if (firstError) {
+                return { 
+                    success: false, 
+                    error: `${firstError.path.join('.')} - ${firstError.message}` 
+                };
+            }
         }
         return { success: false, error: "Validation failed" };
     }

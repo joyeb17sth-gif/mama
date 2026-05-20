@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { registerUser } from '../utils/auth';
-import { getContractors } from '../utils/storage';
+import { getContractors, getProfilesAsync, clearProfilesCache } from '../utils/storage';
 
 const UserManagement = () => {
     const [formData, setFormData] = useState({
@@ -21,8 +21,7 @@ const UserManagement = () => {
     const loadUsers = async () => {
         setLoadingUsers(true);
         try {
-            const { data, error } = await supabase.from('profiles').select('id, email, role, created_at').order('created_at', { ascending: false });
-            if (error) throw error;
+            const data = await getProfilesAsync(true); // force refresh user list on management tab
             setUsers(data || []);
         } catch (err) {
             if (import.meta.env.DEV) console.error("Failed to load profiles:", err);
@@ -60,6 +59,7 @@ const UserManagement = () => {
         try {
             const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId);
             if (error) throw error;
+            clearProfilesCache();
             setSuccess(`Permissions updated successfully.`);
             loadUsers();
         } catch (err) {
@@ -91,6 +91,7 @@ const UserManagement = () => {
                 await supabase.from('profiles').update({ role: formData.role }).eq('id', newUser.id);
             }
 
+            clearProfilesCache();
             setSuccess(`Entity "${formData.email}" initialized successfully as ${formData.role}.`);
             setFormData({
                 email: '',

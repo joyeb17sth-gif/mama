@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Dropdown from './Dropdown';
-import { supabase } from '../utils/supabaseClient';
+import { getProfilesAsync } from '../utils/storage';
 import { format, addMonths, startOfYear } from 'date-fns';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -13,7 +13,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
   useEffect(() => {
     const loadProfiles = async () => {
       try {
-        const { data } = await supabase.from('profiles').select('id, email, role');
+        const data = await getProfilesAsync();
         if (data) {
           const filtered = data.filter(u => {
             const role = u.role?.toLowerCase();

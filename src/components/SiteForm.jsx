@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Dropdown from './Dropdown';
-import { getSites } from '../utils/storage';
+import { getSites, getProfilesAsync } from '../utils/storage';
 import { supabase } from '../utils/supabaseClient';
 import { SiteSchema, validateData } from '../utils/validation';
 import { format, addMonths, startOfYear } from 'date-fns';
@@ -37,7 +37,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
     // Load user profiles for task assignment
     const loadProfiles = async () => {
       try {
-        const { data } = await supabase.from('profiles').select('id, email, role');
+        const data = await getProfilesAsync();
         if (data) {
           const filtered = data.filter(u => {
             const role = u.role?.toLowerCase();

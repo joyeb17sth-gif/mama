@@ -7,7 +7,6 @@ import {
   getTimesheets, saveTimesheets, getTimesheetsAsync,
   getPublicHolidays, savePublicHolidays, getPublicHolidaysAsync,
   getTrainingReleasesAsync,
-  getAuditLogsAsync,
   getPaymentSummariesAsync,
   getPayRatesAsync,
   getGlobalRatesAsync,
@@ -34,7 +33,7 @@ import TaskBudgetMatrix from './components/TaskBudgetMatrix';
 import TaskManagementModal from './components/TaskManagementModal';
 import PaymentSummary from './components/PaymentSummary';
 import TrainingEscrowManager from './components/TrainingEscrowManager';
-import AuditLogViewer from './components/AuditLogViewer';
+
 import Login from './components/Login';
 import Dropdown from './components/Dropdown';
 import ForgotPassword from './components/ForgotPassword';
@@ -107,66 +106,164 @@ function App() {
     setIsSyncing(true);
     setSyncError(null);
     try {
-      const cloudContractors = await getContractorsAsync();
-      const cloudSites = await getSitesAsync();
-      const cloudTimesheets = await getTimesheetsAsync();
-      const cloudPayRates = await getPayRatesAsync();
-      const cloudReleases = await getTrainingReleasesAsync();
-      const cloudPublicHolidays = await getPublicHolidaysAsync();
-      const cloudAuditLogs = await getAuditLogsAsync();
-      const cloudPaymentSummaries = await getPaymentSummariesAsync();
-      const cloudPeriodicalTasks = await getPeriodicalTasksAsync();
+      const role = userProfileData.role?.toLowerCase() || 'user';
+      
+      let cloudContractors, cloudSites, cloudTimesheets, cloudPayRates,
+          cloudReleases, cloudPublicHolidays, cloudPaymentSummaries,
+          cloudPeriodicalTasks, cloudGlobalRates;
 
-      // Update memoryCache + localforage + React state for ALL data types
-      if (cloudContractors) {
-        memoryCache.contractors = cloudContractors;
-        await localforage.setItem('contractors', encryptData(cloudContractors));
-        setContractors(cloudContractors);
-      }
-      if (cloudSites) {
-        memoryCache.sites = cloudSites;
-        await localforage.setItem('sites', encryptData(cloudSites));
-        setSites(cloudSites);
-      }
-      if (cloudTimesheets) {
-        memoryCache.timesheets = cloudTimesheets;
-        await localforage.setItem('timesheets', encryptData(cloudTimesheets));
-      }
-      if (cloudPayRates) {
-        memoryCache.payRates = cloudPayRates;
-        await localforage.setItem('payRates', encryptData(cloudPayRates));
-      }
-      if (cloudPublicHolidays) {
-        memoryCache.publicHolidays = cloudPublicHolidays;
-        await localforage.setItem('publicHolidays', encryptData(cloudPublicHolidays));
-      }
-      if (cloudReleases) {
-        memoryCache.trainingReleases = cloudReleases;
-        await localforage.setItem('trainingReleases', encryptData(cloudReleases));
-      }
-      if (cloudAuditLogs) {
-        memoryCache.auditLogs = cloudAuditLogs;
-        await localforage.setItem('auditLogs', encryptData(cloudAuditLogs));
-      }
-      if (cloudPaymentSummaries) {
-        memoryCache.paymentSummaries = cloudPaymentSummaries;
-        await localforage.setItem('paymentSummaries', encryptData(cloudPaymentSummaries));
-      }
-      if (cloudPeriodicalTasks) {
-        memoryCache.periodicalTasks = cloudPeriodicalTasks;
-        await localforage.setItem('periodicalTasks', encryptData(cloudPeriodicalTasks));
-        setPeriodicalTasks(cloudPeriodicalTasks);
+      const promises = [];
+      const promiseKeys = [];
+
+      // Determine what to download based on role
+      if (role === 'admin') {
+        promises.push(
+          getContractorsAsync(),
+          getSitesAsync(),
+          getTimesheetsAsync(),
+          getPayRatesAsync(),
+          getTrainingReleasesAsync(),
+          getPublicHolidaysAsync(),
+          getPaymentSummariesAsync(),
+          getPeriodicalTasksAsync(),
+          getGlobalRatesAsync()
+        );
+        promiseKeys.push(
+          'contractors',
+          'sites',
+          'timesheets',
+          'payRates',
+          'releases',
+          'publicHolidays',
+          'paymentSummaries',
+          'periodicalTasks',
+          'globalRates'
+        );
+      } else if (role === 'supervisor' || role === 'manager') {
+        promises.push(
+          getSitesAsync(),
+          getPeriodicalTasksAsync()
+        );
+        promiseKeys.push(
+          'sites',
+          'periodicalTasks'
+        );
+      } else if (role === 'payslip_management') {
+        promises.push(
+          getContractorsAsync(),
+          getSitesAsync(),
+          getTimesheetsAsync(),
+          getPayRatesAsync(),
+          getTrainingReleasesAsync(),
+          getPublicHolidaysAsync(),
+          getPaymentSummariesAsync(),
+          getGlobalRatesAsync()
+        );
+        promiseKeys.push(
+          'contractors',
+          'sites',
+          'timesheets',
+          'payRates',
+          'releases',
+          'publicHolidays',
+          'paymentSummaries',
+          'globalRates'
+        );
+      } else {
+        // Default users download nothing
       }
 
-      // Sync global rates (allowance per hour, other per day)
-      const cloudGlobalRates = await getGlobalRatesAsync();
-      if (cloudGlobalRates) {
-        memoryCache.globalRates = cloudGlobalRates;
-        await localforage.setItem('globalRates', encryptData(cloudGlobalRates));
+      // Only execute parallel call if there are promises to run
+      if (promises.length > 0) {
+        const results = await Promise.all(promises);
+        results.forEach((val, idx) => {
+          const key = promiseKeys[idx];
+          if (key === 'contractors') cloudContractors = val;
+          else if (key === 'sites') cloudSites = val;
+          else if (key === 'timesheets') cloudTimesheets = val;
+          else if (key === 'payRates') cloudPayRates = val;
+          else if (key === 'releases') cloudReleases = val;
+          else if (key === 'publicHolidays') cloudPublicHolidays = val;
+          else if (key === 'paymentSummaries') cloudPaymentSummaries = val;
+          else if (key === 'periodicalTasks') cloudPeriodicalTasks = val;
+          else if (key === 'globalRates') cloudGlobalRates = val;
+        });
       }
 
-      // Bump sync version to force child components to re-render with fresh cache data
-      setSyncVersion(v => v + 1);
+      let hasChanges = false;
+
+      // Update memoryCache + localforage + React state for data types that were queried
+      if (cloudContractors !== undefined) {
+        hasChanges = true;
+        if (cloudContractors) {
+          memoryCache.contractors = cloudContractors;
+          await localforage.setItem('contractors', encryptData(cloudContractors));
+          setContractors(cloudContractors);
+        }
+      }
+      if (cloudSites !== undefined) {
+        hasChanges = true;
+        if (cloudSites) {
+          memoryCache.sites = cloudSites;
+          await localforage.setItem('sites', encryptData(cloudSites));
+          setSites(cloudSites);
+        }
+      }
+      if (cloudTimesheets !== undefined) {
+        hasChanges = true;
+        if (cloudTimesheets) {
+          memoryCache.timesheets = cloudTimesheets;
+          await localforage.setItem('timesheets', encryptData(cloudTimesheets));
+        }
+      }
+      if (cloudPayRates !== undefined) {
+        hasChanges = true;
+        if (cloudPayRates) {
+          memoryCache.payRates = cloudPayRates;
+          await localforage.setItem('payRates', encryptData(cloudPayRates));
+        }
+      }
+      if (cloudPublicHolidays !== undefined) {
+        hasChanges = true;
+        if (cloudPublicHolidays) {
+          memoryCache.publicHolidays = cloudPublicHolidays;
+          await localforage.setItem('publicHolidays', encryptData(cloudPublicHolidays));
+        }
+      }
+      if (cloudReleases !== undefined) {
+        hasChanges = true;
+        if (cloudReleases) {
+          memoryCache.trainingReleases = cloudReleases;
+          await localforage.setItem('trainingReleases', encryptData(cloudReleases));
+        }
+      }
+      if (cloudPaymentSummaries !== undefined) {
+        hasChanges = true;
+        if (cloudPaymentSummaries) {
+          memoryCache.paymentSummaries = cloudPaymentSummaries;
+          await localforage.setItem('paymentSummaries', encryptData(cloudPaymentSummaries));
+        }
+      }
+      if (cloudPeriodicalTasks !== undefined) {
+        hasChanges = true;
+        if (cloudPeriodicalTasks) {
+          memoryCache.periodicalTasks = cloudPeriodicalTasks;
+          await localforage.setItem('periodicalTasks', encryptData(cloudPeriodicalTasks));
+          setPeriodicalTasks(cloudPeriodicalTasks);
+        }
+      }
+      if (cloudGlobalRates !== undefined) {
+        hasChanges = true;
+        if (cloudGlobalRates) {
+          memoryCache.globalRates = cloudGlobalRates;
+          await localforage.setItem('globalRates', encryptData(cloudGlobalRates));
+        }
+      }
+
+      // Bump sync version only if at least one data type has actual changes, forcing re-render
+      if (hasChanges) {
+        setSyncVersion(v => v + 1);
+      }
 
     } catch (e) {
       if (import.meta.env.DEV) console.error('Cloud sync failed', e);
@@ -194,6 +291,8 @@ function App() {
     */
 
     let intervalId;
+    let focusListener;
+    let visibilityListener;
 
     const checkAuth = async () => {
       const authStatus = await isAuthenticated();
@@ -238,11 +337,31 @@ function App() {
         setContractors(getContractors());
         setSites(getSites());
         setPeriodicalTasks(getPeriodicalTasks());
-        syncData();
         
-        intervalId = setInterval(() => {
+        // Initial sync only if active
+        if (document.visibilityState === 'visible') {
+          syncData();
+        }
+
+        // Active focus / visible trigger
+        const triggerSyncIfVisible = () => {
+          if (document.visibilityState === 'visible') {
             syncData();
-        }, 30000);
+          }
+        };
+
+        window.addEventListener('focus', triggerSyncIfVisible);
+        document.addEventListener('visibilitychange', triggerSyncIfVisible);
+        
+        focusListener = triggerSyncIfVisible;
+        visibilityListener = triggerSyncIfVisible;
+
+        // Periodic sync every 2 minutes (120000ms) only if active
+        intervalId = setInterval(() => {
+          if (document.visibilityState === 'visible') {
+            syncData();
+          }
+        }, 120000);
       }
     };
 
@@ -250,6 +369,8 @@ function App() {
 
     return () => {
       if (intervalId) clearInterval(intervalId);
+      if (focusListener) window.removeEventListener('focus', focusListener);
+      if (visibilityListener) document.removeEventListener('visibilitychange', visibilityListener);
     };
   }, [authenticated, isStorageReady]);
 
@@ -967,12 +1088,7 @@ function App() {
 
 
 
-        {/* Audit Logs Tab */}
-        {/* {activeTab === 'logs' && (
-          <div className="mt-6">
-            <AuditLogViewer syncVersion={syncVersion} />
-          </div>
-        )} */}
+
 
         {/* Global Rates Settings Tab */}
         {activeTab === 'settings' && hasPermission('settings') && (
