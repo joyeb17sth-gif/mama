@@ -851,13 +851,13 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
           onClick={onCancel}
           className="px-8 py-4 text-notion-black bg-white whisper-border rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-notion-warm-white transition shadow-sm"
         >
-          Abort Protocol
+          Discard
         </button>
         <button
           type="submit"
           className="px-12 py-4 text-white bg-notion-blue rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-notion-blue-active transition-all shadow-notion-card hover:-translate-y-0.5 active:translate-y-0"
         >
-          {site ? 'Commit Architecture' : 'Initialize Terminal'}
+          Save Changes
         </button>
       </div>
     </form>
