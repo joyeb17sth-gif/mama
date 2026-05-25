@@ -69,10 +69,9 @@ export const initStorage = async () => {
 // Helper to save data to Supabase
 const saveToCloud = async (table, id, data) => {
   const encrypted = encryptData(data);
-  const now = new Date().toISOString();
   const { data: responseData, error } = await supabase
     .from(table)
-    .upsert({ id, data: encrypted, updated_at: now })
+    .upsert({ id, data: encrypted })
     .select('updated_at')
     .single();
 

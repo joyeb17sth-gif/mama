@@ -466,7 +466,7 @@ function App() {
     setShowSiteForm(true);
   };
 
-  const handleSaveSite = (formData, siteTasks = []) => {
+  const handleSaveSite = async (formData, siteTasks = []) => {
     let siteId = editingSite?.id;
     let newSiteName = formData.siteName;
 
@@ -500,8 +500,15 @@ function App() {
     // Process Periodical Tasks for this site
     const tasksToSave = siteTasks.map(t => ({ ...t, siteId }));
     
+    // FETCH LATEST FROM CLOUD BEFORE MERGING TO PREVENT OVERWRITES!
+    let currentGlobalTasks = periodicalTasks;
+    try {
+      const latestCloud = await getPeriodicalTasksAsync();
+      if (latestCloud) currentGlobalTasks = latestCloud;
+    } catch (e) {}
+
     // Merge into global periodicalTasks (remove old ones for this site, add new ones)
-    const otherTasks = periodicalTasks.filter(t => t.siteId !== siteId);
+    const otherTasks = currentGlobalTasks.filter(t => t.siteId !== siteId);
     const updatedPeriodicalTasks = [...otherTasks, ...tasksToSave];
     
     setPeriodicalTasks(updatedPeriodicalTasks);

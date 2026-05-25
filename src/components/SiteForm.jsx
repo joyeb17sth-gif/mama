@@ -37,7 +37,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
     // Load user profiles for task assignment
     const loadProfiles = async () => {
       try {
-        const data = await getProfilesAsync();
+        const data = await getProfilesAsync(true);
         if (data) {
           const filtered = data.filter(u => {
             const role = u.role?.toLowerCase();
