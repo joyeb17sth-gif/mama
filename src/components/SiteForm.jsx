@@ -479,7 +479,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
         <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mb-10">Define fixed payroll rates for specific personnel role codes on this site.</p>
 
         {/* Add Entry Card */}
-        <div className="bg-notion-warm-white/50 p-4 sm:p-8 rounded-comfortable whisper-border mb-10 relative z-50 shadow-sm">
+        <div className="bg-notion-warm-white/50 p-4 sm:p-8 rounded-comfortable whisper-border mb-10 relative z-10 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 items-end">
             <div className="lg:col-span-1">
               <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-3 block">Role Designation</label>
@@ -596,7 +596,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
         <p className="text-caption text-notion-warm-gray-300 font-medium mb-10">Define maintenance routines, cleaning schedules, and their period budgets for this site.</p>
 
         {/* Add Task Card */}
-        <div className="bg-notion-warm-white/50 p-4 sm:p-8 rounded-comfortable whisper-border mb-10 relative z-50 shadow-sm">
+        <div className="bg-notion-warm-white/50 p-4 sm:p-8 rounded-comfortable whisper-border mb-10 relative z-10 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
             <div>
               <label className="text-badge font-bold text-notion-warm-gray-400 mb-3 block">Task Code</label>
