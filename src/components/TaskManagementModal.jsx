@@ -184,7 +184,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
     onSave(site.id, tasks);
   };
 
-  const showStartingMonth = ['Quarterly', '6 Monthly', 'Yearly'].includes(newTask.frequency);
+  const showStartingMonth = ['Monthly', 'Quarterly', '6 Monthly', 'Yearly'].includes(newTask.frequency);
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-start sm:items-center justify-center overflow-y-auto sm:py-8">
@@ -276,7 +276,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
               <div className="mb-4 p-3 bg-notion-badge-blue-bg/30 rounded-micro border border-notion-blue/20">
                 <label className="text-badge font-bold text-notion-blue uppercase tracking-widest mb-2 block">Starting Month</label>
                 <p className="text-[10px] text-notion-warm-gray-500 mb-2">
-                  The schedule will begin from this month and repeat every {newTask.frequency === 'Quarterly' ? '3 months' : newTask.frequency === '6 Monthly' ? '6 months' : '12 months'}.
+                  The schedule will begin from this month and repeat every {newTask.frequency === 'Monthly' ? '1 month' : newTask.frequency === 'Quarterly' ? '3 months' : newTask.frequency === '6 Monthly' ? '6 months' : '12 months'}.
                 </p>
                 <div className="w-48">
                   <Dropdown

@@ -655,7 +655,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
           </div>
 
           {/* Starting Month Selector */}
-          {['Quarterly', '6 Monthly', 'Yearly'].includes(newTask.frequency) && (
+          {['Monthly', 'Quarterly', '6 Monthly', 'Yearly'].includes(newTask.frequency) && (
             <div className="mb-4 p-4 bg-notion-badge-blue-bg/30 rounded-micro border border-notion-blue/20">
               <label className="text-badge font-bold text-notion-blue uppercase tracking-widest mb-2 block">Starting Month</label>
               <p className="text-[10px] text-notion-warm-gray-500 mb-2">
