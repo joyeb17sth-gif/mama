@@ -99,7 +99,11 @@ export const loginUser = async (email, password) => {
 };
 
 export const logoutUser = async () => {
-  await supabase.auth.signOut();
+  try {
+    await supabase.auth.signOut();
+  } catch (e) {
+    console.error('Supabase signOut error:', e);
+  }
 };
 
 export const isAuthenticated = async () => {

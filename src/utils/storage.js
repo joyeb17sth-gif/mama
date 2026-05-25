@@ -26,6 +26,10 @@ export const memoryCache = {
 
 export const syncMetadata = {};
 
+// Error callback for save failures — App.jsx hooks into this to show toast
+let _onSaveError = null;
+export const setOnSaveError = (callback) => { _onSaveError = callback; };
+
 // Initialize the storage on app start
 export const initStorage = async () => {
   try {
@@ -73,12 +77,17 @@ const saveToCloud = async (table, id, data) => {
     .single();
 
   if (error) {
-    if (import.meta.env.DEV) console.error(`Error saving to ${table}:`, error);
-  } else if (responseData && responseData.updated_at) {
+    console.error(`Cloud sync failed for ${table}:`, error);
+    if (_onSaveError) _onSaveError(`Failed to sync data to cloud. Changes saved locally.`);
+    return false;
+  }
+
+  if (responseData && responseData.updated_at) {
     const cacheKey = `${table}_${id}`;
     syncMetadata[cacheKey] = responseData.updated_at;
     await localforage.setItem('sync_metadata', syncMetadata);
   }
+  return true;
 };
 
 // Helper to get all data from a Supabase table
@@ -276,4 +285,10 @@ export const getProfilesAsync = async (forceRefresh = false) => {
 
 export const clearProfilesCache = () => {
   memoryCache.profiles = null;
+};
+
+// Clear all sync timestamps to force a full re-download on next sync
+export const clearSyncTimestamps = async () => {
+  Object.keys(syncMetadata).forEach(key => delete syncMetadata[key]);
+  await localforage.removeItem('sync_metadata');
 };

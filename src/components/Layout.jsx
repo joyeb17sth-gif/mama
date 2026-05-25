@@ -7,6 +7,7 @@ const Layout = ({
     onLogout,
     isSyncing,
     syncData,
+    onForceSync,
     userProfile = { name: 'Admin User', role: 'Staff Admin' },
     isAdmin = false
 }) => {
@@ -243,7 +244,11 @@ const Layout = ({
                                 <span>Syncing...</span>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-2 px-2.5 py-1 text-emerald-600 bg-emerald-50 rounded-pill text-[11px] font-semibold border border-emerald-100 group cursor-default transition-all">
+                            <div 
+                                onClick={onForceSync}
+                                title="Click to force sync from cloud"
+                                className="flex items-center gap-2 px-2.5 py-1 text-emerald-600 bg-emerald-50 rounded-pill text-[11px] font-semibold border border-emerald-100 group cursor-pointer hover:bg-emerald-100 active:scale-95 transition-all select-none"
+                            >
                                 <span className="relative flex h-1.5 w-1.5 mr-0.5">
                                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>

@@ -11,7 +11,8 @@ import {
   getPayRatesAsync,
   getGlobalRatesAsync,
   getPeriodicalTasks, savePeriodicalTasks, getPeriodicalTasksAsync,
-  logAction
+  logAction,
+  clearSyncTimestamps, setOnSaveError
 } from './utils/storage';
 import { encryptData } from './utils/encryptionUtils';
 import localforage from 'localforage';
@@ -273,10 +274,26 @@ function App() {
     }
   };
 
+  // Force sync: clears stale timestamps and pulls everything fresh from cloud
+  const forceSync = async () => {
+    await clearSyncTimestamps();
+    await syncData();
+  };
+
   useEffect(() => {
     initStorage().then(() => {
       setIsStorageReady(true);
     });
+  }, []);
+
+  // Wire up cloud save error notifications
+  useEffect(() => {
+    setOnSaveError((msg) => {
+      setToastMessage(msg);
+      setToastType('error');
+      setShowToast(true);
+    });
+    return () => setOnSaveError(null);
   }, []);
 
   useEffect(() => {
@@ -338,9 +355,9 @@ function App() {
         setSites(getSites());
         setPeriodicalTasks(getPeriodicalTasks());
         
-        // Initial sync only if active
+        // Force fresh download on login by clearing stale timestamps, then sync
         if (document.visibilityState === 'visible') {
-          syncData();
+          clearSyncTimestamps().then(() => syncData());
         }
 
         // Active focus / visible trigger
@@ -356,12 +373,12 @@ function App() {
         focusListener = triggerSyncIfVisible;
         visibilityListener = triggerSyncIfVisible;
 
-        // Periodic sync every 2 minutes (120000ms) only if active
+        // Periodic sync every 30 seconds only if active
         intervalId = setInterval(() => {
           if (document.visibilityState === 'visible') {
             syncData();
           }
-        }, 120000);
+        }, 30000);
       }
     };
 
@@ -593,7 +610,11 @@ function App() {
   };
 
   const handleLogout = async () => {
-    await logoutUser();
+    try {
+      await logoutUser();
+    } catch (e) {
+      console.error('Sign out error:', e);
+    }
     setAuthenticatedState(false);
     setActiveTab('dashboard');
   };
@@ -657,6 +678,7 @@ function App() {
         onLogout={handleLogout}
         isSyncing={isSyncing}
         syncData={syncData}
+        onForceSync={forceSync}
         userProfile={{ name: userProfileData.name, role: userProfileData.role }}
         isAdmin={isAdmin}
       >
