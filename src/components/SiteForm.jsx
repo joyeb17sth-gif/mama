@@ -593,13 +593,13 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
 
       <div className="notion-card p-6 md:p-10 relative">
         <h3 className="text-display-secondary text-notion-black tracking-notion-display mb-2">Periodical Tasks</h3>
-        <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mb-10">Define maintenance routines, cleaning schedules, and their period budgets for this site.</p>
+        <p className="text-caption text-notion-warm-gray-300 font-medium mb-10">Define maintenance routines, cleaning schedules, and their period budgets for this site.</p>
 
         {/* Add Task Card */}
         <div className="bg-notion-warm-white/50 p-4 sm:p-8 rounded-comfortable whisper-border mb-10 relative z-50 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end mb-6">
-            <div className="md:col-span-1">
-              <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-3 block">Task Code</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+            <div>
+              <label className="text-badge font-bold text-notion-warm-gray-400 mb-3 block">Task Code</label>
               <input
                 type="text"
                 value={newTask.taskCode}
@@ -608,8 +608,8 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                 className="w-full px-4 py-2.5 bg-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black transition-all uppercase tracking-widest text-badge"
               />
             </div>
-            <div className="md:col-span-1">
-              <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-3 block">Task Name</label>
+            <div>
+              <label className="text-badge font-bold text-notion-warm-gray-400 mb-3 block">Task Name</label>
               <input
                 type="text"
                 value={newTask.taskName}
@@ -618,8 +618,8 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                 className="w-full px-4 py-2.5 bg-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black transition-all text-badge"
               />
             </div>
-            <div className="md:col-span-1">
-              <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-3 block">Frequency</label>
+            <div>
+              <label className="text-badge font-bold text-notion-warm-gray-400 mb-3 block">Frequency</label>
               <Dropdown
                 value={newTask.frequency}
                 onChange={handleTaskFrequencyChange}
@@ -633,8 +633,8 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                 ]}
               />
             </div>
-            <div className="md:col-span-1">
-              <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-3 block">Contract Type</label>
+            <div>
+              <label className="text-badge font-bold text-notion-warm-gray-400 mb-3 block">Contract Type</label>
               <Dropdown
                 value={newTask.contractType}
                 onChange={(val) => setNewTask({ ...newTask, contractType: val })}
@@ -646,7 +646,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
               />
             </div>
             <div className="md:col-span-2">
-              <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-3 block">Assign To</label>
+              <label className="text-badge font-bold text-notion-warm-gray-400 mb-3 block">Assign To</label>
               <Dropdown
                 value={newTask.assignedTo}
                 onChange={(val) => setNewTask({ ...newTask, assignedTo: val })}
@@ -662,7 +662,9 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
           {/* Starting Month Selector */}
           {['Monthly', 'Quarterly', '6 Monthly', 'Yearly'].includes(newTask.frequency) && (
             <div className="mb-4 p-4 bg-notion-badge-blue-bg/30 rounded-micro border border-notion-blue/20">
-              <label className="text-badge font-bold text-notion-blue uppercase tracking-widest mb-2 block">Starting Month</label>
+              <div>
+                <label className="text-badge font-bold text-notion-blue mb-2 block">Starting Month</label>
+              </div>
               <p className="text-[10px] text-notion-warm-gray-500 mb-2">
                 The schedule will begin from this month and repeat based on the selected frequency.
               </p>
@@ -684,7 +686,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
           {/* Dynamic Period Inputs for Task */}
           <div className="border-t border-notion-warm-gray-200 pt-6 mt-6">
             <h4 className="text-badge font-bold text-notion-blue uppercase tracking-widest mb-4">Period Budget Breakdown</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {newTask.periods
                 .map((period, originalIndex) => ({ period, originalIndex }))
                 .sort((a, b) => {
@@ -698,7 +700,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                   <h5 className="font-bold text-[11px] text-notion-black mb-2 border-b border-notion-warm-gray-200 pb-1">{period.name}</h5>
                   {newTask.frequency === 'Custom Date' ? (
                     <div className="mb-2">
-                      <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Target Date <span className="text-notion-blue">*</span></label>
+                      <label className="text-[9px] font-bold text-notion-warm-gray-400 block mb-1">Target Date <span className="text-notion-blue">*</span></label>
                       <input
                         type="date"
                         value={period.customDate || ''}
@@ -708,7 +710,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                     </div>
                   ) : (
                     <div className="mb-2">
-                      <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Exact Date</label>
+                      <label className="text-[9px] font-bold text-notion-warm-gray-400 block mb-1">Exact Date</label>
                       <input
                         type="date"
                         value={period.exactDate || ''}
@@ -719,7 +721,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                   )}
                   <div className="space-y-2">
                     <div>
-                      <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Hours</label>
+                      <label className="text-[9px] font-bold text-notion-warm-gray-400 block mb-1">Hours</label>
                       <input
                         type="number"
                         value={period.hours || ''}
@@ -728,7 +730,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                       />
                     </div>
                     <div>
-                      <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Pricing ($)</label>
+                      <label className="text-[9px] font-bold text-notion-warm-gray-400 block mb-1">Pricing ($)</label>
                       <input
                         type="number"
                         value={period.pricing || ''}
@@ -737,7 +739,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                       />
                     </div>
                     <div>
-                      <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Scope of Work</label>
+                      <label className="text-[9px] font-bold text-notion-warm-gray-400 block mb-1">Scope of Work</label>
                       <textarea
                         value={period.scopeOfWork || ''}
                         onChange={(e) => handleTaskPeriodChange(index, 'scopeOfWork', e.target.value)}
@@ -858,17 +860,17 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
         </div>
       </div>
 
-      <div className="flex justify-end items-center gap-6 pt-10">
+      <div className="flex flex-col sm:flex-row justify-end gap-4 mt-8">
         <button
           type="button"
           onClick={onCancel}
-          className="px-8 py-4 text-notion-black bg-white whisper-border rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-notion-warm-white transition shadow-sm"
+          className="flex-1 sm:flex-none px-8 py-4 text-notion-black bg-white whisper-border rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-notion-warm-white transition shadow-sm text-center"
         >
           Discard
         </button>
         <button
           type="submit"
-          className="px-12 py-4 text-white bg-notion-blue rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-notion-blue-active transition-all shadow-notion-card hover:-translate-y-0.5 active:translate-y-0"
+          className="flex-1 sm:flex-none px-8 py-4 bg-notion-blue text-white rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-notion-blue-active transition shadow-notion-deep text-center"
         >
           Save Changes
         </button>
