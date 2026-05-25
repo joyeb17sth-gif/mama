@@ -587,7 +587,6 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
             </div>
           )}
         </div>
-        </div>
       </div>
       </React.Fragment>
       )}
