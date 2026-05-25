@@ -1,7 +1,7 @@
 import React from 'react';
 import { getContractors } from '../utils/storage';
 
-const SiteList = ({ sites, onEdit, onAddSubSite, onDelete }) => {
+const SiteList = ({ sites, onEdit, onAddSubSite, onDelete, isAdmin = true }) => {
   const contractors = getContractors();
 
   if (sites.length === 0) {
@@ -88,15 +88,19 @@ const SiteList = ({ sites, onEdit, onAddSubSite, onDelete }) => {
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap text-right">
                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-0 translate-x-4">
-                        <button onClick={() => onAddSubSite(mainSite)} className="p-2 text-zinc-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all" title="Add Sub-site">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                        </button>
+                        {isAdmin && (
+                          <button onClick={() => onAddSubSite(mainSite)} className="p-2 text-zinc-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all" title="Add Sub-site">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                          </button>
+                        )}
                         <button onClick={() => onEdit(mainSite)} className="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-xl transition-all" title="Edit Site">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         </button>
-                        <button onClick={() => onDelete(mainSite.id)} className="p-2 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all" title="Delete Site">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
+                        {isAdmin && (
+                          <button onClick={() => onDelete(mainSite.id)} className="p-2 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all" title="Delete Site">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -132,9 +136,11 @@ const SiteList = ({ sites, onEdit, onAddSubSite, onDelete }) => {
                           <button onClick={() => onEdit(subSite)} className="p-1.5 text-zinc-400 hover:text-zinc-900 hover:bg-white rounded-lg border border-transparent hover:border-zinc-200 transition-all">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                           </button>
-                          <button onClick={() => onDelete(subSite.id)} className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-white rounded-lg border border-transparent hover:border-zinc-200 transition-all">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                          </button>
+                          {isAdmin && (
+                            <button onClick={() => onDelete(subSite.id)} className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-white rounded-lg border border-transparent hover:border-zinc-200 transition-all">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -201,16 +207,20 @@ const SiteList = ({ sites, onEdit, onAddSubSite, onDelete }) => {
               <div className="flex items-center justify-between pt-1">
                 <span className="text-[10px] text-zinc-400 font-semibold">Actions</span>
                 <div className="flex gap-2">
-                  <button onClick={() => onAddSubSite(mainSite)} className="flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider text-primary-600 bg-primary-50 rounded-lg hover:bg-primary-100 transition-all" title="Add Sub-site">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                    Sub-Site
-                  </button>
+                  {isAdmin && (
+                    <button onClick={() => onAddSubSite(mainSite)} className="flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider text-primary-600 bg-primary-50 rounded-lg hover:bg-primary-100 transition-all" title="Add Sub-site">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                      Sub-Site
+                    </button>
+                  )}
                   <button onClick={() => onEdit(mainSite)} className="p-2 text-zinc-500 hover:text-zinc-900 bg-zinc-50 border border-zinc-100 rounded-lg transition-all" title="Edit Site">
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                   </button>
-                  <button onClick={() => onDelete(mainSite.id)} className="p-2 text-zinc-500 hover:text-rose-600 bg-zinc-50 border border-zinc-100 rounded-lg transition-all" title="Delete Site">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  </button>
+                  {isAdmin && (
+                    <button onClick={() => onDelete(mainSite.id)} className="p-2 text-zinc-500 hover:text-rose-600 bg-zinc-50 border border-zinc-100 rounded-lg transition-all" title="Delete Site">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -230,9 +240,11 @@ const SiteList = ({ sites, onEdit, onAddSubSite, onDelete }) => {
                           <button onClick={() => onEdit(subSite)} className="p-1.5 text-zinc-500 hover:text-zinc-900 bg-white border border-zinc-200 rounded-lg transition-all">
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                           </button>
-                          <button onClick={() => onDelete(subSite.id)} className="p-1.5 text-zinc-500 hover:text-rose-600 bg-white border border-zinc-200 rounded-lg transition-all">
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                          </button>
+                          {isAdmin && (
+                            <button onClick={() => onDelete(subSite.id)} className="p-1.5 text-zinc-500 hover:text-rose-600 bg-white border border-zinc-200 rounded-lg transition-all">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}

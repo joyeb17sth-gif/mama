@@ -5,7 +5,7 @@ import { supabase } from '../utils/supabaseClient';
 import { SiteSchema, validateData } from '../utils/validation';
 import { format, addMonths, startOfYear } from 'date-fns';
 
-const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
+const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true }) => {
   const [allSites, setAllSites] = useState([]);
   const [formData, setFormData] = useState({
     siteName: site?.siteName || '',
@@ -311,7 +311,9 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
           {validationError}
         </div>
       )}
-      <div className="notion-card p-6 md:p-10">
+      {isAdmin && (
+        <React.Fragment>
+          <div className="notion-card p-6 md:p-10">
         <h3 className="text-display-secondary text-notion-black tracking-notion-display mb-8">Infrastructure Identity</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
@@ -585,7 +587,10 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
             </div>
           )}
         </div>
+        </div>
       </div>
+      </React.Fragment>
+      )}
 
       <div className="notion-card p-6 md:p-10 relative">
         <h3 className="text-display-secondary text-notion-black tracking-notion-display mb-2">Periodical Tasks</h3>

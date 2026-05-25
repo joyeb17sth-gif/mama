@@ -779,19 +779,22 @@ function App() {
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-display-secondary text-notion-black tracking-notion-display">Site Management</h2>
-                  <button
-                    onClick={() => {
-                      setSites(getSites());
-                      handleAddSite();
-                    }}
-                    className="px-4 py-2 bg-notion-blue text-white rounded-micro hover:bg-notion-blue-active transition shadow-notion-card font-semibold text-sm"
-                  >
-                    + Add Site
-                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() => {
+                        setSites(getSites());
+                        handleAddSite();
+                      }}
+                      className="px-4 py-2 bg-notion-blue text-white rounded-micro hover:bg-notion-blue-active transition shadow-notion-card font-semibold text-sm"
+                    >
+                      + Add Site
+                    </button>
+                  )}
                 </div>
                 <div className="notion-card p-6">
                   <SiteList
                     sites={sites}
+                    isAdmin={isAdmin}
                     onEdit={handleEditSite}
                     onAddSubSite={handleAddSubSite}
                     onDelete={handleDeleteSite}
@@ -817,6 +820,7 @@ function App() {
                 <div className="notion-card p-6">
                   <SiteForm
                     site={editingSite}
+                    isAdmin={isAdmin}
                     periodicalTasks={visiblePeriodicalTasks.filter(t => t.siteId === editingSite?.id)}
                     onSave={handleSaveSite}
                     onCancel={() => {
