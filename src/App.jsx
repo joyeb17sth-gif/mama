@@ -109,6 +109,8 @@ function App() {
     return periodicalTasks.filter(t => t.assignedTo === userEmail);
   }, [periodicalTasks, isAdmin, userProfileData]);
 
+  const syncDataRef = React.useRef(null);
+
   const syncData = async () => {
     if (!isAuthenticated()) return;
     setIsSyncing(true);
@@ -287,6 +289,10 @@ function App() {
     await syncData();
   };
 
+  React.useEffect(() => {
+    syncDataRef.current = syncData;
+  }, [syncData]);
+
   useEffect(() => {
     initStorage().then(() => {
       setIsStorageReady(true);
@@ -364,13 +370,13 @@ function App() {
         
         // Force fresh download on login by clearing stale timestamps, then sync
         if (document.visibilityState === 'visible') {
-          clearSyncTimestamps().then(() => syncData());
+          clearSyncTimestamps().then(() => syncDataRef.current?.());
         }
 
         // Active focus / visible trigger
         const triggerSyncIfVisible = () => {
-          if (document.visibilityState === 'visible') {
-            syncData();
+          if (document.visibilityState === 'visible' && syncDataRef.current) {
+            syncDataRef.current();
           }
         };
 
@@ -382,8 +388,8 @@ function App() {
 
         // Periodic sync every 30 seconds only if active
         intervalId = setInterval(() => {
-          if (document.visibilityState === 'visible') {
-            syncData();
+          if (document.visibilityState === 'visible' && syncDataRef.current) {
+            syncDataRef.current();
           }
         }, 30000);
       }
