@@ -46,13 +46,13 @@ BEGIN
             EXECUTE format('CREATE POLICY "Enable read access for all users" ON public.%I FOR SELECT USING (true)', t);
             
             -- WRITE (Insert): Optimized check
-            EXECUTE format('CREATE POLICY "Enable insert for anon users" ON public.%I FOR INSERT TO anon WITH CHECK ((select auth.role()) = ''anon'')', t);
+            EXECUTE format('CREATE POLICY "Enable insert for all users" ON public.%I FOR INSERT WITH CHECK ((select auth.role()) IN (''anon'', ''authenticated''))', t);
             
             -- UPDATE: Optimized check
-            EXECUTE format('CREATE POLICY "Enable update for anon users" ON public.%I FOR UPDATE TO anon USING ((select auth.role()) = ''anon'') WITH CHECK ((select auth.role()) = ''anon'')', t);
+            EXECUTE format('CREATE POLICY "Enable update for all users" ON public.%I FOR UPDATE USING ((select auth.role()) IN (''anon'', ''authenticated'')) WITH CHECK ((select auth.role()) IN (''anon'', ''authenticated''))', t);
             
             -- DELETE: Optimized check
-            EXECUTE format('CREATE POLICY "Enable delete for anon users" ON public.%I FOR DELETE TO anon USING ((select auth.role()) = ''anon'')', t);
+            EXECUTE format('CREATE POLICY "Enable delete for all users" ON public.%I FOR DELETE USING ((select auth.role()) IN (''anon'', ''authenticated''))', t);
 
         END IF;
     END LOOP;
