@@ -9,7 +9,7 @@ import { exportPaymentSummaryToCSV } from '../utils/exportUtils';
 import Toast from './Toast';
 import Archiver from './Archiver';
 
-const Dashboard = () => {
+const Dashboard = ({ syncVersion, periodicalTasks: propPeriodicalTasks }) => {
     const [sites, setSites] = useState([]);
     const [contractors, setContractors] = useState([]);
     const [timesheets, setTimesheets] = useState([]);
@@ -29,12 +29,20 @@ const Dashboard = () => {
         loadAllData();
     }, []);
 
+    useEffect(() => {
+        if (propPeriodicalTasks) {
+            setPeriodicalTasks(propPeriodicalTasks);
+        }
+    }, [propPeriodicalTasks]);
+
     const loadAllData = () => {
         setSites(getSites());
         setContractors(getContractors());
         setTimesheets(getTimesheets());
         setReleases(getTrainingReleases());
-        setPeriodicalTasks(getPeriodicalTasks());
+        if (!propPeriodicalTasks) {
+            setPeriodicalTasks(getPeriodicalTasks());
+        }
     };
 
     // Helper: Get training balance for a contractor

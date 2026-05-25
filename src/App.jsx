@@ -102,6 +102,13 @@ function App() {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
 
+  const visiblePeriodicalTasks = React.useMemo(() => {
+    if (isAdmin) return periodicalTasks;
+    const userEmail = userProfileData?.name;
+    if (!userEmail || userEmail === 'Loading...') return [];
+    return periodicalTasks.filter(t => t.assignedTo === userEmail);
+  }, [periodicalTasks, isAdmin, userProfileData]);
+
   const syncData = async () => {
     if (!isAuthenticated()) return;
     setIsSyncing(true);
@@ -508,7 +515,9 @@ function App() {
     } catch (e) {}
 
     // Merge into global periodicalTasks (remove old ones for this site, add new ones)
-    const otherTasks = currentGlobalTasks.filter(t => t.siteId !== siteId);
+    const otherTasks = isAdmin 
+       ? currentGlobalTasks.filter(t => t.siteId !== siteId)
+       : currentGlobalTasks.filter(t => !(t.siteId === siteId && t.assignedTo === userProfileData.name));
     const updatedPeriodicalTasks = [...otherTasks, ...tasksToSave];
     
     setPeriodicalTasks(updatedPeriodicalTasks);
@@ -707,7 +716,7 @@ function App() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-display-secondary text-notion-black tracking-notion-display">System Overview</h2>
             </div>
-            <Dashboard syncVersion={syncVersion} />
+            <Dashboard syncVersion={syncVersion} periodicalTasks={visiblePeriodicalTasks} />
           </div>
         )}
 
@@ -808,7 +817,7 @@ function App() {
                 <div className="notion-card p-6">
                   <SiteForm
                     site={editingSite}
-                    periodicalTasks={periodicalTasks.filter(t => t.siteId === editingSite?.id)}
+                    periodicalTasks={visiblePeriodicalTasks.filter(t => t.siteId === editingSite?.id)}
                     onSave={handleSaveSite}
                     onCancel={() => {
                       setShowSiteForm(false);
@@ -833,10 +842,10 @@ function App() {
         {activeTab === 'task-matrix' && hasPermission('task-matrix') && (
           <div className="space-y-6">
             <h2 className="text-display-secondary text-notion-black tracking-notion-display mb-4">Contractor Periodicals & Budgets</h2>
-            <TaskBudgetMatrix sites={sites} periodicalTasks={periodicalTasks} />
+            <TaskBudgetMatrix sites={sites} periodicalTasks={visiblePeriodicalTasks} />
             <TaskMatrix 
               sites={sites} 
-              periodicalTasks={periodicalTasks} 
+              periodicalTasks={visiblePeriodicalTasks} 
               onToggleStatus={handleToggleTaskStatus}
               onManageTasks={(site) => setManagingTasksSite(site)}
             />
@@ -847,10 +856,12 @@ function App() {
         {managingTasksSite && (
           <TaskManagementModal
             site={managingTasksSite}
-            tasks={periodicalTasks.filter(t => t.siteId === managingTasksSite.id)}
+            tasks={visiblePeriodicalTasks.filter(t => t.siteId === managingTasksSite.id)}
             onSave={(siteId, updatedTasks) => {
               const tasksToSave = updatedTasks.map(t => ({ ...t, siteId }));
-              const otherTasks = periodicalTasks.filter(t => t.siteId !== siteId);
+              const otherTasks = isAdmin 
+                 ? periodicalTasks.filter(t => t.siteId !== siteId)
+                 : periodicalTasks.filter(t => !(t.siteId === siteId && t.assignedTo === userProfileData?.name));
               const merged = [...otherTasks, ...tasksToSave];
               setPeriodicalTasks(merged);
               savePeriodicalTasks(merged);
