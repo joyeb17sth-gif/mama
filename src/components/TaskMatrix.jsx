@@ -193,7 +193,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                 <th className="px-3 py-2 border-r border-notion-warm-gray-200">Budget Hrs</th>
                 {months.map(month => (
                   <th key={month.toISOString()} className="px-3 py-2 border-r border-notion-warm-gray-200 text-center w-16">
-                    {format(month, 'MMM-yy')}
+                    {format(month, 'MMM')}
                   </th>
                 ))}
               </tr>

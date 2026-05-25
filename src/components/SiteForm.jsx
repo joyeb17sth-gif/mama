@@ -148,11 +148,11 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
   const [newTask, setNewTask] = useState({
     taskCode: '',
     taskName: '',
-    frequency: 'Monthly',
+    frequency: 'Custom Date',
     contractType: 'AD/HOC',
     assignedTo: '',
     startingMonth: 0,
-    periods: getInitialPeriods('Monthly')
+    periods: getInitialPeriods('Custom Date')
   });
 
   const handleTaskFrequencyChange = (val) => {
@@ -292,11 +292,11 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
     setNewTask({
       taskCode: '',
       taskName: '',
-      frequency: 'Monthly',
+      frequency: 'Custom Date',
       contractType: 'AD/HOC',
       assignedTo: '',
       startingMonth: 0,
-      periods: getInitialPeriods('Monthly')
+      periods: getInitialPeriods('Custom Date')
     });
   };
 
