@@ -110,126 +110,250 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
     return '';
   };
 
+  const [viewMode, setViewMode] = useState('matrix');
+
+  const upcomingSchedules = useMemo(() => {
+    const today = new Date();
+    const currentMonthStr = format(today, 'yyyy-MM');
+    const upcoming = [];
+
+    periodicalTasks.forEach(task => {
+      const site = sites.find(s => s.id === task.siteId);
+      if (!task.schedules) return;
+
+      const sortedSchedules = [...task.schedules].sort((a, b) => a.targetPeriod.localeCompare(b.targetPeriod));
+      const nextSchedule = sortedSchedules.find(s => s.status === 'Scheduled' && s.targetPeriod >= currentMonthStr);
+
+      if (nextSchedule) {
+          const monthDate = parseISO(`${nextSchedule.targetPeriod}-01`);
+          upcoming.push({
+            task,
+            site,
+            schedule: nextSchedule,
+            monthDate,
+            monthDisplay: format(monthDate, 'MMM yyyy'),
+            exactDate: getExactDateForMonth(task, monthDate),
+            scope: getDefaultScopeOfWorkForMonth(task, monthDate) || nextSchedule.scopeOfWork || ''
+          });
+      }
+    });
+
+    upcoming.sort((a, b) => a.schedule.targetPeriod.localeCompare(b.schedule.targetPeriod));
+    return upcoming;
+  }, [periodicalTasks, sites]);
+
   return (
     <div className="bg-white rounded-xl shadow-notion-card border border-notion-warm-gray-200">
       {/* Header Controls */}
       <div className="p-4 border-b border-notion-warm-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-notion-warm-white rounded-t-xl">
-        <h3 className="font-bold text-notion-black text-base md:text-lg">Periodical Task List</h3>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full md:w-auto">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
-            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-[#00A2E8]"></div> Scheduled</div>
-            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-[#156082]"></div> Completed</div>
-            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-gray-400"></div> Completed, Not Claimed</div>
-          </div>
-          <div className="w-full sm:w-32">
-            <Dropdown
-              value={selectedYear}
-              onChange={(val) => setSelectedYear(parseInt(val))}
-              options={[...Array(5)].map((_, i) => {
-                const year = new Date().getFullYear() - 2 + i;
-                return { value: year, label: year.toString() };
-              })}
-            />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <h3 className="font-bold text-notion-black text-base md:text-lg">Periodical Task List</h3>
+          <div className="flex bg-white rounded-micro p-1 shadow-sm border border-notion-warm-gray-200">
+            <button 
+               className={`px-3 py-1 rounded-micro text-xs font-bold transition-all ${viewMode === 'matrix' ? 'bg-notion-blue text-white shadow-sm' : 'text-notion-warm-gray-500 hover:text-notion-black'}`}
+               onClick={() => setViewMode('matrix')}
+            >Matrix View</button>
+            <button 
+               className={`px-3 py-1 rounded-micro text-xs font-bold transition-all ${viewMode === 'upcoming' ? 'bg-notion-blue text-white shadow-sm' : 'text-notion-warm-gray-500 hover:text-notion-black'}`}
+               onClick={() => setViewMode('upcoming')}
+            >Upcoming Tasks</button>
           </div>
         </div>
+        
+        {viewMode === 'matrix' && (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full md:w-auto">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+              <div className="flex items-center gap-1"><div className="w-3 h-3 bg-[#00A2E8]"></div> Scheduled</div>
+              <div className="flex items-center gap-1"><div className="w-3 h-3 bg-[#156082]"></div> Completed</div>
+              <div className="flex items-center gap-1"><div className="w-3 h-3 bg-gray-400"></div> Completed, Not Claimed</div>
+            </div>
+            <div className="w-full sm:w-32">
+              <Dropdown
+                value={selectedYear}
+                onChange={(val) => setSelectedYear(parseInt(val))}
+                options={[...Array(5)].map((_, i) => {
+                  const year = new Date().getFullYear() - 2 + i;
+                  return { value: year, label: year.toString() };
+                })}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Matrix Table */}
-      <div className="overflow-x-auto w-full custom-scrollbar">
-        <table className="w-full text-xs md:text-sm text-left whitespace-nowrap min-w-max border-collapse">
-          <thead>
-            <tr className="bg-notion-warm-white border-b border-notion-warm-gray-200 text-[10px] md:text-xs text-notion-warm-gray-500 font-semibold tracking-wider">
-              <th className="px-3 py-2 border-r border-notion-warm-gray-200 w-16">#</th>
-              <th className="px-3 py-2 border-r border-notion-warm-gray-200 w-64">Location / Task</th>
-              <th className="px-3 py-2 border-r border-notion-warm-gray-200">Frequency</th>
-              <th className="px-3 py-2 border-r border-notion-warm-gray-200">Contracted</th>
-              <th className="px-3 py-2 border-r border-notion-warm-gray-200">Budget Hrs</th>
-              {months.map(month => (
-                <th key={month.toISOString()} className="px-3 py-2 border-r border-notion-warm-gray-200 text-center w-16">
-                  {format(month, 'MMM-yy')}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {Object.values(groupedTasks).length === 0 && (
-              <tr>
-                <td colSpan={5 + months.length} className="px-6 py-8 text-center text-notion-warm-gray-500">
-                  No periodical tasks configured yet. Manage tasks within the Sites configuration.
-                </td>
+      {viewMode === 'matrix' && (
+        <div className="overflow-x-auto w-full custom-scrollbar">
+          <table className="w-full text-xs md:text-sm text-left whitespace-nowrap min-w-max border-collapse">
+            <thead>
+              <tr className="bg-notion-warm-white border-b border-notion-warm-gray-200 text-[10px] md:text-xs text-notion-warm-gray-500 font-semibold tracking-wider">
+                <th className="px-3 py-2 border-r border-notion-warm-gray-200 w-16">#</th>
+                <th className="px-3 py-2 border-r border-notion-warm-gray-200 w-64">Location / Task</th>
+                <th className="px-3 py-2 border-r border-notion-warm-gray-200">Frequency</th>
+                <th className="px-3 py-2 border-r border-notion-warm-gray-200">Contracted</th>
+                <th className="px-3 py-2 border-r border-notion-warm-gray-200">Budget Hrs</th>
+                {months.map(month => (
+                  <th key={month.toISOString()} className="px-3 py-2 border-r border-notion-warm-gray-200 text-center w-16">
+                    {format(month, 'MMM-yy')}
+                  </th>
+                ))}
               </tr>
-            )}
-            
-            {Object.values(groupedTasks).map(({ site, tasks }) => (
-              <React.Fragment key={site?.id || 'unknown'}>
-                {/* Site Header Row */}
-                <tr className="bg-[#a8d08d] text-notion-black border-b border-notion-warm-gray-200 text-xs md:text-sm">
-                  <td className="px-3 py-1 font-bold border-r border-notion-warm-gray-200"></td>
-                  <td colSpan={3 + months.length} className="px-3 py-1 font-bold">
-                    {site?.siteName || 'Unknown Site'}
-                  </td>
-                  <td className="px-3 py-1 text-right">
-                    {onManageTasks && site && (
-                      <button
-                        onClick={() => onManageTasks(site)}
-                        className="px-3 py-0.5 text-[10px] font-bold uppercase tracking-widest bg-white text-notion-blue whisper-border rounded-micro hover:bg-notion-badge-blue-bg transition-all shadow-sm"
-                      >
-                        ✏️ Manage
-                      </button>
-                    )}
+            </thead>
+            <tbody>
+              {Object.values(groupedTasks).length === 0 && (
+                <tr>
+                  <td colSpan={5 + months.length} className="px-6 py-8 text-center text-notion-warm-gray-500">
+                    No periodical tasks configured yet. Manage tasks within the Sites configuration.
                   </td>
                 </tr>
-                
-                {/* Task Rows */}
-                {tasks.map(task => (
-                  <tr key={task.id} className="border-b border-notion-warm-gray-200 hover:bg-notion-warm-white transition-colors">
-                    <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 font-mono text-[10px] md:text-xs text-notion-warm-gray-500">
-                      {task.taskCode}
+              )}
+              
+              {Object.values(groupedTasks).map(({ site, tasks }) => (
+                <React.Fragment key={site?.id || 'unknown'}>
+                  {/* Site Header Row */}
+                  <tr className="bg-[#a8d08d] text-notion-black border-b border-notion-warm-gray-200 text-xs md:text-sm">
+                    <td className="px-3 py-1 font-bold border-r border-notion-warm-gray-200"></td>
+                    <td colSpan={3 + months.length} className="px-3 py-1 font-bold">
+                      {site?.siteName || 'Unknown Site'}
                     </td>
-                    <td className="px-3 py-1.5 border-r border-notion-warm-gray-200">
-                      {task.taskName}
-                    </td>
-                    <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-[10px] md:text-xs">
-                      {task.frequency}
-                    </td>
-                    <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-[10px] md:text-xs">
-                      {task.contractType}
-                    </td>
-                    <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-center font-semibold bg-[#ffc000] text-amber-900 border-b border-white">
-                      {task.budgetHours}
-                    </td>
-                    
-                    {/* Schedule Cells */}
-                    {months.map(month => {
-                      const schedule = getScheduleForMonth(task, month);
-                      return (
-                        <td 
-                          key={month.toISOString()} 
-                          onClick={() => {
-                            if (schedule) {
-                              const defaultScope = getDefaultScopeOfWorkForMonth(task, month);
-                              setPopupScopeOfWork(schedule.scopeOfWork || defaultScope);
-                              setPopupStatus(schedule.status);
-                              setActivePopup({ task, schedule, monthDisplay: format(month, 'MMM yyyy'), monthDate: month });
-                            }
-                          }}
-                          className={`border-r border-white border-b text-center cursor-pointer hover:opacity-80 transition-opacity ${
-                            schedule ? getStatusColor(schedule.status) : 'bg-transparent border-r-notion-warm-gray-200'
-                          }`}
+                    <td className="px-3 py-1 text-right">
+                      {onManageTasks && site && (
+                        <button
+                          onClick={() => onManageTasks(site)}
+                          className="px-3 py-0.5 text-[10px] font-bold uppercase tracking-widest bg-white text-notion-blue whisper-border rounded-micro hover:bg-notion-badge-blue-bg transition-all shadow-sm"
                         >
-                           <span className="text-[10px] font-bold">
-                             {schedule ? getStatusDisplay(schedule.status) : ''}
-                           </span>
-                        </td>
-                      );
-                    })}
+                          ✏️ Manage
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                  
+                  {/* Task Rows */}
+                  {tasks.map(task => (
+                    <tr key={task.id} className="border-b border-notion-warm-gray-200 hover:bg-notion-warm-white transition-colors">
+                      <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 font-mono text-[10px] md:text-xs text-notion-warm-gray-500">
+                        {task.taskCode}
+                      </td>
+                      <td className="px-3 py-1.5 border-r border-notion-warm-gray-200">
+                        {task.taskName}
+                      </td>
+                      <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-[10px] md:text-xs">
+                        {task.frequency}
+                      </td>
+                      <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-[10px] md:text-xs">
+                        {task.contractType}
+                      </td>
+                      <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-center font-semibold bg-[#ffc000] text-amber-900 border-b border-white">
+                        {task.budgetHours}
+                      </td>
+                      
+                      {/* Schedule Cells */}
+                      {months.map(month => {
+                        const schedule = getScheduleForMonth(task, month);
+                        return (
+                          <td 
+                            key={month.toISOString()} 
+                            onClick={() => {
+                              if (schedule) {
+                                const defaultScope = getDefaultScopeOfWorkForMonth(task, month);
+                                setPopupScopeOfWork(schedule.scopeOfWork || defaultScope);
+                                setPopupStatus(schedule.status);
+                                setActivePopup({ task, schedule, monthDisplay: format(month, 'MMM yyyy'), monthDate: month });
+                              }
+                            }}
+                            className={`border-r border-white border-b text-center cursor-pointer hover:opacity-80 transition-opacity ${
+                              schedule ? getStatusColor(schedule.status) : 'bg-transparent border-r-notion-warm-gray-200'
+                            }`}
+                          >
+                             <span className="text-[10px] font-bold">
+                               {schedule ? getStatusDisplay(schedule.status) : ''}
+                             </span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Upcoming Tasks Table */}
+      {viewMode === 'upcoming' && (
+        <div className="overflow-x-auto w-full custom-scrollbar p-1">
+          {upcomingSchedules.length === 0 ? (
+             <div className="py-12 text-center text-notion-warm-gray-500 bg-white">
+               No upcoming scheduled tasks found.
+             </div>
+          ) : (
+            <table className="w-full text-xs md:text-sm text-left whitespace-nowrap min-w-max border-collapse shadow-sm">
+              <thead>
+                <tr className="bg-notion-warm-white border-b border-notion-warm-gray-200 text-[10px] md:text-xs text-notion-warm-gray-500 font-semibold tracking-wider">
+                  <th className="px-4 py-3">Scheduled Period</th>
+                  <th className="px-4 py-3">Location</th>
+                  <th className="px-4 py-3">Task Details</th>
+                  <th className="px-4 py-3">Assigned To</th>
+                  <th className="px-4 py-3">Scope of Work</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {upcomingSchedules.map((item, index) => (
+                  <tr key={`${item.task.id}-${index}`} className="border-b border-notion-warm-gray-100 hover:bg-blue-50/30 transition-colors bg-white">
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-notion-blue">{item.monthDisplay}</span>
+                        {item.exactDate && item.exactDate !== 'Not Set' && (
+                           <span className="text-[10px] font-bold text-notion-warm-gray-400 uppercase tracking-widest">{item.exactDate}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-notion-black">
+                      {item.site?.siteName || 'Unknown Site'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="px-1.5 py-0.5 bg-notion-warm-white text-[10px] font-bold text-notion-warm-gray-500 uppercase tracking-widest rounded border whisper-border">
+                          {item.task.taskCode}
+                        </span>
+                        <span className="font-semibold text-notion-black">{item.task.taskName}</span>
+                      </div>
+                      <div className="text-[10px] text-notion-warm-gray-400 mt-1 uppercase tracking-widest">
+                        {item.task.frequency} • {item.task.contractType}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {item.task.assignedTo ? (
+                        <span className="px-2 py-1 bg-notion-badge-blue-bg text-notion-blue text-[10px] font-bold rounded-micro border border-notion-blue/20">
+                          {item.task.assignedTo}
+                        </span>
+                      ) : (
+                        <span className="text-notion-warm-gray-300 text-xs italic">Unassigned</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 max-w-xs truncate text-notion-warm-gray-500" title={item.scope}>
+                      {item.scope || 'No scope defined'}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => {
+                          setPopupScopeOfWork(item.scope);
+                          setPopupStatus(item.schedule.status);
+                          setActivePopup({ task: item.task, schedule: item.schedule, monthDisplay: item.monthDisplay, monthDate: item.monthDate });
+                        }}
+                        className="px-3 py-1.5 bg-white text-notion-blue text-xs font-bold border border-notion-warm-gray-200 rounded-micro hover:bg-notion-badge-blue-bg transition shadow-sm"
+                      >
+                        Update Status
+                      </button>
+                    </td>
                   </tr>
                 ))}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       {/* Status Update Popup */}
       {activePopup && (
