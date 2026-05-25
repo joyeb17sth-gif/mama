@@ -29,10 +29,13 @@ DECLARE
     ];
 BEGIN
     FOREACH t IN ARRAY tables LOOP
-        -- Drop if it exists to avoid duplicates
-        EXECUTE format('DROP TRIGGER IF EXISTS set_updated_at ON public.%I', t);
-        
-        -- Create the trigger
-        EXECUTE format('CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.set_current_timestamp_updated_at()', t);
+        -- Only proceed if table exists
+        IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = t) THEN
+            -- Drop if it exists to avoid duplicates
+            EXECUTE format('DROP TRIGGER IF EXISTS set_updated_at ON public.%I', t);
+            
+            -- Create the trigger
+            EXECUTE format('CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.set_current_timestamp_updated_at()', t);
+        END IF;
     END LOOP;
 END $$;
