@@ -328,7 +328,7 @@ function App() {
         if (session && session.user) {
           const email = session.user.email;
           let role = 'user';
-          if (email === 'jungjoyeb@gmail.com' || email.includes('joyeb')) role = 'admin';
+          if (email === 'jungjoyeb@gmail.com') role = 'admin';
           
           try {
              const { data: profile, error: profileError } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
@@ -338,7 +338,7 @@ function App() {
                await supabase.from('profiles').insert({
                  id: session.user.id,
                  email: email,
-                 role: (email === 'jungjoyeb@gmail.com' || email.includes('joyeb')) ? 'admin' : 'user'
+                 role: (email === 'jungjoyeb@gmail.com') ? 'admin' : 'user'
                });
              } else if (profile && profile.role) {
                role = profile.role;
@@ -350,7 +350,7 @@ function App() {
             if (import.meta.env.DEV) console.error('Profile check failed:', e);
           }
           setUserProfileData({ name: email, role });
-          setIsAdmin(role === 'admin' || email.includes('joyeb'));
+          setIsAdmin(role === 'admin');
           
           const normalizedRole = role.toLowerCase();
           if (normalizedRole === 'supervisor' || normalizedRole === 'manager') {
