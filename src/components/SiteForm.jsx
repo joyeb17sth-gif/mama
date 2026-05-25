@@ -216,7 +216,8 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
 
     const schedules = [];
     const currentYear = new Date().getFullYear();
-    let currentDate = new Date(currentYear - 2, startingMonth, 1);
+    // Start from startingMonth of current year
+    let currentDate = new Date(currentYear, startingMonth, 1);
 
     const totalMonths = 12 * 7;
     for (let i = 0; i < totalMonths; i += interval) {
@@ -680,7 +681,15 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel }) => {
           <div className="border-t border-notion-warm-gray-200 pt-6 mt-6">
             <h4 className="text-badge font-bold text-notion-blue uppercase tracking-widest mb-4">Period Budget Breakdown</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {newTask.periods.map((period, index) => (
+              {newTask.periods
+                .map((period, originalIndex) => ({ period, originalIndex }))
+                .sort((a, b) => {
+                  if (newTask.frequency !== 'Monthly') return 0;
+                  const aRel = (a.originalIndex - (newTask.startingMonth || 0) + 12) % 12;
+                  const bRel = (b.originalIndex - (newTask.startingMonth || 0) + 12) % 12;
+                  return aRel - bRel;
+                })
+                .map(({ period, originalIndex: index }) => (
                 <div key={index} className="p-3 bg-white whisper-border rounded-micro shadow-sm">
                   <h5 className="font-bold text-[11px] text-notion-black mb-2 border-b border-notion-warm-gray-200 pb-1">{period.name}</h5>
                   {newTask.frequency === 'Custom Date' ? (
