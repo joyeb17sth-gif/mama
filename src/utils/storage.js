@@ -71,7 +71,7 @@ const saveToCloud = async (table, id, data) => {
   const encrypted = encryptData(data);
   const { data: responseData, error } = await supabase
     .from(table)
-    .upsert({ id, data: encrypted })
+    .upsert({ id, data: encrypted, updated_at: new Date().toISOString() })
     .select('updated_at')
     .single();
 
