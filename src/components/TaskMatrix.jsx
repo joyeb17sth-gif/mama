@@ -179,14 +179,8 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
     Object.values(taskGroups).forEach(items => {
       items.sort((a, b) => a.schedule.targetPeriod.localeCompare(b.schedule.targetPeriod));
 
-      let upcomingAdded = false;
       items.forEach(item => {
-        if (item.isPastDue) {
-          finalUpcoming.push(item);
-        } else if (!upcomingAdded) {
-          finalUpcoming.push(item);
-          upcomingAdded = true;
-        }
+        finalUpcoming.push(item);
       });
     });
 
