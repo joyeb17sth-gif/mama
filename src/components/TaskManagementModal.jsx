@@ -65,7 +65,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
 
   const handleTaskPeriodChange = (index, field, value) => {
     const updatedPeriods = [...newTask.periods];
-    if (field === 'exactDate' || field === 'scopeOfWork') {
+    if (field === 'customDate' || field === 'exactDate' || field === 'scopeOfWork') {
       updatedPeriods[index][field] = value;
     } else {
       updatedPeriods[index][field] = parseFloat(value) || 0;
