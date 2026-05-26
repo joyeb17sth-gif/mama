@@ -25,6 +25,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
   }, []);
 
   const getInitialPeriods = (freq) => {
+    if (freq === 'Custom Date') return [{ name: 'Custom Schedule', hours: 0, pricing: 0, customDate: '', scopeOfWork: '' }];
     if (freq === 'Quarterly') return [
       { name: '1st Quarter', hours: 0, pricing: 0, exactDate: '', scopeOfWork: '' },
       { name: '2nd Quarter', hours: 0, pricing: 0, exactDate: '', scopeOfWork: '' },
@@ -79,6 +80,16 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
   };
 
   const generateSchedules = (frequency, startingMonth = 0, periods = [], existingSchedules = []) => {
+    if (frequency === 'Custom Date') {
+      const schedules = [];
+      const customDate = periods[0]?.customDate;
+      if (customDate) {
+        const targetPeriod = customDate.substring(0, 7); // yyyy-MM
+        schedules.push({ id: Date.now().toString() + Math.random().toString(36).substr(2, 9), targetPeriod, exactDate: customDate, status: 'Scheduled' });
+      }
+      return schedules;
+    }
+
     let interval = 1;
     if (frequency === 'Weekly') interval = 1;
     if (frequency === 'Monthly') interval = 1;
@@ -266,7 +277,8 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                     { value: 'Monthly', label: 'Monthly' },
                     { value: 'Quarterly', label: 'Quarterly' },
                     { value: '6 Monthly', label: '6 Monthly' },
-                    { value: 'Yearly', label: 'Yearly' }
+                    { value: 'Yearly', label: 'Yearly' },
+                    { value: 'Custom Date', label: 'Custom Date' }
                   ]}
                 />
               </div>
@@ -358,17 +370,29 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                       {newTask.frequency === 'Monthly' ? `${period.name} ${new Date().getFullYear() + (trueMonthIndex < (newTask.startingMonth || 0) ? 1 : 0)}` : period.name}
                     </h5>
                     <div className="space-y-2">
-                      <div>
-                        <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Exact Date</label>
-                        <input
-                          type="date"
-                          value={period.exactDate || ''}
-                          min={minDate || undefined}
-                          max={maxDate || undefined}
-                          onChange={(e) => handleTaskPeriodChange(arrayIndex, 'exactDate', e.target.value)}
-                          className="w-full px-2 py-1 bg-notion-warm-white whisper-border rounded text-[11px] font-bold outline-none focus:border-notion-blue"
-                        />
-                      </div>
+                      {newTask.frequency === 'Custom Date' ? (
+                        <div>
+                          <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Target Date <span className="text-notion-blue">*</span></label>
+                          <input
+                            type="date"
+                            value={period.customDate || ''}
+                            onChange={(e) => handleTaskPeriodChange(arrayIndex, 'customDate', e.target.value)}
+                            className="w-full px-2 py-1 bg-notion-warm-white whisper-border rounded text-[11px] font-bold outline-none focus:border-notion-blue"
+                          />
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Exact Date</label>
+                          <input
+                            type="date"
+                            value={period.exactDate || ''}
+                            min={minDate || undefined}
+                            max={maxDate || undefined}
+                            onChange={(e) => handleTaskPeriodChange(arrayIndex, 'exactDate', e.target.value)}
+                            className="w-full px-2 py-1 bg-notion-warm-white whisper-border rounded text-[11px] font-bold outline-none focus:border-notion-blue"
+                          />
+                        </div>
+                      )}
                       <div>
                         <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Hours</label>
                         <input
@@ -419,7 +443,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
               <button
                 type="button"
                 onClick={handleAddTask}
-                disabled={!newTask.taskCode.trim() || !newTask.taskName.trim()}
+                disabled={!newTask.taskCode.trim() || !newTask.taskName.trim() || (newTask.frequency === 'Custom Date' && (!newTask.periods[0] || !newTask.periods[0].customDate))}
                 className="px-8 py-2.5 bg-notion-blue text-white rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-notion-blue-active transition shadow-notion-deep disabled:opacity-20 hover:-translate-y-0.5 active:translate-y-0"
               >
                 {editingTaskId ? 'Update Task' : '+ Add Task'}
