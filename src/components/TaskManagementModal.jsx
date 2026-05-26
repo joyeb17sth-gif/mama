@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Dropdown from './Dropdown';
-import { getProfilesAsync } from '../utils/storage';
+import { getContractors } from '../utils/storage';
 import { format, addMonths, startOfYear } from 'date-fns';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -11,16 +11,14 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
   const [profileUsers, setProfileUsers] = useState([]);
 
   useEffect(() => {
-    const loadProfiles = async () => {
+    const loadProfiles = () => {
       try {
-        const data = await getProfilesAsync();
-        if (data) {
-          const filtered = data.filter(u => {
-            const role = u.role?.toLowerCase();
-            return role === 'manager' || role === 'supervisor';
-          });
-          setProfileUsers(filtered);
-        }
+        const contractors = getContractors() || [];
+        const filtered = contractors.filter(u => {
+          const role = u.role?.toLowerCase();
+          return role === 'manager' || role === 'supervisor';
+        });
+        setProfileUsers(filtered);
       } catch (e) { /* ignore */ }
     };
     loadProfiles();
@@ -279,7 +277,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                   onChange={(val) => setNewTask({ ...newTask, assignedTo: val })}
                   options={[
                     { value: '', label: 'Unassigned' },
-                    ...profileUsers.map(u => ({ value: u.email, label: `${u.email} (${u.role})` }))
+                    ...profileUsers.map(u => ({ value: u.email, label: `${u.name || u.email} (${u.role})` }))
                   ]}
                   placeholder="Select a person..."
                 />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Dropdown from './Dropdown';
-import { getSites, getProfilesAsync } from '../utils/storage';
+import { getSites, getContractors } from '../utils/storage';
 import { supabase } from '../utils/supabaseClient';
 import { SiteSchema, validateData } from '../utils/validation';
 import { format, addMonths, startOfYear } from 'date-fns';
@@ -35,16 +35,14 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
     setAllSites(sites);
 
     // Load user profiles for task assignment
-    const loadProfiles = async () => {
+    const loadProfiles = () => {
       try {
-        const data = await getProfilesAsync(true);
-        if (data) {
-          const filtered = data.filter(u => {
-            const role = u.role?.toLowerCase();
-            return role === 'manager' || role === 'supervisor';
-          });
-          setProfileUsers(filtered);
-        }
+        const contractors = getContractors() || [];
+        const filtered = contractors.filter(u => {
+          const role = u.role?.toLowerCase();
+          return role === 'manager' || role === 'supervisor';
+        });
+        setProfileUsers(filtered);
       } catch (e) { /* ignore */ }
     };
     loadProfiles();
@@ -667,7 +665,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                 onChange={(val) => setNewTask({ ...newTask, assignedTo: val })}
                 options={[
                   { value: '', label: 'Unassigned' },
-                  ...profileUsers.map(u => ({ value: u.email, label: `${u.email} (${u.role})` }))
+                  ...profileUsers.map(u => ({ value: u.email, label: `${u.name || u.email} (${u.role})` }))
                 ]}
                 placeholder="Select a person..."
               />
