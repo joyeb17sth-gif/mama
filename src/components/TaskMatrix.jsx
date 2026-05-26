@@ -64,24 +64,20 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
        const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex];
        return periods.find(p => p.name === monthName)?.exactDate || 'Not Set';
     }
-    if (task.frequency === 'Quarterly' || task.frequency === '6 Monthly' || task.frequency === 'Yearly') {
-       for (let i = 0; i < periods.length; i++) {
-          if (periods[i].exactDate) {
-             const parsed = new Date(periods[i].exactDate);
-             if (!isNaN(parsed.getTime()) && parsed.getMonth() === monthIndex) {
-                return periods[i].exactDate;
-             }
-          }
-       }
-       let defaultMonths = [];
-       if (task.frequency === 'Quarterly') defaultMonths = [0, 3, 6, 9];
-       if (task.frequency === '6 Monthly') defaultMonths = [0, 6];
-       if (task.frequency === 'Yearly') defaultMonths = [0];
-
-       const idx = defaultMonths.indexOf(monthIndex);
-       if (idx !== -1) return periods[idx]?.exactDate || 'Not Set';
-       
-       return 'Not Set';
+    if (task.frequency === 'Quarterly') {
+       let diff = monthIndex - (task.startingMonth || 0);
+       if (diff < 0) diff += 12;
+       const qIndex = Math.floor(diff / 3);
+       return periods[qIndex]?.exactDate || 'Not Set';
+    }
+    if (task.frequency === '6 Monthly') {
+       let diff = monthIndex - (task.startingMonth || 0);
+       if (diff < 0) diff += 12;
+       const hIndex = Math.floor(diff / 6);
+       return periods[hIndex]?.exactDate || 'Not Set';
+    }
+    if (task.frequency === 'Yearly' || task.frequency === 'Weekly') {
+       return periods[0]?.exactDate || 'Not Set';
     }
     if (task.frequency === 'Custom Date') {
        return periods[0]?.customDate || 'Not Set';
@@ -99,26 +95,19 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
        const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex];
        return periods.find(p => p.name === monthName)?.scopeOfWork || '';
     }
-    if (task.frequency === 'Quarterly' || task.frequency === '6 Monthly' || task.frequency === 'Yearly') {
-       for (let i = 0; i < periods.length; i++) {
-          if (periods[i].exactDate) {
-             const parsed = new Date(periods[i].exactDate);
-             if (!isNaN(parsed.getTime()) && parsed.getMonth() === monthIndex) {
-                return periods[i].scopeOfWork || '';
-             }
-          }
-       }
-       let defaultMonths = [];
-       if (task.frequency === 'Quarterly') defaultMonths = [0, 3, 6, 9];
-       if (task.frequency === '6 Monthly') defaultMonths = [0, 6];
-       if (task.frequency === 'Yearly') defaultMonths = [0];
-
-       const idx = defaultMonths.indexOf(monthIndex);
-       if (idx !== -1) return periods[idx]?.scopeOfWork || '';
-       
-       return '';
+    if (task.frequency === 'Quarterly') {
+       let diff = monthIndex - (task.startingMonth || 0);
+       if (diff < 0) diff += 12;
+       const qIndex = Math.floor(diff / 3);
+       return periods[qIndex]?.scopeOfWork || '';
     }
-    if (task.frequency === 'Weekly' || task.frequency === 'Custom Date') {
+    if (task.frequency === '6 Monthly') {
+       let diff = monthIndex - (task.startingMonth || 0);
+       if (diff < 0) diff += 12;
+       const hIndex = Math.floor(diff / 6);
+       return periods[hIndex]?.scopeOfWork || '';
+    }
+    if (task.frequency === 'Yearly' || task.frequency === 'Weekly' || task.frequency === 'Custom Date') {
        return periods[0]?.scopeOfWork || '';
     }
     return '';
