@@ -195,57 +195,84 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
   };
 
   const generateSchedules = (frequency, startingMonth = 0, periods = [], existingSchedules = []) => {
+    const schedules = [];
     if (frequency === 'Custom Date') {
-      const schedules = [];
       const customDate = periods[0]?.customDate;
       if (customDate) {
-        const targetPeriod = customDate.substring(0, 7); // yyyy-MM
-        schedules.push({ id: Date.now().toString() + Math.random().toString(36).substr(2, 9), targetPeriod, exactDate: customDate, status: 'Scheduled' });
+        const targetPeriod = customDate.substring(0, 7);
+        const existing = existingSchedules.find(s => s.targetPeriod === targetPeriod);
+        if (existing) schedules.push(existing);
+        else schedules.push({ id: Date.now().toString() + Math.random().toString(36).substr(2, 9), targetPeriod, status: 'Scheduled' });
       }
       return schedules;
     }
 
-    let interval = 1;
-    if (frequency === 'Weekly') interval = 1;
-    if (frequency === 'Monthly') interval = 1;
-    if (frequency === 'Quarterly') interval = 3;
-    if (frequency === '6 Monthly') interval = 6;
-    if (frequency === 'Yearly') interval = 12;
-
-    const schedules = [];
     const currentYear = new Date().getFullYear();
-    // Start from startingMonth of current year
-    let currentDate = new Date(currentYear, startingMonth, 1);
 
-    const totalMonths = 36; // Generate for 3 years
-    const allPeriods = getInitialPeriods(frequency);
-    let iteration = 0;
+    if (frequency === 'Monthly' || frequency === 'Weekly') {
+      let interval = frequency === 'Monthly' ? 1 : 1;
+      let currentDate = new Date(currentYear, startingMonth, 1);
+      const totalMonths = 36; // Generate for 3 years
+      const allPeriods = getInitialPeriods(frequency);
+      let iteration = 0;
 
-    for (let i = 0; i < totalMonths; i += interval) {
-      let expectedName = '';
-      if (frequency === 'Monthly') {
-        expectedName = allPeriods[currentDate.getMonth()]?.name;
-      } else if (allPeriods.length > 0) {
-        expectedName = allPeriods[iteration % allPeriods.length]?.name;
-      }
-
-      const isActive = expectedName ? periods.some(p => p.name === expectedName) : true;
-
-      if (isActive) {
-        const targetPeriod = format(currentDate, 'yyyy-MM');
-        const existing = existingSchedules.find(s => s.targetPeriod === targetPeriod);
-        if (existing) {
-          schedules.push(existing);
-        } else {
-          schedules.push({
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-            targetPeriod,
-            status: 'Scheduled'
-          });
+      for (let i = 0; i < totalMonths; i += interval) {
+        let expectedName = '';
+        if (frequency === 'Monthly') {
+          expectedName = allPeriods[currentDate.getMonth()]?.name;
+        } else if (allPeriods.length > 0) {
+          expectedName = allPeriods[iteration % allPeriods.length]?.name;
         }
+
+        const isActive = expectedName ? periods.some(p => p.name === expectedName) : true;
+
+        if (isActive) {
+          const targetPeriod = format(currentDate, 'yyyy-MM');
+          const existing = existingSchedules.find(s => s.targetPeriod === targetPeriod);
+          if (existing) {
+            schedules.push(existing);
+          } else {
+            schedules.push({
+              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              targetPeriod,
+              status: 'Scheduled'
+            });
+          }
+        }
+        currentDate = addMonths(currentDate, interval);
+        iteration++;
       }
-      currentDate = addMonths(currentDate, interval);
-      iteration++;
+    } else {
+      let defaultMonths = [];
+      if (frequency === 'Quarterly') defaultMonths = [0, 3, 6, 9];
+      if (frequency === '6 Monthly') defaultMonths = [0, 6];
+      if (frequency === 'Yearly') defaultMonths = [0];
+
+      const targetMonths = periods.map((p, idx) => {
+        if (p.exactDate) {
+          const parts = p.exactDate.split('-');
+          if (parts.length === 3) return parseInt(parts[1], 10) - 1;
+        }
+        return defaultMonths[idx] !== undefined ? defaultMonths[idx] : 0;
+      });
+
+      const numYears = 3;
+      for (let y = 0; y < numYears; y++) {
+        const year = currentYear + y;
+        targetMonths.forEach(month => {
+           const targetPeriod = `${year}-${String(month + 1).padStart(2, '0')}`;
+           const existing = existingSchedules.find(s => s.targetPeriod === targetPeriod);
+           if (existing) {
+             schedules.push(existing);
+           } else {
+             schedules.push({
+                id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                targetPeriod,
+                status: 'Scheduled'
+             });
+           }
+        });
+      }
     }
     return schedules;
   };
@@ -677,7 +704,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
           </div>
 
           {/* Starting Month Selector */}
-          {['Monthly', 'Quarterly', '6 Monthly', 'Yearly'].includes(newTask.frequency) && (
+          {newTask.frequency === 'Monthly' && (
             <div className="mb-4 p-4 bg-notion-badge-blue-bg/30 rounded-micro border border-notion-blue/20">
               <div>
                 <label className="text-badge font-bold text-notion-blue mb-2 block">Starting Month</label>
