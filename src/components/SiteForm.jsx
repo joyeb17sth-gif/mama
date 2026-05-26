@@ -269,7 +269,15 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
     if (!newTask.taskName || !newTask.taskCode) return;
     
     const { totalHours, totalPrice } = calculateTaskTotals(newTask.periods);
-    const finalStartingMonth = newTask.frequency === 'Monthly' ? newTask.startingMonth : 0;
+    let finalStartingMonth = newTask.startingMonth;
+    if (newTask.frequency !== 'Monthly') {
+      const firstExactDate = newTask.periods?.[0]?.exactDate;
+      if (firstExactDate) {
+        finalStartingMonth = parseInt(firstExactDate.split('-')[1], 10) - 1;
+      } else {
+        finalStartingMonth = 0;
+      }
+    }
     
     if (editingTaskId) {
       const existingTask = tasks.find(t => t.id === editingTaskId);
