@@ -40,7 +40,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
         const contractors = getContractors() || [];
         const filtered = contractors.filter(u => {
           const role = u.role?.toLowerCase();
-          return role === 'manager' || role === 'supervisor' || u.email?.toLowerCase() === 'joyeb5730@gmail.com';
+          return role === 'manager' || role === 'supervisor';
         });
         setProfileUsers(filtered);
       } catch (e) { /* ignore */ }
@@ -665,6 +665,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                 onChange={(val) => setNewTask({ ...newTask, assignedTo: val })}
                 options={[
                   { value: '', label: 'Unassigned' },
+                  { value: 'joyeb5730@gmail.com', label: 'Admin Supervisor' },
                   ...profileUsers.map(u => ({ value: u.email, label: `${u.name || u.email} (${u.role})` }))
                 ]}
                 placeholder="Select a person..."
