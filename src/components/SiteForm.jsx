@@ -219,11 +219,26 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
     // Start from startingMonth of current year
     let currentDate = new Date(currentYear, startingMonth, 1);
 
-    const totalMonths = 12 * 7;
+    const totalMonths = 12;
+    const allPeriods = getInitialPeriods(frequency);
+    let iteration = 0;
+
     for (let i = 0; i < totalMonths; i += interval) {
-       const targetPeriod = format(currentDate, 'yyyy-MM');
-       schedules.push({ id: Date.now().toString() + Math.random().toString(36).substr(2, 9), targetPeriod, status: 'Scheduled' });
+       let expectedName = '';
+       if (frequency === 'Monthly') {
+         expectedName = allPeriods[currentDate.getMonth()]?.name;
+       } else if (allPeriods.length > 0) {
+         expectedName = allPeriods[iteration % allPeriods.length]?.name;
+       }
+
+       const isActive = expectedName ? periods.some(p => p.name === expectedName) : true;
+
+       if (isActive) {
+         const targetPeriod = format(currentDate, 'yyyy-MM');
+         schedules.push({ id: Date.now().toString() + Math.random().toString(36).substr(2, 9), targetPeriod, status: 'Scheduled' });
+       }
        currentDate = addMonths(currentDate, interval);
+       iteration++;
     }
     return schedules;
   };
@@ -265,7 +280,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
         periodBudgets: newTask.periods,
         contractType: newTask.contractType,
         assignedTo: newTask.assignedTo,
-        schedules: (freqChanged || monthChanged || dateChanged)
+        schedules: (freqChanged || monthChanged || dateChanged || existingTask.periodBudgets?.length !== newTask.periods.length)
           ? generateSchedules(newTask.frequency, newTask.startingMonth, newTask.periods)
           : existingTask.schedules
       };
@@ -688,23 +703,51 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
             <h4 className="text-badge font-bold text-notion-blue uppercase tracking-widest mb-4">Period Budget Breakdown</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {newTask.periods
-                .map((period, originalIndex) => ({ period, originalIndex }))
+                .map((period, arrayIndex) => {
+                  const trueMonthIndex = newTask.frequency === 'Monthly'
+                    ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].indexOf(period.name)
+                    : arrayIndex;
+                  return { period, trueMonthIndex, arrayIndex };
+                })
                 .sort((a, b) => {
                   if (newTask.frequency !== 'Monthly') return 0;
-                  const aRel = (a.originalIndex - (newTask.startingMonth || 0) + 12) % 12;
-                  const bRel = (b.originalIndex - (newTask.startingMonth || 0) + 12) % 12;
+                  const aRel = (a.trueMonthIndex - (newTask.startingMonth || 0) + 12) % 12;
+                  const bRel = (b.trueMonthIndex - (newTask.startingMonth || 0) + 12) % 12;
                   return aRel - bRel;
                 })
-                .map(({ period, originalIndex: index }) => (
-                <div key={index} className="p-3 bg-white whisper-border rounded-micro shadow-sm">
-                  <h5 className="font-bold text-[11px] text-notion-black mb-2 border-b border-notion-warm-gray-200 pb-1">{period.name}</h5>
+                .map(({ period, trueMonthIndex, arrayIndex }) => {
+                  let minDate = '';
+                  let maxDate = '';
+                  if (newTask.frequency === 'Monthly') {
+                    const year = new Date().getFullYear() + (trueMonthIndex < (newTask.startingMonth || 0) ? 1 : 0);
+                    const paddedMonth = String(trueMonthIndex + 1).padStart(2, '0');
+                    minDate = `${year}-${paddedMonth}-01`;
+                    const lastDay = new Date(year, trueMonthIndex + 1, 0).getDate();
+                    maxDate = `${year}-${paddedMonth}-${lastDay}`;
+                  }
+                  return (
+                <div key={arrayIndex} className="p-3 bg-white whisper-border rounded-micro shadow-sm relative group">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newPeriods = newTask.periods.filter((_, i) => i !== arrayIndex);
+                      setNewTask({ ...newTask, periods: newPeriods });
+                    }}
+                    className="absolute top-2 right-2 p-1 text-notion-warm-gray-200 hover:text-rose-600 hover:bg-notion-badge-rose-bg rounded transition-all opacity-0 group-hover:opacity-100"
+                    title="Remove Month"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                  <h5 className="font-bold text-[11px] text-notion-black mb-2 border-b border-notion-warm-gray-200 pb-1 pr-6">
+                    {newTask.frequency === 'Monthly' ? `${period.name} ${new Date().getFullYear() + (trueMonthIndex < (newTask.startingMonth || 0) ? 1 : 0)}` : period.name}
+                  </h5>
                   {newTask.frequency === 'Custom Date' ? (
                     <div className="mb-2">
                       <label className="text-[9px] font-bold text-notion-warm-gray-400 block mb-1">Target Date <span className="text-notion-blue">*</span></label>
                       <input
                         type="date"
                         value={period.customDate || ''}
-                        onChange={(e) => handleTaskPeriodChange(index, 'customDate', e.target.value)}
+                        onChange={(e) => handleTaskPeriodChange(arrayIndex, 'customDate', e.target.value)}
                         className="w-full px-2 py-1 bg-notion-warm-white whisper-border rounded text-[11px] font-bold outline-none focus:border-notion-blue"
                       />
                     </div>
@@ -714,7 +757,9 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                       <input
                         type="date"
                         value={period.exactDate || ''}
-                        onChange={(e) => handleTaskPeriodChange(index, 'exactDate', e.target.value)}
+                        min={minDate || undefined}
+                        max={maxDate || undefined}
+                        onChange={(e) => handleTaskPeriodChange(arrayIndex, 'exactDate', e.target.value)}
                         className="w-full px-2 py-1 bg-notion-warm-white whisper-border rounded text-[11px] font-bold outline-none focus:border-notion-blue"
                       />
                     </div>
@@ -725,7 +770,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                       <input
                         type="number"
                         value={period.hours || ''}
-                        onChange={(e) => handleTaskPeriodChange(index, 'hours', e.target.value)}
+                        onChange={(e) => handleTaskPeriodChange(arrayIndex, 'hours', e.target.value)}
                         className="w-full px-2 py-1 bg-notion-warm-white whisper-border rounded text-[11px] font-bold tabular-nums outline-none focus:border-notion-blue"
                       />
                     </div>
@@ -734,7 +779,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                       <input
                         type="number"
                         value={period.pricing || ''}
-                        onChange={(e) => handleTaskPeriodChange(index, 'pricing', e.target.value)}
+                        onChange={(e) => handleTaskPeriodChange(arrayIndex, 'pricing', e.target.value)}
                         className="w-full px-2 py-1 bg-notion-warm-white whisper-border rounded text-[11px] font-bold tabular-nums outline-none focus:border-notion-blue"
                       />
                     </div>
@@ -742,7 +787,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                       <label className="text-[9px] font-bold text-notion-warm-gray-400 block mb-1">Scope of Work</label>
                       <textarea
                         value={period.scopeOfWork || ''}
-                        onChange={(e) => handleTaskPeriodChange(index, 'scopeOfWork', e.target.value)}
+                        onChange={(e) => handleTaskPeriodChange(arrayIndex, 'scopeOfWork', e.target.value)}
                         placeholder="Describe scope..."
                         rows={2}
                         className="w-full px-2 py-1 bg-notion-warm-white whisper-border rounded text-[11px] font-bold outline-none focus:border-notion-blue resize-none"
@@ -750,7 +795,8 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
             
             <div className="flex items-center gap-6 mt-6 p-4 bg-notion-badge-blue-bg/30 rounded-micro border border-notion-blue/20">

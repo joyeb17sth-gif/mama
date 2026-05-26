@@ -648,6 +648,49 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    // Clean up future schedules from previously created tasks
+    if (periodicalTasks.length > 0 && isStorageReady) {
+      let needsCleanup = false;
+      const currentYear = new Date().getFullYear();
+      const cleanedTasks = periodicalTasks.map(task => {
+        if (!task.schedules) return task;
+        
+        // Extract creation year from ID (if it's a timestamp), otherwise fallback to current year
+        const parsedId = parseInt(task.id);
+        const creationYear = (!isNaN(parsedId) && parsedId > 1600000000000) 
+          ? new Date(parsedId).getFullYear() 
+          : currentYear;
+        
+        // Calculate the maximum valid date (12 months from startingMonth in the creation year)
+        const startingMonth = task.startingMonth || 0;
+        const maxDate = new Date(creationYear + 1, startingMonth, 1);
+
+        const validSchedules = task.schedules.filter(s => {
+          if (!s.targetPeriod) return true;
+          const parts = s.targetPeriod.split('-');
+          const scheduleDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+          
+          if (!isNaN(scheduleDate.getTime()) && scheduleDate >= maxDate) {
+            needsCleanup = true;
+            return false;
+          }
+          return true;
+        });
+
+        if (validSchedules.length !== task.schedules.length) {
+          return { ...task, schedules: validSchedules };
+        }
+        return task;
+      });
+
+      if (needsCleanup) {
+        setPeriodicalTasks(cleanedTasks);
+        savePeriodicalTasks(cleanedTasks);
+      }
+    }
+  }, [periodicalTasks, isStorageReady]);
+
   // Loading state while IndexedDB mounts
   if (!isStorageReady) {
     return (

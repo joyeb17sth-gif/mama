@@ -1,8 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { getContractors } from '../utils/storage';
 
 const SiteList = ({ sites, onEdit, onAddSubSite, onDelete, isAdmin = true }) => {
   const contractors = getContractors();
+  const [collapsedClients, setCollapsedClients] = useState({});
+  const [collapsedSites, setCollapsedSites] = useState({});
+
+  const toggleClient = (clientName) => {
+    setCollapsedClients(prev => ({ ...prev, [clientName]: !prev[clientName] }));
+  };
+
+  const toggleSite = (siteId) => {
+    setCollapsedSites(prev => ({ ...prev, [siteId]: !prev[siteId] }));
+  };
 
   if (sites.length === 0) {
     return (
@@ -16,6 +26,14 @@ const SiteList = ({ sites, onEdit, onAddSubSite, onDelete, isAdmin = true }) => 
 
   const mainSites = sites.filter(s => !s.isSubSite);
 
+  // Group main sites by client name
+  const groupedByClient = mainSites.reduce((acc, site) => {
+    const client = site.clientName || 'Direct Client';
+    if (!acc[client]) acc[client] = [];
+    acc[client].push(site);
+    return acc;
+  }, {});
+
   return (
     <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden animate-fade-in">
       {/* Desktop Table View */}
@@ -27,7 +45,7 @@ const SiteList = ({ sites, onEdit, onAddSubSite, onDelete, isAdmin = true }) => 
                 Site Organization
               </th>
               <th className="px-6 py-4 text-left text-p3 font-bold text-zinc-400 uppercase tracking-widest">
-                Client / Details
+                Site Details
               </th>
               <th className="px-6 py-4 text-left text-p3 font-bold text-zinc-400 uppercase tracking-widest">
                 Budget (Limit)
@@ -41,30 +59,56 @@ const SiteList = ({ sites, onEdit, onAddSubSite, onDelete, isAdmin = true }) => 
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
-            {mainSites.map((mainSite) => {
-              const subSites = sites.filter(s => s.isSubSite && s.parentSiteId === mainSite.id);
-
-              return (
-                <React.Fragment key={mainSite.id}>
-                  {/* Main Site Row */}
-                  <tr className="bg-white group">
-                    <td className="px-6 py-5 whitespace-nowrap">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-primary-600 text-white flex items-center justify-center">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-                        </div>
-                        <div>
-                          <div className="text-[9px] font-bold text-primary-600 uppercase tracking-widest mb-0.5">Primary Site</div>
-                          <div className="text-p3 font-bold text-zinc-900">{mainSite.siteName}</div>
-                        </div>
+            {Object.entries(groupedByClient).map(([clientName, clientSites]) => (
+              <React.Fragment key={clientName}>
+                {/* Client Layer Header Row */}
+                <tr 
+                  className="bg-slate-100 border-t-[6px] border-white border-b-2 border-b-slate-200 cursor-pointer hover:bg-slate-200/70 transition-colors"
+                  onClick={() => toggleClient(clientName)}
+                >
+                  <td colSpan="5" className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-notion-blue text-white shadow-sm flex items-center justify-center transition-transform duration-200">
+                        <svg className={`w-4 h-4 transform ${collapsedClients[clientName] ? '-rotate-90' : 'rotate-0'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" /></svg>
                       </div>
-                    </td>
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Client</span>
+                        <span className="text-sm font-black text-slate-900 uppercase tracking-widest">{clientName}</span>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+                {!collapsedClients[clientName] && clientSites.map((mainSite) => {
+                  const subSites = sites.filter(s => s.isSubSite && s.parentSiteId === mainSite.id);
+
+                  return (
+                    <React.Fragment key={mainSite.id}>
+                      {/* Main Site Row */}
+                      <tr className="bg-white group hover:bg-slate-50/50 transition-colors">
+                        <td className="py-5 pl-12 pr-6 whitespace-nowrap">
+                            <div className="flex items-center gap-4">
+                              {subSites.length > 0 ? (
+                                <button 
+                                  onClick={() => toggleSite(mainSite.id)}
+                                  className="w-6 h-6 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                                >
+                                  <svg className={`w-4 h-4 transform transition-transform duration-200 ${collapsedSites[mainSite.id] ? '-rotate-90' : 'rotate-0'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                                </button>
+                              ) : (
+                                <div className="w-6 h-6"></div>
+                              )}
+                              <div>
+                                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Primary Site</div>
+                              <div className="text-p3 font-bold text-zinc-900">{mainSite.siteName}</div>
+                            </div>
+                          </div>
+                        </td>
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
-                        <span className="text-p3 font-bold text-zinc-700">{mainSite.clientName || 'Direct Client'}</span>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="px-1.5 py-0.5 bg-zinc-100 text-zinc-500 rounded text-[9px] font-bold uppercase tracking-tighter">{mainSite.payrollCycle}</span>
-                          <span className="px-1.5 py-0.5 bg-zinc-100 text-zinc-500 rounded text-[9px] font-bold uppercase tracking-tighter">{mainSite.cleaningType || 'housekeeping'}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="px-1.5 py-0.5 bg-zinc-100 text-zinc-600 rounded text-[9px] font-bold uppercase tracking-tighter">{mainSite.payrollCycle}</span>
+                          <span className="px-1.5 py-0.5 bg-zinc-100 text-zinc-600 rounded text-[9px] font-bold uppercase tracking-tighter">{mainSite.cleaningType || 'housekeeping'}</span>
                         </div>
                       </div>
                     </td>
@@ -106,13 +150,10 @@ const SiteList = ({ sites, onEdit, onAddSubSite, onDelete, isAdmin = true }) => 
                   </tr>
 
                   {/* Sub-Site Rows */}
-                  {subSites.map((subSite, index) => (
+                  {!collapsedSites[mainSite.id] && subSites.map((subSite, index) => (
                     <tr key={subSite.id} className="bg-zinc-50/30 group hover:bg-zinc-50 transition-colors">
-                      <td className="px-6 py-4 pl-16 whitespace-nowrap">
+                      <td className="py-4 pl-[88px] pr-6 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-400">
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" /></svg>
-                          </div>
                           <div>
                             <div className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Sub-site {index + 1}</div>
                             <div className="text-p3 font-bold text-zinc-700">{subSite.siteName}</div>
@@ -148,13 +189,33 @@ const SiteList = ({ sites, onEdit, onAddSubSite, onDelete, isAdmin = true }) => 
                 </React.Fragment>
               );
             })}
+              </React.Fragment>
+            ))}
           </tbody>
         </table>
       </div>
 
       {/* Mobile Card-Based View */}
-      <div className="block md:hidden space-y-6 p-4 bg-zinc-50/50">
-        {mainSites.map((mainSite) => {
+      <div className="block md:hidden space-y-10 p-4 bg-zinc-50/50">
+        {Object.entries(groupedByClient).map(([clientName, clientSites]) => (
+          <div key={clientName} className="space-y-4">
+            {/* Client Header */}
+            <div 
+              className="flex items-center gap-3 p-3 bg-slate-100 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-slate-200/70 transition-colors"
+              onClick={() => toggleClient(clientName)}
+            >
+              <div className="w-10 h-10 rounded-lg bg-notion-blue text-white shadow-sm flex items-center justify-center">
+                <svg className={`w-5 h-5 transform ${collapsedClients[clientName] ? '-rotate-90' : 'rotate-0'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Client</span>
+                <h3 className="text-base font-black text-slate-900 uppercase tracking-widest">{clientName}</h3>
+              </div>
+            </div>
+            
+            {!collapsedClients[clientName] && (
+              <div className="space-y-6">
+                {clientSites.map((mainSite) => {
           const subSites = sites.filter(s => s.isSubSite && s.parentSiteId === mainSite.id);
 
           return (
@@ -162,11 +223,18 @@ const SiteList = ({ sites, onEdit, onAddSubSite, onDelete, isAdmin = true }) => 
               {/* Site Header */}
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-primary-600 text-white flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-                  </div>
+                  {subSites.length > 0 ? (
+                    <button 
+                      onClick={() => toggleSite(mainSite.id)}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 flex-shrink-0 transition-colors"
+                    >
+                      <svg className={`w-5 h-5 transform transition-transform duration-200 ${collapsedSites[mainSite.id] ? '-rotate-90' : 'rotate-0'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                  ) : (
+                    <div className="w-8 h-8 flex-shrink-0"></div>
+                  )}
                   <div>
-                    <span className="text-[9px] font-bold text-primary-600 uppercase tracking-widest block">Primary Site</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Primary Site</span>
                     <h4 className="text-p3 font-bold text-zinc-900">{mainSite.siteName}</h4>
                   </div>
                 </div>
@@ -186,11 +254,10 @@ const SiteList = ({ sites, onEdit, onAddSubSite, onDelete, isAdmin = true }) => 
               {/* Details & Budget */}
               <div className="grid grid-cols-2 gap-4 py-3 border-t border-b border-zinc-100 text-xs">
                 <div>
-                  <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider block">Client / Cycle</span>
-                  <div className="font-bold text-zinc-700 mt-0.5">{mainSite.clientName || 'Direct Client'}</div>
+                  <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider block">Cycle / Type</span>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    <span className="px-1.5 py-0.5 bg-zinc-100 text-zinc-500 rounded text-[9px] font-bold uppercase tracking-tighter">{mainSite.payrollCycle}</span>
-                    <span className="px-1.5 py-0.5 bg-zinc-100 text-zinc-500 rounded text-[9px] font-bold uppercase tracking-tighter">{mainSite.cleaningType || 'housekeeping'}</span>
+                    <span className="px-1.5 py-0.5 bg-zinc-100 text-zinc-600 rounded text-[9px] font-bold uppercase tracking-tighter">{mainSite.payrollCycle}</span>
+                    <span className="px-1.5 py-0.5 bg-zinc-100 text-zinc-600 rounded text-[9px] font-bold uppercase tracking-tighter">{mainSite.cleaningType || 'housekeeping'}</span>
                   </div>
                 </div>
 
@@ -225,7 +292,7 @@ const SiteList = ({ sites, onEdit, onAddSubSite, onDelete, isAdmin = true }) => 
               </div>
 
               {/* Sub-Sites Section */}
-              {subSites.length > 0 && (
+              {!collapsedSites[mainSite.id] && subSites.length > 0 && (
                 <div className="pt-3 mt-3 border-t border-dashed border-zinc-100 space-y-2">
                   <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest block">Nested Terminals ({subSites.length})</span>
                   <div className="space-y-2">
@@ -254,6 +321,10 @@ const SiteList = ({ sites, onEdit, onAddSubSite, onDelete, isAdmin = true }) => 
             </div>
           );
         })}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -107,14 +107,14 @@ const Layout = ({
             {/* Mobile Sidebar Overlay */}
             {isMobileMenuOpen && (
                 <div
-                    className="fixed inset-0 bg-notion-black/20 z-20 lg:hidden transition-opacity backdrop-blur-sm"
+                    className="fixed inset-0 bg-notion-black/20 z-[100] lg:hidden transition-opacity backdrop-blur-sm"
                     onClick={() => setIsMobileMenuOpen(false)}
                 ></div>
             )}
 
             {/* Sidebar Navigation */}
             <aside
-                className={`fixed inset-y-0 left-0 z-30 w-64 bg-white whisper-border transform transition-transform duration-300 cubic-bezier(0.4, 0, 0.2, 1) lg:translate-x-0 lg:static lg:inset-0
+                className={`fixed inset-y-0 left-0 z-[110] w-64 bg-white whisper-border transform transition-transform duration-300 cubic-bezier(0.4, 0, 0.2, 1) lg:translate-x-0 lg:static lg:inset-0 lg:z-0
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
             >
                 <div className="flex flex-col h-full">

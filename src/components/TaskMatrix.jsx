@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { format, addMonths, parseISO, startOfYear, endOfYear, eachMonthOfInterval } from 'date-fns';
+import { format, addMonths, parseISO, startOfYear, endOfYear, eachMonthOfInterval, addDays, addWeeks, startOfDay, isBefore } from 'date-fns';
 import Dropdown from './Dropdown';
 
 const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) => {
@@ -7,6 +7,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
   const [activePopup, setActivePopup] = useState(null); // { task, schedule, monthDisplay }
   const [popupScopeOfWork, setPopupScopeOfWork] = useState('');
   const [popupStatus, setPopupStatus] = useState('');
+  const [upcomingFilter, setUpcomingFilter] = useState('1week');
 
   // Generate 12 months for the selected year
   const months = useMemo(() => {
@@ -113,34 +114,113 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
   const [viewMode, setViewMode] = useState('matrix');
 
   const upcomingSchedules = useMemo(() => {
-    const today = new Date();
+    const today = startOfDay(new Date());
     const currentMonthStr = format(today, 'yyyy-MM');
-    const upcoming = [];
+    const list = [];
 
     periodicalTasks.forEach(task => {
       const site = sites.find(s => s.id === task.siteId);
       if (!task.schedules) return;
 
-      const sortedSchedules = [...task.schedules].sort((a, b) => a.targetPeriod.localeCompare(b.targetPeriod));
-      const nextSchedule = sortedSchedules.find(s => s.status === 'Scheduled' && s.targetPeriod >= currentMonthStr);
+      task.schedules.forEach(schedule => {
+        if (schedule.status !== 'Scheduled') return;
 
-      if (nextSchedule) {
-          const monthDate = parseISO(`${nextSchedule.targetPeriod}-01`);
-          upcoming.push({
-            task,
-            site,
-            schedule: nextSchedule,
-            monthDate,
-            monthDisplay: format(monthDate, 'MMM yyyy'),
-            exactDate: getExactDateForMonth(task, monthDate),
-            scope: getDefaultScopeOfWorkForMonth(task, monthDate) || nextSchedule.scopeOfWork || ''
-          });
-      }
+        const monthDate = parseISO(`${schedule.targetPeriod}-01`);
+        const exactDateStr = getExactDateForMonth(task, monthDate);
+        let isPastDue = false;
+        let scheduleDate = monthDate;
+
+        let displayExactDate = exactDateStr;
+        if (exactDateStr && exactDateStr !== 'Not Set') {
+          const parts = exactDateStr.split('-');
+          if (parts.length === 3) {
+            displayExactDate = `${schedule.targetPeriod}-${parts[2]}`;
+          }
+          const parsed = parseISO(displayExactDate);
+          if (!isNaN(parsed)) {
+            scheduleDate = parsed;
+            if (isBefore(parsed, today)) {
+              isPastDue = true;
+            }
+          }
+        } else {
+          // No exact date: past due if targetPeriod is before the current month
+          if (schedule.targetPeriod < currentMonthStr) {
+            isPastDue = true;
+          }
+        }
+
+        list.push({
+          task,
+          site,
+          schedule,
+          monthDate,
+          monthDisplay: format(monthDate, 'MMM yyyy'),
+          exactDate: displayExactDate,
+          scope: getDefaultScopeOfWorkForMonth(task, monthDate) || schedule.scopeOfWork || '',
+          isPastDue,
+          scheduleDate
+        });
+      });
     });
 
-    upcoming.sort((a, b) => a.schedule.targetPeriod.localeCompare(b.schedule.targetPeriod));
-    return upcoming;
+    const taskGroups = {};
+    list.forEach(item => {
+      const taskId = item.task.id;
+      if (!taskGroups[taskId]) {
+        taskGroups[taskId] = [];
+      }
+      taskGroups[taskId].push(item);
+    });
+
+    const finalUpcoming = [];
+    Object.values(taskGroups).forEach(items => {
+      items.sort((a, b) => a.schedule.targetPeriod.localeCompare(b.schedule.targetPeriod));
+
+      let upcomingAdded = false;
+      items.forEach(item => {
+        if (item.isPastDue) {
+          finalUpcoming.push(item);
+        } else if (!upcomingAdded) {
+          finalUpcoming.push(item);
+          upcomingAdded = true;
+        }
+      });
+    });
+
+    finalUpcoming.sort((a, b) => {
+      if (a.isPastDue && !b.isPastDue) return -1;
+      if (!a.isPastDue && b.isPastDue) return 1;
+      const cmp = a.schedule.targetPeriod.localeCompare(b.schedule.targetPeriod);
+      if (cmp !== 0) return cmp;
+      return a.scheduleDate - b.scheduleDate;
+    });
+
+    return finalUpcoming;
   }, [periodicalTasks, sites]);
+
+  const filteredUpcomingSchedules = useMemo(() => {
+    if (upcomingFilter === 'all') return upcomingSchedules;
+    if (upcomingFilter === 'past_due') return upcomingSchedules.filter(item => item.isPastDue);
+    
+    const today = startOfDay(new Date());
+    let endDate;
+    if (upcomingFilter === '1week') {
+      endDate = addWeeks(today, 1);
+    } else if (upcomingFilter === '15days') {
+      endDate = addDays(today, 15);
+    } else if (upcomingFilter === '1month') {
+      endDate = addMonths(today, 1);
+    }
+
+    return upcomingSchedules.filter(item => {
+      // Do not include past due items in the upcoming timeframe filters
+      if (item.isPastDue) return false;
+
+      let itemDate = item.scheduleDate;
+      return isBefore(itemDate, endDate) || itemDate.getTime() === endDate.getTime();
+    });
+  }, [upcomingSchedules, upcomingFilter]);
 
   return (
     <div className="bg-white rounded-xl shadow-notion-card border border-notion-warm-gray-200">
@@ -160,6 +240,24 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
           </div>
         </div>
         
+        {viewMode === 'upcoming' && (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full md:w-auto">
+            <div className="w-full sm:w-40">
+              <Dropdown
+                value={upcomingFilter}
+                onChange={(val) => setUpcomingFilter(val)}
+                options={[
+                  { value: 'all', label: 'All Time' },
+                  { value: 'past_due', label: 'Past Due' },
+                  { value: '1week', label: 'Next 1 Week' },
+                  { value: '15days', label: 'Next 15 Days' },
+                  { value: '1month', label: 'Next 1 Month' }
+                ]}
+              />
+            </div>
+          </div>
+        )}
+
         {viewMode === 'matrix' && (
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full md:w-auto">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
@@ -282,7 +380,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
       {/* Upcoming Tasks Table */}
       {viewMode === 'upcoming' && (
         <div className="overflow-x-auto w-full custom-scrollbar p-1">
-          {upcomingSchedules.length === 0 ? (
+          {filteredUpcomingSchedules.length === 0 ? (
              <div className="py-12 text-center text-notion-warm-gray-500 bg-white">
                No upcoming scheduled tasks found.
              </div>
@@ -299,11 +397,18 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                 </tr>
               </thead>
               <tbody>
-                {upcomingSchedules.map((item, index) => (
+                {filteredUpcomingSchedules.map((item, index) => (
                   <tr key={`${item.task.id}-${index}`} className="border-b border-notion-warm-gray-100 hover:bg-blue-50/30 transition-colors bg-white">
                     <td className="px-4 py-3">
                       <div className="flex flex-col">
-                        <span className="font-bold text-notion-blue">{item.monthDisplay}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-notion-blue">{item.monthDisplay}</span>
+                          {item.isPastDue && (
+                            <span className="px-1.5 py-0.5 bg-red-50 text-red-600 text-[9px] font-extrabold uppercase tracking-wider rounded border border-red-200 animate-pulse">
+                              Past Due
+                            </span>
+                          )}
+                        </div>
                         {item.exactDate && item.exactDate !== 'Not Set' && (
                            <span className="text-[10px] font-bold text-notion-warm-gray-400 uppercase tracking-widest">{item.exactDate}</span>
                         )}
