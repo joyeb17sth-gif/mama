@@ -61,7 +61,8 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
     if (!periods.length) return 'Not Set';
     
     if (task.frequency === 'Monthly') {
-       return periods[monthIndex]?.exactDate || 'Not Set';
+       const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex];
+       return periods.find(p => p.name === monthName)?.exactDate || 'Not Set';
     }
     if (task.frequency === 'Quarterly') {
        let diff = monthIndex - (task.startingMonth || 0);
@@ -91,7 +92,8 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
     if (!periods.length) return '';
     
     if (task.frequency === 'Monthly') {
-       return periods[monthIndex]?.scopeOfWork || '';
+       const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex];
+       return periods.find(p => p.name === monthName)?.scopeOfWork || '';
     }
     if (task.frequency === 'Quarterly') {
        let diff = monthIndex - (task.startingMonth || 0);

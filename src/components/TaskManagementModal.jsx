@@ -78,7 +78,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
     return { totalHours, totalPrice };
   };
 
-  const generateSchedules = (frequency, startingMonth = 0, periods = []) => {
+  const generateSchedules = (frequency, startingMonth = 0, periods = [], existingSchedules = []) => {
     let interval = 1;
     if (frequency === 'Weekly') interval = 1;
     if (frequency === 'Monthly') interval = 1;
@@ -91,7 +91,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
     // Start from startingMonth of current year
     let currentDate = new Date(currentYear, startingMonth, 1);
 
-    const totalMonths = 12;
+    const totalMonths = 36; // Generate for 3 years
     const allPeriods = getInitialPeriods(frequency);
     let iteration = 0;
 
@@ -107,11 +107,16 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
 
       if (isActive) {
         const targetPeriod = format(currentDate, 'yyyy-MM');
-        schedules.push({
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          targetPeriod,
-          status: 'Scheduled'
-        });
+        const existing = existingSchedules.find(s => s.targetPeriod === targetPeriod);
+        if (existing) {
+          schedules.push(existing);
+        } else {
+          schedules.push({
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            targetPeriod,
+            status: 'Scheduled'
+          });
+        }
       }
       currentDate = addMonths(currentDate, interval);
       iteration++;
@@ -154,9 +159,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
         periodBudgets: newTask.periods,
         contractType: newTask.contractType,
         assignedTo: newTask.assignedTo,
-        schedules: (freqChanged || monthChanged || existingTask.periodBudgets?.length !== newTask.periods.length)
-          ? generateSchedules(newTask.frequency, newTask.startingMonth, newTask.periods)
-          : existingTask.schedules
+        schedules: generateSchedules(newTask.frequency, newTask.startingMonth, newTask.periods, existingTask.schedules || [])
       };
       setTasks(tasks.map(t => t.id === editingTaskId ? updatedTask : t));
       setEditingTaskId(null);

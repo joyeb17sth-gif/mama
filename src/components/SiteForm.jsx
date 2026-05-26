@@ -194,7 +194,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
     onSave(validationResult.data, tasks);
   };
 
-  const generateSchedules = (frequency, startingMonth = 0, periods = []) => {
+  const generateSchedules = (frequency, startingMonth = 0, periods = [], existingSchedules = []) => {
     if (frequency === 'Custom Date') {
       const schedules = [];
       const customDate = periods[0]?.customDate;
@@ -217,26 +217,35 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
     // Start from startingMonth of current year
     let currentDate = new Date(currentYear, startingMonth, 1);
 
-    const totalMonths = 12;
+    const totalMonths = 36; // Generate for 3 years
     const allPeriods = getInitialPeriods(frequency);
     let iteration = 0;
 
     for (let i = 0; i < totalMonths; i += interval) {
-       let expectedName = '';
-       if (frequency === 'Monthly') {
-         expectedName = allPeriods[currentDate.getMonth()]?.name;
-       } else if (allPeriods.length > 0) {
-         expectedName = allPeriods[iteration % allPeriods.length]?.name;
-       }
+      let expectedName = '';
+      if (frequency === 'Monthly') {
+        expectedName = allPeriods[currentDate.getMonth()]?.name;
+      } else if (allPeriods.length > 0) {
+        expectedName = allPeriods[iteration % allPeriods.length]?.name;
+      }
 
-       const isActive = expectedName ? periods.some(p => p.name === expectedName) : true;
+      const isActive = expectedName ? periods.some(p => p.name === expectedName) : true;
 
-       if (isActive) {
-         const targetPeriod = format(currentDate, 'yyyy-MM');
-         schedules.push({ id: Date.now().toString() + Math.random().toString(36).substr(2, 9), targetPeriod, status: 'Scheduled' });
-       }
-       currentDate = addMonths(currentDate, interval);
-       iteration++;
+      if (isActive) {
+        const targetPeriod = format(currentDate, 'yyyy-MM');
+        const existing = existingSchedules.find(s => s.targetPeriod === targetPeriod);
+        if (existing) {
+          schedules.push(existing);
+        } else {
+          schedules.push({
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            targetPeriod,
+            status: 'Scheduled'
+          });
+        }
+      }
+      currentDate = addMonths(currentDate, interval);
+      iteration++;
     }
     return schedules;
   };
@@ -263,10 +272,6 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
     
     if (editingTaskId) {
       const existingTask = tasks.find(t => t.id === editingTaskId);
-      const freqChanged = existingTask.frequency !== newTask.frequency;
-      const monthChanged = (existingTask.startingMonth || 0) !== newTask.startingMonth;
-      const dateChanged = newTask.frequency === 'Custom Date' && existingTask.periodBudgets?.[0]?.customDate !== newTask.periods[0]?.customDate;
-      
       const updatedTask = {
         ...existingTask,
         taskCode: newTask.taskCode.toUpperCase().trim(),
@@ -278,9 +283,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
         periodBudgets: newTask.periods,
         contractType: newTask.contractType,
         assignedTo: newTask.assignedTo,
-        schedules: (freqChanged || monthChanged || dateChanged || existingTask.periodBudgets?.length !== newTask.periods.length)
-          ? generateSchedules(newTask.frequency, newTask.startingMonth, newTask.periods)
-          : existingTask.schedules
+        schedules: generateSchedules(newTask.frequency, newTask.startingMonth, newTask.periods, existingTask.schedules || [])
       };
       setTasks(tasks.map(t => t.id === editingTaskId ? updatedTask : t));
       setEditingTaskId(null);
