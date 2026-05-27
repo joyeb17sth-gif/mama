@@ -458,12 +458,22 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                     </td>
                     <td className="px-4 py-3">
                       {(item.task.assignedTo && item.task.assignedTo.length > 0) ? (
-                        <div className="flex flex-wrap gap-1">
-                          {(Array.isArray(item.task.assignedTo) ? item.task.assignedTo : [item.task.assignedTo]).map((assignee, idx) => (
-                            <span key={idx} className="px-2 py-1 bg-notion-badge-blue-bg text-notion-blue text-[10px] font-bold rounded-micro border border-notion-blue/20">
-                              {assignee}
-                            </span>
-                          ))}
+                        <div className="flex items-center -space-x-1.5">
+                          {(Array.isArray(item.task.assignedTo) ? item.task.assignedTo : [item.task.assignedTo]).map((assignee, idx) => {
+                            const colors = ['bg-blue-500','bg-emerald-500','bg-violet-500','bg-amber-500','bg-rose-500','bg-cyan-500','bg-indigo-500','bg-pink-500'];
+                            const letter = (assignee || '?')[0].toUpperCase();
+                            return (
+                              <div key={idx} className="relative group/avatar">
+                                <div className={`w-7 h-7 rounded-full ${colors[idx % colors.length]} flex items-center justify-center text-white text-[11px] font-bold ring-2 ring-white cursor-default`}>
+                                  {letter}
+                                </div>
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-notion-black text-white text-[10px] font-medium rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover/avatar:opacity-100 transition-opacity duration-200 z-50">
+                                  {assignee}
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-2 h-2 bg-notion-black rotate-45"></div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       ) : (
                         <span className="text-notion-warm-gray-300 text-xs italic">Unassigned</span>
@@ -520,7 +530,30 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                 <p><span className="text-notion-warm-gray-500 font-medium">Task:</span> <span className="font-semibold text-notion-black">{activePopup.task.taskName} ({activePopup.task.taskCode})</span></p>
                 <p><span className="text-notion-warm-gray-500 font-medium">Period:</span> <span className="font-semibold text-notion-black">{activePopup.monthDisplay}</span></p>
                 <p><span className="text-notion-warm-gray-500 font-medium">Exact Date:</span> <span className="font-semibold text-notion-black">{getExactDateForMonth(activePopup.task, activePopup.monthDate)}</span></p>
-                <p className="flex flex-wrap gap-1"><span className="text-notion-warm-gray-500 font-medium shrink-0">Assigned To:</span> <span className={`font-semibold break-words ${(activePopup.task.assignedTo && activePopup.task.assignedTo.length > 0) ? 'text-notion-blue' : 'text-notion-warm-gray-300'}`}>{(activePopup.task.assignedTo && activePopup.task.assignedTo.length > 0) ? (Array.isArray(activePopup.task.assignedTo) ? activePopup.task.assignedTo.join(', ') : activePopup.task.assignedTo) : 'Unassigned'}</span></p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-notion-warm-gray-500 font-medium shrink-0 text-sm">Assigned To:</span>
+                  {(activePopup.task.assignedTo && activePopup.task.assignedTo.length > 0) ? (
+                    <div className="flex items-center -space-x-1.5">
+                      {(Array.isArray(activePopup.task.assignedTo) ? activePopup.task.assignedTo : [activePopup.task.assignedTo]).map((assignee, idx) => {
+                        const colors = ['bg-blue-500','bg-emerald-500','bg-violet-500','bg-amber-500','bg-rose-500','bg-cyan-500','bg-indigo-500','bg-pink-500'];
+                        const letter = (assignee || '?')[0].toUpperCase();
+                        return (
+                          <div key={idx} className="relative group/avatar">
+                            <div className={`w-7 h-7 rounded-full ${colors[idx % colors.length]} flex items-center justify-center text-white text-[11px] font-bold ring-2 ring-white cursor-default`}>
+                              {letter}
+                            </div>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-notion-black text-white text-[10px] font-medium rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover/avatar:opacity-100 transition-opacity duration-200 z-50">
+                              {assignee}
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-2 h-2 bg-notion-black rotate-45"></div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <span className="text-notion-warm-gray-300 text-xs italic">Unassigned</span>
+                  )}
+                </div>
                 <p><span className="text-notion-warm-gray-500 font-medium">Current Status:</span> <span className="font-semibold text-notion-black">{activePopup.schedule.status}</span></p>
               </div>
               <div className="pt-2">
