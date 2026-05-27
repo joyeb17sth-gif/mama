@@ -56,9 +56,11 @@ const Dropdown = ({
                 onClick={() => setIsOpen(!isOpen)}
                 className={finalButtonClasses}
             >
-                <span className={textClasses}>
+                <span className={`${textClasses} truncate pr-2`}>
                     {isMulti 
-                        ? (selectedOptions.length > 0 ? selectedOptions.map(o => o.label).join(', ') : placeholder) 
+                        ? (selectedOptions.length > 0 
+                            ? (selectedOptions.length === 1 ? selectedOptions[0].label : `${selectedOptions.length} selected`) 
+                            : placeholder) 
                         : (selectedOption ? selectedOption.label : placeholder)}
                 </span>
                 <svg
