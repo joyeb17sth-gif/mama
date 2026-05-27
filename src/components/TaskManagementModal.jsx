@@ -15,8 +15,8 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
       try {
         const contractors = getContractors() || [];
         const filtered = contractors.filter(u => {
-          const role = u.role?.toLowerCase();
-          return role === 'manager' || role === 'supervisor';
+          const role = u.role?.toLowerCase() || '';
+          return role.includes('manager') || role.includes('supervisor') || role.includes('mod');
         });
         setProfileUsers(filtered);
       } catch (e) { /* ignore */ }
