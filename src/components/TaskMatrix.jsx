@@ -115,6 +115,34 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
     return '';
   };
 
+  const getDefaultScopeFileForMonth = (task, monthDate) => {
+    if (!monthDate) return null;
+    const monthIndex = monthDate.getMonth();
+    const periods = task.periodBudgets || [];
+    if (!periods.length) return null;
+    
+    let targetPeriod = null;
+    if (task.frequency === 'Monthly') {
+       const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex];
+       targetPeriod = periods.find(p => p.name === monthName);
+    } else if (task.frequency === 'Quarterly') {
+       let diff = monthIndex - (task.startingMonth || 0);
+       if (diff < 0) diff += 12;
+       targetPeriod = periods[Math.floor(diff / 3)];
+    } else if (task.frequency === '6 Monthly') {
+       let diff = monthIndex - (task.startingMonth || 0);
+       if (diff < 0) diff += 12;
+       targetPeriod = periods[Math.floor(diff / 6)];
+    } else if (task.frequency === 'Yearly' || task.frequency === 'Weekly' || task.frequency === 'Custom Date') {
+       targetPeriod = periods[0];
+    }
+    
+    if (targetPeriod && targetPeriod.scopeFileUrl) {
+       return { url: targetPeriod.scopeFileUrl, name: targetPeriod.scopeFileName };
+    }
+    return null;
+  };
+
   const [viewMode, setViewMode] = useState('matrix');
 
   const upcomingSchedules = useMemo(() => {
@@ -442,7 +470,13 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                       )}
                     </td>
                     <td className="px-4 py-3 max-w-xs truncate text-notion-warm-gray-500" title={item.scope}>
-                      {item.scope || 'No scope defined'}
+                      {getDefaultScopeFileForMonth(item.task, item.monthDate) ? (
+                        <a href={getDefaultScopeFileForMonth(item.task, item.monthDate).url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-notion-blue hover:underline text-xs font-bold">
+                           {getDefaultScopeFileForMonth(item.task, item.monthDate).name || 'View Document'}
+                        </a>
+                      ) : (
+                        <span>{item.scope || 'No scope defined'}</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
@@ -490,7 +524,19 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                 <p><span className="text-notion-warm-gray-500 font-medium">Current Status:</span> <span className="font-semibold text-notion-black">{activePopup.schedule.status}</span></p>
               </div>
               <div className="pt-2">
-                <label className="block text-sm font-medium text-notion-warm-gray-500 mb-2">Scope of Work</label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-notion-warm-gray-500">Scope of Work</label>
+                  {getDefaultScopeFileForMonth(activePopup.task, activePopup.monthDate) && (
+                    <a 
+                      href={getDefaultScopeFileForMonth(activePopup.task, activePopup.monthDate).url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-xs font-bold text-notion-blue bg-notion-badge-blue-bg px-2 py-1 rounded-micro hover:bg-notion-blue hover:text-white transition-colors"
+                    >
+                      View Document
+                    </a>
+                  )}
+                </div>
                 <textarea
                   value={popupScopeOfWork || ''}
                   onChange={(e) => setPopupScopeOfWork(e.target.value)}

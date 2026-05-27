@@ -28,6 +28,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
   // Periodical Tasks State
   const [tasks, setTasks] = useState(periodicalTasks);
   const [profileUsers, setProfileUsers] = useState([]);
+  const [uploadingFiles, setUploadingFiles] = useState({});
 
 
   useEffect(() => {
@@ -145,6 +146,50 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
 
   const [editingTaskId, setEditingTaskId] = useState(null);
 
+  const handleFileUpload = async (e, arrayIndex, isEditingTask = false) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!supabase) {
+      alert("Supabase is not configured!");
+      return;
+    }
+
+    setUploadingFiles(prev => ({ ...prev, [arrayIndex]: true }));
+    
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('scope_files')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data } = supabase.storage
+        .from('scope_files')
+        .getPublicUrl(filePath);
+
+      if (isEditingTask) {
+        const newPeriods = [...editingTask.periods];
+        newPeriods[arrayIndex] = { ...newPeriods[arrayIndex], scopeFileUrl: data.publicUrl, scopeFileName: file.name };
+        setEditingTask({ ...editingTask, periods: newPeriods });
+      } else {
+        handleTaskPeriodChange(arrayIndex, 'scopeFileUrl', data.publicUrl);
+        handleTaskPeriodChange(arrayIndex, 'scopeFileName', file.name);
+      }
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert("Error uploading file: " + error.message);
+    } finally {
+      setUploadingFiles(prev => ({ ...prev, [arrayIndex]: false }));
+    }
+  };
+
   const [newTask, setNewTask] = useState({
     taskCode: '',
     taskName: '',
@@ -166,7 +211,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
 
   const handleTaskPeriodChange = (index, field, value) => {
     const updatedPeriods = [...newTask.periods];
-    if (field === 'customDate' || field === 'exactDate' || field === 'scopeOfWork') {
+    if (field === 'customDate' || field === 'exactDate' || field === 'scopeOfWork' || field === 'scopeFileUrl' || field === 'scopeFileName') {
       updatedPeriods[index][field] = value;
     } else {
       updatedPeriods[index][field] = parseFloat(value) || 0;
@@ -824,6 +869,43 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                         rows={2}
                         className="w-full px-2 py-1 bg-notion-warm-white whisper-border rounded text-[11px] font-bold outline-none focus:border-notion-blue resize-none"
                       />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <label className="text-[9px] font-bold text-notion-warm-gray-400 uppercase tracking-widest">Attached Document</label>
+                      {period.scopeFileUrl ? (
+                        <div className="flex items-center justify-between bg-notion-badge-blue-bg/50 px-2 py-1 rounded-micro border border-notion-blue/20">
+                          <a href={period.scopeFileUrl} target="_blank" rel="noopener noreferrer" className="text-[9px] font-bold text-notion-blue truncate w-16" title={period.scopeFileName || "View File"}>
+                            {period.scopeFileName || "Document"}
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                                handleTaskPeriodChange(arrayIndex, 'scopeFileUrl', null);
+                                handleTaskPeriodChange(arrayIndex, 'scopeFileName', null);
+                            }}
+                            className="text-notion-warm-gray-400 hover:text-rose-600 ml-1"
+                          >
+                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <input
+                            type="file"
+                            onChange={(e) => handleFileUpload(e, arrayIndex, false)}
+                            disabled={uploadingFiles[arrayIndex]}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                            title="Upload Document"
+                          />
+                          <div className={`w-6 h-6 flex items-center justify-center bg-notion-warm-white hover:bg-notion-warm-gray-100 whisper-border rounded text-notion-warm-gray-500 transition-colors ${uploadingFiles[arrayIndex] ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                            {uploadingFiles[arrayIndex] ? (
+                              <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                            ) : (
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
