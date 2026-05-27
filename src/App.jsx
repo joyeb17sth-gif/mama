@@ -106,8 +106,8 @@ function App() {
     if (isAdmin) return sites;
     const role = userProfileData.role?.toLowerCase() || 'user';
     if (role === 'supervisor' || role === 'manager') {
-      const myEmail = userProfileData.name;
-      const me = contractors.find(c => c.email === myEmail);
+      const myEmail = (userProfileData.name || '').trim().toLowerCase();
+      const me = contractors.find(c => (c.email || '').trim().toLowerCase() === myEmail);
       if (!me) return [];
 
       const directlyAllocatedSiteIds = sites.filter(s => s.allocatedContractors?.includes(me.id)).map(s => s.id);
