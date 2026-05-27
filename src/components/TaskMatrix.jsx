@@ -568,7 +568,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                 </div>
               </div>
               {popupStatus === 'Completed' && (
-                <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300 grid grid-cols-[7fr_3fr] gap-3">
+                <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300 grid grid-cols-[7fr_3fr] gap-6">
                   <div className="min-w-0">
                     <label className="block text-xs font-bold text-notion-warm-gray-500 uppercase tracking-widest mb-1 truncate">Completion Date</label>
                     <input
