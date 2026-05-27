@@ -49,7 +49,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
     taskName: '',
     frequency: 'Monthly',
     contractType: 'AD/HOC',
-    assignedTo: '',
+    assignedTo: [],
     startingMonth: 0, // January = 0
     periods: getInitialPeriods('Monthly')
   });
@@ -143,7 +143,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
       taskName: taskToEdit.taskName || '',
       frequency: taskToEdit.frequency || 'Monthly',
       contractType: taskToEdit.contractType || 'AD/HOC',
-      assignedTo: taskToEdit.assignedTo || '',
+      assignedTo: Array.isArray(taskToEdit.assignedTo) ? taskToEdit.assignedTo : (taskToEdit.assignedTo ? [taskToEdit.assignedTo] : []),
       startingMonth: taskToEdit.startingMonth || 0,
       periods: taskToEdit.periodBudgets || getInitialPeriods(taskToEdit.frequency || 'Monthly')
     });
@@ -206,7 +206,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
       taskName: '',
       frequency: 'Monthly',
       contractType: 'AD/HOC',
-      assignedTo: '',
+      assignedTo: [],
       startingMonth: 0,
       periods: getInitialPeriods('Monthly')
     });
@@ -300,12 +300,12 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                   value={newTask.assignedTo}
                   onChange={(val) => setNewTask({ ...newTask, assignedTo: val })}
                   options={[
-                    { value: '', label: 'Unassigned' },
                     { value: 'joyeb5730@gmail.com', label: 'Admin Supervisor' },
                     { value: 'saching@seetalgroup.com', label: 'saching (Manager)' },
                     ...profileUsers.map(u => ({ value: u.email, label: `${u.name || u.email} (${u.role})` }))
                   ]}
-                  placeholder="Select a person..."
+                  placeholder="Select assignees..."
+                  isMulti={true}
                 />
               </div>
             </div>
@@ -455,7 +455,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                   onClick={() => {
                     setEditingTaskId(null);
                     setNewTask({
-                      taskCode: '', taskName: '', frequency: 'Monthly', contractType: 'AD/HOC', assignedTo: '', startingMonth: 0,
+                      taskCode: '', taskName: '', frequency: 'Monthly', contractType: 'AD/HOC', assignedTo: [], startingMonth: 0,
                       periods: getInitialPeriods('Monthly')
                     });
                   }}

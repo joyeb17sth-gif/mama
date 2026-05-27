@@ -429,10 +429,14 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      {item.task.assignedTo ? (
-                        <span className="px-2 py-1 bg-notion-badge-blue-bg text-notion-blue text-[10px] font-bold rounded-micro border border-notion-blue/20">
-                          {item.task.assignedTo}
-                        </span>
+                      {(item.task.assignedTo && item.task.assignedTo.length > 0) ? (
+                        <div className="flex flex-wrap gap-1">
+                          {(Array.isArray(item.task.assignedTo) ? item.task.assignedTo : [item.task.assignedTo]).map((assignee, idx) => (
+                            <span key={idx} className="px-2 py-1 bg-notion-badge-blue-bg text-notion-blue text-[10px] font-bold rounded-micro border border-notion-blue/20">
+                              {assignee}
+                            </span>
+                          ))}
+                        </div>
                       ) : (
                         <span className="text-notion-warm-gray-300 text-xs italic">Unassigned</span>
                       )}
@@ -482,7 +486,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                 <p><span className="text-notion-warm-gray-500 font-medium">Task:</span> <span className="font-semibold text-notion-black">{activePopup.task.taskName} ({activePopup.task.taskCode})</span></p>
                 <p><span className="text-notion-warm-gray-500 font-medium">Period:</span> <span className="font-semibold text-notion-black">{activePopup.monthDisplay}</span></p>
                 <p><span className="text-notion-warm-gray-500 font-medium">Exact Date:</span> <span className="font-semibold text-notion-black">{getExactDateForMonth(activePopup.task, activePopup.monthDate)}</span></p>
-                <p><span className="text-notion-warm-gray-500 font-medium">Assigned To:</span> <span className={`font-semibold ${activePopup.task.assignedTo ? 'text-notion-blue' : 'text-notion-warm-gray-300'}`}>{activePopup.task.assignedTo || 'Unassigned'}</span></p>
+                <p><span className="text-notion-warm-gray-500 font-medium">Assigned To:</span> <span className={`font-semibold ${(activePopup.task.assignedTo && activePopup.task.assignedTo.length > 0) ? 'text-notion-blue' : 'text-notion-warm-gray-300'}`}>{(activePopup.task.assignedTo && activePopup.task.assignedTo.length > 0) ? (Array.isArray(activePopup.task.assignedTo) ? activePopup.task.assignedTo.join(', ') : activePopup.task.assignedTo) : 'Unassigned'}</span></p>
                 <p><span className="text-notion-warm-gray-500 font-medium">Current Status:</span> <span className="font-semibold text-notion-black">{activePopup.schedule.status}</span></p>
               </div>
               <div className="pt-2">

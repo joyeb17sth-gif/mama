@@ -132,7 +132,7 @@ function App() {
 
     const userEmail = userProfileData?.name;
     if (!userEmail || userEmail === 'Loading...') return [];
-    return periodicalTasks.filter(t => t.assignedTo === userEmail);
+    return periodicalTasks.filter(t => Array.isArray(t.assignedTo) ? t.assignedTo.includes(userEmail) : t.assignedTo === userEmail);
   }, [periodicalTasks, isAdmin, userProfileData, visibleSites]);
 
   const syncDataRef = React.useRef(null);
@@ -551,7 +551,7 @@ function App() {
     // Merge into global periodicalTasks (remove old ones for this site, add new ones)
     const otherTasks = isAdmin 
        ? currentGlobalTasks.filter(t => t.siteId !== siteId)
-       : currentGlobalTasks.filter(t => !(t.siteId === siteId && t.assignedTo === userProfileData.name));
+       : currentGlobalTasks.filter(t => !(t.siteId === siteId && (Array.isArray(t.assignedTo) ? t.assignedTo.includes(userProfileData.name) : t.assignedTo === userProfileData.name)));
     const updatedPeriodicalTasks = [...otherTasks, ...tasksToSave];
     
     setPeriodicalTasks(updatedPeriodicalTasks);
@@ -951,10 +951,10 @@ function App() {
             tasks={visiblePeriodicalTasks.filter(t => t.siteId === managingTasksSite.id)}
             onSave={(siteId, updatedTasks) => {
               const tasksToSave = updatedTasks.map(t => ({ ...t, siteId }));
-              const otherTasks = isAdmin 
+              const updatedPeriodicalTasks = isAdmin 
                  ? periodicalTasks.filter(t => t.siteId !== siteId)
-                 : periodicalTasks.filter(t => !(t.siteId === siteId && t.assignedTo === userProfileData?.name));
-              const merged = [...otherTasks, ...tasksToSave];
+                 : periodicalTasks.filter(t => !(t.siteId === siteId && (Array.isArray(t.assignedTo) ? t.assignedTo.includes(userProfileData?.name) : t.assignedTo === userProfileData?.name)));
+              const merged = [...updatedPeriodicalTasks, ...tasksToSave];
               setPeriodicalTasks(merged);
               savePeriodicalTasks(merged);
               setManagingTasksSite(null);
