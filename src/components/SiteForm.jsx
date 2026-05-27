@@ -312,6 +312,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
       periods: taskToEdit.periodBudgets || getInitialPeriods(taskToEdit.frequency || 'Custom Date')
     });
     setEditingTaskId(taskId);
+    setIsNewTaskOpen(true);
   };
 
   const handleAddTask = () => {

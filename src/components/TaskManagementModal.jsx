@@ -196,6 +196,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
       periods: taskToEdit.periodBudgets || getInitialPeriods(taskToEdit.frequency || 'Monthly')
     });
     setEditingTaskId(taskId);
+    setIsNewTaskOpen(true);
   };
 
   const handleAddTask = () => {

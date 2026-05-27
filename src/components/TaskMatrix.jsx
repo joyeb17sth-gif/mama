@@ -366,7 +366,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                       <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-[10px] md:text-xs">
                         {task.contractType}
                       </td>
-                      <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-center font-semibold bg-[#ffc000] text-amber-900 border-b border-white">
+                      <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-center font-semibold bg-emerald-100 text-emerald-700 border-b border-white">
                         {task.budgetHours}
                       </td>
                       
