@@ -502,10 +502,10 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
 
       {/* Status Update Popup */}
       {activePopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-notion-card w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-notion-warm-gray-200 bg-notion-warm-white flex justify-between items-center">
-              <h3 className="font-bold text-notion-black">Update Task Status</h3>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-notion-card w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-4 py-3 border-b border-notion-warm-gray-200 bg-notion-warm-white flex justify-between items-center shrink-0">
+              <h3 className="font-bold text-notion-black text-sm">Update Task Status</h3>
               <button 
                 onClick={() => setActivePopup(null)}
                 className="text-notion-warm-gray-500 hover:text-notion-black transition-colors"
@@ -515,12 +515,12 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                 </svg>
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1">
               <div className="space-y-1 text-sm">
                 <p><span className="text-notion-warm-gray-500 font-medium">Task:</span> <span className="font-semibold text-notion-black">{activePopup.task.taskName} ({activePopup.task.taskCode})</span></p>
                 <p><span className="text-notion-warm-gray-500 font-medium">Period:</span> <span className="font-semibold text-notion-black">{activePopup.monthDisplay}</span></p>
                 <p><span className="text-notion-warm-gray-500 font-medium">Exact Date:</span> <span className="font-semibold text-notion-black">{getExactDateForMonth(activePopup.task, activePopup.monthDate)}</span></p>
-                <p><span className="text-notion-warm-gray-500 font-medium">Assigned To:</span> <span className={`font-semibold ${(activePopup.task.assignedTo && activePopup.task.assignedTo.length > 0) ? 'text-notion-blue' : 'text-notion-warm-gray-300'}`}>{(activePopup.task.assignedTo && activePopup.task.assignedTo.length > 0) ? (Array.isArray(activePopup.task.assignedTo) ? activePopup.task.assignedTo.join(', ') : activePopup.task.assignedTo) : 'Unassigned'}</span></p>
+                <p className="flex flex-wrap gap-1"><span className="text-notion-warm-gray-500 font-medium shrink-0">Assigned To:</span> <span className={`font-semibold break-words ${(activePopup.task.assignedTo && activePopup.task.assignedTo.length > 0) ? 'text-notion-blue' : 'text-notion-warm-gray-300'}`}>{(activePopup.task.assignedTo && activePopup.task.assignedTo.length > 0) ? (Array.isArray(activePopup.task.assignedTo) ? activePopup.task.assignedTo.join(', ') : activePopup.task.assignedTo) : 'Unassigned'}</span></p>
                 <p><span className="text-notion-warm-gray-500 font-medium">Current Status:</span> <span className="font-semibold text-notion-black">{activePopup.schedule.status}</span></p>
               </div>
               <div className="pt-2">
@@ -568,30 +568,30 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                 </div>
               </div>
               {popupStatus === 'Completed' && (
-                <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300 space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-notion-warm-gray-500 mb-2">Date of Completion</label>
+                <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300 flex flex-row gap-3">
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-xs font-bold text-notion-warm-gray-500 uppercase tracking-widest mb-1 truncate">Completion Date</label>
                     <input
                       type="date"
                       value={popupCompletionDate}
                       onChange={(e) => setPopupCompletionDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-notion-warm-gray-200 rounded-lg text-sm focus:border-notion-blue focus:ring-1 focus:ring-notion-blue outline-none text-notion-black transition-all"
+                      className="w-full px-2 py-2 bg-white border border-notion-warm-gray-200 rounded-lg text-sm focus:border-notion-blue focus:ring-1 focus:ring-notion-blue outline-none text-notion-black transition-all"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-notion-warm-gray-500 mb-2">Hours Required to Complete Task</label>
+                  <div className="w-24 shrink-0">
+                    <label className="block text-xs font-bold text-notion-warm-gray-500 uppercase tracking-widest mb-1 truncate">Total Hrs</label>
                     <input
                       type="number"
                       value={popupHours}
                       onChange={(e) => setPopupHours(e.target.value)}
-                      placeholder="Enter hours..."
-                      className="w-full px-3 py-2 bg-white border border-notion-warm-gray-200 rounded-lg text-sm focus:border-notion-blue focus:ring-1 focus:ring-notion-blue outline-none text-notion-black transition-all"
+                      placeholder="0"
+                      className="w-full px-2 py-2 bg-white border border-notion-warm-gray-200 rounded-lg text-sm focus:border-notion-blue focus:ring-1 focus:ring-notion-blue outline-none text-notion-black transition-all"
                     />
                   </div>
                 </div>
               )}
             </div>
-            <div className="px-6 py-4 border-t border-notion-warm-gray-200 bg-notion-warm-white flex justify-end gap-3">
+            <div className="px-4 py-3 border-t border-notion-warm-gray-200 bg-notion-warm-white flex justify-end gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => setActivePopup(null)}
@@ -605,9 +605,10 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                   onToggleStatus(activePopup.task, activePopup.schedule, popupStatus, popupScopeOfWork, popupHours ? parseFloat(popupHours) : undefined, popupCompletionDate);
                   setActivePopup(null);
                 }}
-                className="px-4 py-2 bg-notion-blue hover:bg-notion-blue-active text-white rounded-lg text-sm font-medium transition shadow-sm"
+                disabled={popupStatus === 'Completed' && (!popupCompletionDate || !popupHours)}
+                className="px-5 py-2 bg-notion-blue text-white hover:bg-blue-600 rounded-lg text-sm font-bold transition shadow-md disabled:opacity-30"
               >
-                Save Changes
+                Save
               </button>
             </div>
           </div>
