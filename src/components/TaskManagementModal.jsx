@@ -302,6 +302,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                   options={[
                     { value: '', label: 'Unassigned' },
                     { value: 'joyeb5730@gmail.com', label: 'Admin Supervisor' },
+                    { value: 'saching@seetalgroup.com', label: 'saching (Manager)' },
                     ...profileUsers.map(u => ({ value: u.email, label: `${u.name || u.email} (${u.role})` }))
                   ]}
                   placeholder="Select a person..."
