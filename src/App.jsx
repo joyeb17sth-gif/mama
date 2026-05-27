@@ -177,10 +177,12 @@ function App() {
         );
       } else if (role === 'supervisor' || role === 'manager') {
         promises.push(
+          getContractorsAsync(),
           getSitesAsync(),
           getPeriodicalTasksAsync()
         );
         promiseKeys.push(
+          'contractors',
           'sites',
           'periodicalTasks'
         );
