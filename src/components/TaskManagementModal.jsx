@@ -468,11 +468,11 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                           className="w-full px-2 py-1 bg-notion-warm-white whisper-border rounded text-[11px] font-bold outline-none focus:border-notion-blue resize-none"
                         />
                       </div>
-                      <div className="mt-2 flex items-center justify-between">
-                        <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest">Attached Document</label>
+                      <div className="mt-2">
+                        <label className="text-[9px] font-bold text-notion-warm-gray-300 uppercase tracking-widest block mb-1">Attached Document</label>
                         {period.scopeFileUrl ? (
                           <div className="flex items-center justify-between bg-notion-badge-blue-bg/50 px-2 py-1 rounded-micro border border-notion-blue/20">
-                            <a href={period.scopeFileUrl} target="_blank" rel="noopener noreferrer" className="text-[9px] font-bold text-notion-blue truncate w-16" title={period.scopeFileName || "View File"}>
+                            <a href={period.scopeFileUrl} target="_blank" rel="noopener noreferrer" className="text-[9px] font-bold text-notion-blue truncate w-24" title={period.scopeFileName || "View File"}>
                               {period.scopeFileName || "Document"}
                             </a>
                             <button
@@ -487,7 +487,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                             </button>
                           </div>
                         ) : (
-                          <div className="relative">
+                          <div className="relative inline-block">
                             <input
                               type="file"
                               onChange={(e) => handleFileUpload(e, arrayIndex, false)}
