@@ -49,12 +49,14 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
   const [newTask, setNewTask] = useState({
     taskCode: '',
     taskName: '',
-    frequency: 'Monthly',
+    frequency: 'Custom Date',
     contractType: 'AD/HOC',
     assignedTo: [],
     startingMonth: 0, // January = 0
-    periods: getInitialPeriods('Monthly')
+    periods: getInitialPeriods('Custom Date')
   });
+
+  const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
 
   const handleFileUpload = async (e, arrayIndex, isEditingTask = false) => {
     const file = e.target.files[0];
@@ -250,12 +252,13 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
     setNewTask({
       taskCode: '',
       taskName: '',
-      frequency: 'Monthly',
+      frequency: 'Custom Date',
       contractType: 'AD/HOC',
       assignedTo: [],
       startingMonth: 0,
-      periods: getInitialPeriods('Monthly')
+      periods: getInitialPeriods('Custom Date')
     });
+    setIsNewTaskOpen(false);
   };
 
   const removeTask = (taskId) => {
@@ -269,10 +272,10 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
   const showStartingMonth = newTask.frequency === 'Monthly';
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-start sm:items-center justify-center overflow-y-auto sm:py-8">
-      <div className="bg-white w-full h-full sm:h-auto sm:max-w-5xl sm:rounded-xl shadow-2xl animate-fade-in-up flex flex-col">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 sm:p-8 overflow-hidden">
+      <div className="bg-white w-full max-w-5xl max-h-[95vh] rounded-xl shadow-2xl animate-fade-in-up flex flex-col">
         {/* Header */}
-        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-notion-warm-gray-200 bg-notion-warm-white sm:rounded-t-xl shrink-0">
+        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-notion-warm-gray-200 bg-notion-warm-white rounded-t-xl shrink-0">
           <div>
             <h2 className="text-lg font-bold text-notion-black">Manage Periodical Tasks</h2>
             <p className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mt-1">{site?.siteName}</p>
@@ -286,18 +289,28 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
         </div>
 
         {/* Content */}
-        <div className="p-4 sm:p-6 space-y-6 flex-1 overflow-y-auto sm:max-h-[75vh] custom-scrollbar">
+        <div className="p-4 sm:p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
           {/* Add/Edit Task Form */}
           <div className="bg-notion-warm-white/50 p-4 sm:p-6 rounded-comfortable whisper-border shadow-sm">
-            <h3 className="text-badge font-bold text-notion-black uppercase tracking-widest mb-4">
-              {editingTaskId ? '✏️ Editing Task' : '➕ New Task'}
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end mb-4">
-              <div>
-                <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Task Code</label>
-                <input
-                  type="text"
-                  value={newTask.taskCode}
+            <button 
+              type="button" 
+              className="w-full flex items-center justify-between outline-none"
+              onClick={() => setIsNewTaskOpen(!isNewTaskOpen)}
+            >
+              <h3 className="text-badge font-bold text-notion-black uppercase tracking-widest text-left">
+                {editingTaskId ? '✏️ Editing Task' : '➕ New Task'}
+              </h3>
+              <svg className={`w-5 h-5 text-notion-warm-gray-400 transition-transform ${isNewTaskOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" /></svg>
+            </button>
+            
+            {isNewTaskOpen && (
+              <div className="mt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end mb-4">
+                  <div>
+                    <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Task Code</label>
+                    <input
+                      type="text"
+                      value={newTask.taskCode}
                   onChange={(e) => setNewTask({ ...newTask, taskCode: e.target.value })}
                   placeholder="e.g. RWC001"
                   className="w-full px-3 py-2 bg-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black transition-all uppercase tracking-widest text-badge"
@@ -523,31 +536,46 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
               </div>
             </div>
 
-            <div className="flex gap-3 mt-4">
-              <button
-                type="button"
-                onClick={handleAddTask}
-                disabled={!newTask.taskCode.trim() || !newTask.taskName.trim() || (newTask.frequency === 'Custom Date' && (!newTask.periods[0] || !newTask.periods[0].customDate))}
-                className="px-8 py-2.5 bg-notion-blue text-white rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-notion-blue-active transition shadow-notion-deep disabled:opacity-20 hover:-translate-y-0.5 active:translate-y-0"
-              >
-                {editingTaskId ? 'Update Task' : '+ Add Task'}
-              </button>
-              {editingTaskId && (
+              <div className="flex justify-end gap-3 mt-8">
+                {editingTaskId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingTaskId(null);
+                      setNewTask({
+                        taskCode: '',
+                        taskName: '',
+                        frequency: 'Custom Date',
+                        contractType: 'AD/HOC',
+                        assignedTo: [],
+                        startingMonth: 0,
+                        periods: getInitialPeriods('Custom Date')
+                      });
+                      setIsNewTaskOpen(false);
+                    }}
+                    className="px-6 py-2.5 bg-notion-warm-white hover:bg-notion-warm-gray-100 whisper-border rounded-micro text-[11px] font-bold text-notion-black tracking-widest uppercase transition-colors"
+                  >
+                    Cancel Edit
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
-                    setEditingTaskId(null);
-                    setNewTask({
-                      taskCode: '', taskName: '', frequency: 'Monthly', contractType: 'AD/HOC', assignedTo: [], startingMonth: 0,
-                      periods: getInitialPeriods('Monthly')
-                    });
+                      handleAddTask();
+                      setIsNewTaskOpen(false);
                   }}
-                  className="px-6 py-2.5 bg-white text-notion-black whisper-border rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-notion-warm-white transition"
+                  className={`px-8 py-2.5 rounded-micro text-[11px] font-bold tracking-widest uppercase shadow-sm transition-all ${
+                    (!newTask.taskName || !newTask.taskCode) 
+                      ? 'bg-notion-warm-gray-100 text-notion-warm-gray-300 cursor-not-allowed'
+                      : 'bg-notion-blue text-white hover:bg-blue-600 hover:shadow-md'
+                  }`}
+                  disabled={!newTask.taskName || !newTask.taskCode}
                 >
-                  Cancel Edit
+                  {editingTaskId ? 'Update Task' : 'Add Task'}
                 </button>
-              )}
+              </div>
             </div>
+            )}
           </div>
 
           {/* Task List Section */}
@@ -585,13 +613,15 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                     </div>
                     <div className="col-span-1 text-right flex justify-end gap-2">
                       <button
-                        type="button"
-                        onClick={() => handleEditTask(task.id)}
-                        className="p-2 text-notion-blue hover:text-notion-blue-active hover:bg-notion-badge-blue-bg rounded-micro transition-all shadow-sm bg-white whisper-border"
-                        title="Modify Task"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                      </button>
+                      onClick={() => {
+                          handleEditTask(task.id);
+                          setIsNewTaskOpen(true);
+                      }}
+                      className="text-notion-warm-gray-300 hover:text-notion-blue transition-colors px-2 py-1 bg-white hover:bg-notion-badge-blue-bg/50 whisper-border rounded-micro"
+                      title="Edit Task"
+                    >
+                      ✏️ Edit
+                    </button>
                       <button
                         type="button"
                         onClick={() => removeTask(task.id)}
@@ -649,7 +679,10 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                       <div className="flex gap-2">
                         <button
                           type="button"
-                          onClick={() => handleEditTask(task.id)}
+                          onClick={() => {
+                              handleEditTask(task.id);
+                              setIsNewTaskOpen(true);
+                          }}
                           className="p-2 text-notion-blue hover:bg-notion-badge-blue-bg rounded-micro transition-all shadow-sm bg-white whisper-border"
                           title="Modify Task"
                         >

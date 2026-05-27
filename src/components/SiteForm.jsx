@@ -200,6 +200,8 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
     periods: getInitialPeriods('Custom Date')
   });
 
+  const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
+
   const handleTaskFrequencyChange = (val) => {
     setNewTask({
       ...newTask,
@@ -303,11 +305,11 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
     setNewTask({
       taskCode: taskToEdit.taskCode || '',
       taskName: taskToEdit.taskName || '',
-      frequency: taskToEdit.frequency || 'Monthly',
+      frequency: taskToEdit.frequency || 'Custom Date',
       contractType: taskToEdit.contractType || 'AD/HOC',
       assignedTo: Array.isArray(taskToEdit.assignedTo) ? taskToEdit.assignedTo : (taskToEdit.assignedTo ? [taskToEdit.assignedTo] : []),
       startingMonth: taskToEdit.startingMonth || 0,
-      periods: taskToEdit.periodBudgets || getInitialPeriods(taskToEdit.frequency || 'Monthly')
+      periods: taskToEdit.periodBudgets || getInitialPeriods(taskToEdit.frequency || 'Custom Date')
     });
     setEditingTaskId(taskId);
   };
@@ -370,6 +372,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
       startingMonth: 0,
       periods: getInitialPeriods('Custom Date')
     });
+    setIsNewTaskOpen(false);
   };
 
   const removeTask = (taskId) => {
@@ -687,8 +690,21 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
 
         {/* Add Task Card */}
         <div className="bg-notion-warm-white/50 p-4 sm:p-8 rounded-comfortable whisper-border mb-10 relative z-10 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
-            <div>
+          <button 
+            type="button" 
+            className="w-full flex items-center justify-between outline-none mb-2"
+            onClick={() => setIsNewTaskOpen(!isNewTaskOpen)}
+          >
+            <h4 className="text-badge font-bold text-notion-black uppercase tracking-widest text-left">
+              {editingTaskId ? '✏️ Editing Task' : '➕ New Periodical Task'}
+            </h4>
+            <svg className={`w-5 h-5 text-notion-warm-gray-400 transition-transform ${isNewTaskOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" /></svg>
+          </button>
+          
+          {isNewTaskOpen && (
+          <div className="mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+              <div>
               <label className="text-badge font-bold text-notion-warm-gray-400 mb-3 block">Task Code</label>
               <input
                 type="text"
@@ -924,14 +940,46 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                </div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleAddTask}
-            disabled={!newTask.taskCode.trim() || !newTask.taskName.trim() || (newTask.frequency === 'Custom Date' && (!newTask.periods[0] || !newTask.periods[0].customDate))}
-            className="mt-8 w-full lg:w-auto px-10 py-3 bg-notion-blue text-white rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-notion-blue-active transition shadow-notion-deep disabled:opacity-20 hover:-translate-y-0.5 active:translate-y-0"
-          >
-            {editingTaskId ? 'Update Task' : '+ Register Task'}
-          </button>
+            <div className="flex justify-end gap-3 mt-8">
+              {editingTaskId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingTaskId(null);
+                    setNewTask({
+                      taskCode: '',
+                      taskName: '',
+                      frequency: 'Custom Date',
+                      contractType: 'AD/HOC',
+                      assignedTo: [],
+                      startingMonth: 0,
+                      periods: getInitialPeriods('Custom Date')
+                    });
+                    setIsNewTaskOpen(false);
+                  }}
+                  className="px-6 py-2.5 bg-notion-warm-white hover:bg-notion-warm-gray-100 whisper-border rounded-micro text-[11px] font-bold text-notion-black tracking-widest uppercase transition-colors"
+                >
+                  Cancel Edit
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                    handleAddTask();
+                    setIsNewTaskOpen(false);
+                }}
+                className={`px-8 py-2.5 rounded-micro text-[11px] font-bold tracking-widest uppercase shadow-sm transition-all ${
+                  (!newTask.taskName || !newTask.taskCode) 
+                    ? 'bg-notion-warm-gray-100 text-notion-warm-gray-300 cursor-not-allowed'
+                    : 'bg-notion-blue text-white hover:bg-blue-600 hover:shadow-md'
+                }`}
+                disabled={!newTask.taskName || !newTask.taskCode}
+              >
+                {editingTaskId ? 'Update Task' : '+ Register Task'}
+              </button>
+            </div>
+        </div>
+        )}
         </div>
 
         {/* List of Tasks */}
@@ -953,7 +1001,10 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                 <div className="md:hidden flex gap-2">
                   <button
                     type="button"
-                    onClick={() => handleEditTask(task.id)}
+                    onClick={() => {
+                        handleEditTask(task.id);
+                        setIsNewTaskOpen(true);
+                    }}
                     className="p-2 text-notion-blue hover:text-notion-blue-active hover:bg-notion-badge-blue-bg rounded-micro transition-all shadow-sm bg-white whisper-border"
                     title="Modify Task"
                   >
