@@ -5,7 +5,7 @@ import { supabase } from '../utils/supabaseClient';
 import { SiteSchema, validateData } from '../utils/validation';
 import { format, addMonths, startOfYear } from 'date-fns';
 
-const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true }) => {
+const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true, availableSites = [] }) => {
   const [allSites, setAllSites] = useState([]);
   const [formData, setFormData] = useState({
     siteName: site?.siteName || '',
@@ -17,7 +17,8 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
     isTrainingSite: site?.isTrainingSite || false,
     isSubSite: site?.isSubSite || false,
     parentSiteId: site?.parentSiteId || '',
-    codeRates: site?.codeRates || []
+    codeRates: site?.codeRates || [],
+    allocatedContractors: site?.allocatedContractors || []
   });
 
   const [newRateCode, setNewRateCode] = useState('');
@@ -31,7 +32,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
 
   useEffect(() => {
     // Load all sites to populate parent site dropdown
-    const sites = getSites().filter(s => s.id !== site?.id && !s.isSubSite);
+    const sites = (availableSites.length > 0 ? availableSites : getSites()).filter(s => s.id !== site?.id && !s.isSubSite);
     setAllSites(sites);
 
     // Load user profiles for task assignment
@@ -59,7 +60,8 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
         isTrainingSite: site.isTrainingSite || false,
         isSubSite: site.isSubSite || false,
         parentSiteId: site.parentSiteId || '',
-        codeRates: site.codeRates || []
+        codeRates: site.codeRates || [],
+        allocatedContractors: site.allocatedContractors || []
       });
     }
   }, [site]);
@@ -401,6 +403,24 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
               ]}
             />
           </div>
+
+          {!formData.isSubSite && (
+            <div className="md:col-span-2 mt-4">
+              <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest pl-1 mb-2 block">
+                Management Access Allocation
+              </label>
+              <Dropdown
+                isMulti={true}
+                value={formData.allocatedContractors || []}
+                onChange={(val) => setFormData({ ...formData, allocatedContractors: val })}
+                options={profileUsers.map(u => ({ value: u.id, label: `${u.name || u.email} (${u.role})` }))}
+                placeholder="Select Managers/Supervisors"
+              />
+              <p className="text-[10px] text-notion-warm-gray-300 font-bold uppercase tracking-tight mt-2 pl-1">
+                Selected personnel will automatically receive access to this primary site and all its nested sub-sites.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

@@ -102,12 +102,38 @@ function App() {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
 
+  const visibleSites = React.useMemo(() => {
+    if (isAdmin) return sites;
+    const role = userProfileData.role?.toLowerCase() || 'user';
+    if (role === 'supervisor' || role === 'manager') {
+      const myEmail = userProfileData.name;
+      const me = contractors.find(c => c.email === myEmail);
+      if (!me) return [];
+
+      const directlyAllocatedSiteIds = sites.filter(s => s.allocatedContractors?.includes(me.id)).map(s => s.id);
+      
+      return sites.filter(site => {
+        if (site.allocatedContractors?.includes(me.id)) return true;
+        if (site.isSubSite && directlyAllocatedSiteIds.includes(site.parentSiteId)) return true;
+        return false;
+      });
+    }
+    return sites;
+  }, [sites, isAdmin, userProfileData, contractors]);
+
   const visiblePeriodicalTasks = React.useMemo(() => {
     if (isAdmin) return periodicalTasks;
+    
+    const role = userProfileData?.role?.toLowerCase() || 'user';
+    if (role === 'supervisor' || role === 'manager') {
+      const visibleSiteIds = visibleSites.map(s => s.id);
+      return periodicalTasks.filter(t => visibleSiteIds.includes(t.siteId));
+    }
+
     const userEmail = userProfileData?.name;
     if (!userEmail || userEmail === 'Loading...') return [];
     return periodicalTasks.filter(t => t.assignedTo === userEmail);
-  }, [periodicalTasks, isAdmin, userProfileData]);
+  }, [periodicalTasks, isAdmin, userProfileData, visibleSites]);
 
   const syncDataRef = React.useRef(null);
 
@@ -548,7 +574,7 @@ function App() {
   };
 
   // Periodical Tasks toggle handler
-  const handleToggleTaskStatus = (task, schedule, specificStatus, scopeOfWork) => {
+  const handleToggleTaskStatus = (task, schedule, specificStatus, scopeOfWork, completedHours, completionDate) => {
     let newStatus = specificStatus;
     if (!newStatus) {
       if (schedule.status === 'Scheduled') newStatus = 'Completed';
@@ -558,9 +584,19 @@ function App() {
 
     const updatedTasks = periodicalTasks.map(t => {
       if (t.id === task.id) {
-        const updatedSchedules = t.schedules.map(s => 
-          s.id === schedule.id ? { ...s, status: newStatus, scopeOfWork: scopeOfWork !== undefined ? scopeOfWork : (s.scopeOfWork || '') } : s
-        );
+        const updatedSchedules = t.schedules.map(s => {
+          if (s.id === schedule.id) {
+            const updated = { ...s, status: newStatus, scopeOfWork: scopeOfWork !== undefined ? scopeOfWork : (s.scopeOfWork || '') };
+            if (completedHours !== undefined) {
+               updated.completedHours = completedHours;
+            }
+            if (completionDate !== undefined) {
+               updated.completionDate = completionDate;
+            }
+            return updated;
+          }
+          return s;
+        });
         return { ...t, schedules: updatedSchedules };
       }
       return t;
@@ -568,7 +604,7 @@ function App() {
 
     setPeriodicalTasks(updatedTasks);
     savePeriodicalTasks(updatedTasks);
-    logAction('UPDATE_TASK_STATUS', { taskId: task.id, scheduleId: schedule.id, newStatus, scopeOfWork: scopeOfWork || '' });
+    logAction('UPDATE_TASK_STATUS', { taskId: task.id, scheduleId: schedule.id, newStatus, scopeOfWork: scopeOfWork || '', completedHours, completionDate });
   };
 
   // Timesheet handler
@@ -842,7 +878,7 @@ function App() {
                 </div>
                 <div className="notion-card p-6">
                   <SiteList
-                    sites={sites}
+                    sites={visibleSites}
                     isAdmin={isAdmin}
                     onEdit={handleEditSite}
                     onAddSubSite={handleAddSubSite}
@@ -870,6 +906,7 @@ function App() {
                   <SiteForm
                     site={editingSite}
                     isAdmin={isAdmin}
+                    availableSites={visibleSites}
                     periodicalTasks={visiblePeriodicalTasks.filter(t => t.siteId === editingSite?.id)}
                     onSave={handleSaveSite}
                     onCancel={() => {
@@ -895,9 +932,9 @@ function App() {
         {activeTab === 'task-matrix' && hasPermission('task-matrix') && (
           <div className="space-y-6">
             <h2 className="text-display-secondary text-notion-black tracking-notion-display mb-4">Contractor Periodicals & Budgets</h2>
-            <TaskBudgetMatrix sites={sites} periodicalTasks={visiblePeriodicalTasks} />
+            <TaskBudgetMatrix sites={visibleSites} periodicalTasks={visiblePeriodicalTasks} />
             <TaskMatrix 
-              sites={sites} 
+              sites={visibleSites} 
               periodicalTasks={visiblePeriodicalTasks} 
               onToggleStatus={handleToggleTaskStatus}
               onManageTasks={(site) => setManagingTasksSite(site)}

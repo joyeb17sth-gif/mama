@@ -7,6 +7,8 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
   const [activePopup, setActivePopup] = useState(null); // { task, schedule, monthDisplay }
   const [popupScopeOfWork, setPopupScopeOfWork] = useState('');
   const [popupStatus, setPopupStatus] = useState('');
+  const [popupHours, setPopupHours] = useState('');
+  const [popupCompletionDate, setPopupCompletionDate] = useState('');
   const [upcomingFilter, setUpcomingFilter] = useState('1week');
 
   // Generate 12 months for the selected year
@@ -34,7 +36,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
   const getStatusColor = (status) => {
     switch (status) {
       case 'Scheduled': return 'bg-[#00A2E8] text-white'; // Light blue from excel
-      case 'Completed': return 'bg-[#156082] text-white'; // Dark blue from excel
+      case 'Completed': return 'bg-[#ffc000] text-amber-900'; // Yellow
       case 'Completed Not Claimed': return 'bg-gray-400 text-white'; // Grey
       default: return 'bg-transparent';
     }
@@ -258,7 +260,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full md:w-auto">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
               <div className="flex items-center gap-1"><div className="w-3 h-3 bg-[#00A2E8]"></div> Scheduled</div>
-              <div className="flex items-center gap-1"><div className="w-3 h-3 bg-[#156082]"></div> Completed</div>
+              <div className="flex items-center gap-1"><div className="w-3 h-3 bg-[#ffc000]"></div> Completed</div>
               <div className="flex items-center gap-1"><div className="w-3 h-3 bg-gray-400"></div> Completed, Not Claimed</div>
             </div>
             <div className="w-full sm:w-32">
@@ -351,6 +353,8 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                                 const defaultScope = getDefaultScopeOfWorkForMonth(task, month);
                                 setPopupScopeOfWork(schedule.scopeOfWork || defaultScope);
                                 setPopupStatus(schedule.status);
+                                setPopupHours(schedule.completedHours || '');
+                                setPopupCompletionDate(schedule.completionDate || format(new Date(), 'yyyy-MM-dd'));
                                 setActivePopup({ task, schedule, monthDisplay: format(month, 'MMM yyyy'), monthDate: month });
                               }
                             }}
@@ -441,6 +445,8 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                         onClick={() => {
                           setPopupScopeOfWork(item.scope);
                           setPopupStatus(item.schedule.status);
+                          setPopupHours(item.schedule.completedHours || '');
+                          setPopupCompletionDate(item.schedule.completionDate || format(new Date(), 'yyyy-MM-dd'));
                           setActivePopup({ task: item.task, schedule: item.schedule, monthDisplay: item.monthDisplay, monthDate: item.monthDate });
                         }}
                         className="px-3 py-1.5 bg-white text-notion-blue text-xs font-bold border border-notion-warm-gray-200 rounded-micro hover:bg-notion-badge-blue-bg transition shadow-sm"
@@ -511,6 +517,29 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                   ))}
                 </div>
               </div>
+              {popupStatus === 'Completed' && (
+                <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300 space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-notion-warm-gray-500 mb-2">Date of Completion</label>
+                    <input
+                      type="date"
+                      value={popupCompletionDate}
+                      onChange={(e) => setPopupCompletionDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-notion-warm-gray-200 rounded-lg text-sm focus:border-notion-blue focus:ring-1 focus:ring-notion-blue outline-none text-notion-black transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-notion-warm-gray-500 mb-2">Hours Required to Complete Task</label>
+                    <input
+                      type="number"
+                      value={popupHours}
+                      onChange={(e) => setPopupHours(e.target.value)}
+                      placeholder="Enter hours..."
+                      className="w-full px-3 py-2 bg-white border border-notion-warm-gray-200 rounded-lg text-sm focus:border-notion-blue focus:ring-1 focus:ring-notion-blue outline-none text-notion-black transition-all"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             <div className="px-6 py-4 border-t border-notion-warm-gray-200 bg-notion-warm-white flex justify-end gap-3">
               <button
@@ -523,7 +552,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
               <button
                 type="button"
                 onClick={() => {
-                  onToggleStatus(activePopup.task, activePopup.schedule, popupStatus, popupScopeOfWork);
+                  onToggleStatus(activePopup.task, activePopup.schedule, popupStatus, popupScopeOfWork, popupHours ? parseFloat(popupHours) : undefined, popupCompletionDate);
                   setActivePopup(null);
                 }}
                 className="px-4 py-2 bg-notion-blue hover:bg-notion-blue-active text-white rounded-lg text-sm font-medium transition shadow-sm"

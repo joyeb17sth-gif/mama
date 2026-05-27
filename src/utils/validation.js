@@ -38,7 +38,8 @@ export const SiteSchema = z.object({
     isTrainingSite: z.boolean().default(false),
     isSubSite: z.boolean().default(false),
     parentSiteId: z.string().optional().or(z.literal('')),
-    codeRates: z.array(z.any()).optional()
+    codeRates: z.array(z.any()).optional(),
+    allocatedContractors: z.array(z.string()).optional()
 });
 
 export const AuthSchema = z.object({

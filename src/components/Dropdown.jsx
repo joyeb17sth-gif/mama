@@ -9,12 +9,14 @@ const Dropdown = ({
     className = '',
     buttonClassName = '',
     variant = 'default', // 'default' or 'compact'
-    showSelected = true
+    showSelected = true,
+    isMulti = false
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
-    const selectedOption = showSelected ? options.find(opt => opt.value === value) : null;
+    const selectedOptions = isMulti ? options.filter(opt => (value || []).includes(opt.value)) : [];
+    const selectedOption = !isMulti && showSelected ? options.find(opt => opt.value === value) : null;
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -32,9 +34,11 @@ const Dropdown = ({
 
     const finalButtonClasses = buttonClassName || defaultButtonClasses;
 
+    const hasSelection = isMulti ? selectedOptions.length > 0 : !!selectedOption;
+
     const textClasses = variant === 'compact'
-        ? `text-[11px] font-bold tracking-tight ${selectedOption ? '' : 'text-zinc-500'}`
-        : `text-sm font-bold tracking-tight ${selectedOption ? 'text-zinc-900' : 'text-zinc-400'}`;
+        ? `text-[11px] font-bold tracking-tight ${hasSelection ? '' : 'text-zinc-500'}`
+        : `text-sm font-bold tracking-tight ${hasSelection ? 'text-zinc-900' : 'text-zinc-400'}`;
 
     const listClasses = variant === 'compact'
         ? 'absolute z-[100] min-w-full mt-2 bg-white border border-zinc-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 right-0'
@@ -53,7 +57,9 @@ const Dropdown = ({
                 className={finalButtonClasses}
             >
                 <span className={textClasses}>
-                    {selectedOption ? selectedOption.label : placeholder}
+                    {isMulti 
+                        ? (selectedOptions.length > 0 ? selectedOptions.map(o => o.label).join(', ') : placeholder) 
+                        : (selectedOption ? selectedOption.label : placeholder)}
                 </span>
                 <svg
                     className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''} ${variant === 'compact' ? 'w-3 h-3 ml-2' : 'w-5 h-5 ml-4'}`}
@@ -70,7 +76,9 @@ const Dropdown = ({
                     <div className="max-h-64 overflow-y-auto custom-scrollbar">
                         {options.length > 0 ? (
                             options.map((option) => {
-                                const isSelected = value === option.value && showSelected;
+                                const isSelected = isMulti 
+                                    ? (value || []).includes(option.value) 
+                                    : (value === option.value && showSelected);
                                 return (
                                 <button
                                     key={option.value}
@@ -78,8 +86,15 @@ const Dropdown = ({
                                     disabled={option.disabled}
                                     onClick={() => {
                                         if(!option.disabled) {
-                                            onChange(option.value);
-                                            setIsOpen(false);
+                                            if (isMulti) {
+                                                const newValue = isSelected 
+                                                    ? (value || []).filter(v => v !== option.value) 
+                                                    : [...(value || []), option.value];
+                                                onChange(newValue);
+                                            } else {
+                                                onChange(option.value);
+                                                setIsOpen(false);
+                                            }
                                         }
                                     }}
                                     className={`w-full text-left py-3 transition-all flex items-center justify-between whitespace-nowrap relative
@@ -95,10 +110,16 @@ const Dropdown = ({
                                         <div className={`absolute left-[1.25rem] top-1/2 w-4 h-[2px] ${isSelected ? 'bg-zinc-700' : 'bg-zinc-200'} rounded-r-full`}></div>
                                     )}
                                     <span className="relative z-10 truncate">{option.label}</span>
-                                    {isSelected && (
-                                        <svg className={`w-4 h-4 ml-2 shrink-0 ${isSelected ? 'text-white' : 'text-zinc-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                                        </svg>
+                                    {isMulti ? (
+                                        <div className={`w-4 h-4 ml-2 shrink-0 border rounded-sm flex items-center justify-center transition-colors ${isSelected ? 'border-white bg-white' : 'border-zinc-300'}`}>
+                                            {isSelected && <svg className="w-3 h-3 text-zinc-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>}
+                                        </div>
+                                    ) : (
+                                        isSelected && (
+                                            <svg className={`w-4 h-4 ml-2 shrink-0 ${isSelected ? 'text-white' : 'text-zinc-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        )
                                     )}
                                 </button>
                             )})
