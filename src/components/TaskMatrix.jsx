@@ -568,8 +568,8 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                 </div>
               </div>
               {popupStatus === 'Completed' && (
-                <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300 flex flex-row gap-3">
-                  <div className="flex-1 min-w-0">
+                <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300 grid grid-cols-2 gap-3">
+                  <div className="min-w-0">
                     <label className="block text-xs font-bold text-notion-warm-gray-500 uppercase tracking-widest mb-1 truncate">Completion Date</label>
                     <input
                       type="date"
@@ -578,7 +578,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                       className="w-full px-2 py-2 bg-white border border-notion-warm-gray-200 rounded-lg text-sm focus:border-notion-blue focus:ring-1 focus:ring-notion-blue outline-none text-notion-black transition-all"
                     />
                   </div>
-                  <div className="w-24 shrink-0">
+                  <div className="min-w-0">
                     <label className="block text-xs font-bold text-notion-warm-gray-500 uppercase tracking-widest mb-1 truncate">Total Hrs</label>
                     <input
                       type="number"
