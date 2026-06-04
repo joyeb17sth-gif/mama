@@ -23,6 +23,8 @@ export default {
           'warm-gray': {
             500: '#615d59',
             300: '#a39e98',
+            200: '#e1dfdb',
+            100: '#f1f0ee',
           },
           teal: '#2a9d99',
           green: '#1aae39',

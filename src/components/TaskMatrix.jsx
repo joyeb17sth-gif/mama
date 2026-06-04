@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { format, addMonths, parseISO, startOfYear, endOfYear, eachMonthOfInterval, addDays, addWeeks, startOfDay, isBefore } from 'date-fns';
+import { format, addMonths, subMonths, parseISO, startOfYear, endOfYear, eachMonthOfInterval, addDays, addWeeks, startOfDay, isBefore, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isToday } from 'date-fns';
 import Dropdown from './Dropdown';
 
 const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) => {
@@ -10,6 +10,10 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
   const [popupHours, setPopupHours] = useState('');
   const [popupCompletionDate, setPopupCompletionDate] = useState('');
   const [upcomingFilter, setUpcomingFilter] = useState('1week');
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [selectedSiteFilter, setSelectedSiteFilter] = useState('all');
+  const [expandedDays, setExpandedDays] = useState(new Set());
+  const [showAggregatedWarning, setShowAggregatedWarning] = useState(false);
 
   // Generate 12 months for the selected year
   const months = useMemo(() => {
@@ -22,6 +26,8 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
   const groupedTasks = useMemo(() => {
     const grouped = {};
     periodicalTasks.forEach(task => {
+      if (selectedSiteFilter !== 'all' && task.siteId !== selectedSiteFilter) return;
+
       if (!grouped[task.siteId]) {
         grouped[task.siteId] = {
           site: sites.find(s => s.id === task.siteId),
@@ -31,7 +37,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
       grouped[task.siteId].tasks.push(task);
     });
     return grouped;
-  }, [periodicalTasks, sites]);
+  }, [periodicalTasks, sites, selectedSiteFilter]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -53,7 +59,20 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
 
   const getScheduleForMonth = (task, monthDate) => {
     const targetPeriod = format(monthDate, 'yyyy-MM');
-    return task.schedules?.find(s => s.targetPeriod === targetPeriod);
+    const monthSchedules = task.schedules?.filter(s => s.targetPeriod === targetPeriod);
+    
+    if (!monthSchedules || monthSchedules.length === 0) return undefined;
+    if (monthSchedules.length === 1) return monthSchedules[0];
+
+    // Aggregate status for multiple schedules (e.g. Weekly)
+    const allCompleted = monthSchedules.every(s => s.status === 'Completed' || s.status === 'Completed Not Claimed');
+    const allNotClaimed = monthSchedules.every(s => s.status === 'Completed Not Claimed');
+    
+    let overallStatus = 'Scheduled';
+    if (allNotClaimed) overallStatus = 'Completed Not Claimed';
+    else if (allCompleted) overallStatus = 'Completed';
+    
+    return { ...monthSchedules[0], status: overallStatus, isAggregated: true };
   };
 
   const getExactDateForMonth = (task, monthDate) => {
@@ -85,6 +104,34 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
        return periods[0]?.customDate || 'Not Set';
     }
     return 'Not Set';
+  };
+
+  const getEndDateForMonth = (task, monthDate) => {
+    if (!monthDate) return '';
+    const monthIndex = monthDate.getMonth();
+    const periods = task.periodBudgets || [];
+    if (!periods.length) return '';
+    
+    if (task.frequency === 'Monthly') {
+       const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex];
+       return periods.find(p => p.name === monthName)?.endDate || '';
+    }
+    if (task.frequency === 'Quarterly') {
+       let diff = monthIndex - (task.startingMonth || 0);
+       if (diff < 0) diff += 12;
+       const qIndex = Math.floor(diff / 3);
+       return periods[qIndex]?.endDate || '';
+    }
+    if (task.frequency === '6 Monthly') {
+       let diff = monthIndex - (task.startingMonth || 0);
+       if (diff < 0) diff += 12;
+       const hIndex = Math.floor(diff / 6);
+       return periods[hIndex]?.endDate || '';
+    }
+    if (task.frequency === 'Yearly' || task.frequency === 'Weekly' || task.frequency === 'Custom Date') {
+       return periods[0]?.endDate || '';
+    }
+    return '';
   };
 
   const getDefaultScopeOfWorkForMonth = (task, monthDate) => {
@@ -151,16 +198,20 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
     const list = [];
 
     periodicalTasks.forEach(task => {
+      if (selectedSiteFilter !== 'all' && task.siteId !== selectedSiteFilter) return;
+
       const site = sites.find(s => s.id === task.siteId);
       if (!task.schedules) return;
 
       task.schedules.forEach(schedule => {
-        if (schedule.status !== 'Scheduled') return;
+        // Removed the filter here to allow all statuses (Scheduled, Completed, etc.) to be processed.
 
         const monthDate = parseISO(`${schedule.targetPeriod}-01`);
-        const exactDateStr = getExactDateForMonth(task, monthDate);
+        const exactDateStr = schedule.exactDate || getExactDateForMonth(task, monthDate);
+        const endDateStr = getEndDateForMonth(task, monthDate);
         let isPastDue = false;
         let scheduleDate = monthDate;
+        let scheduleEndDate = monthDate;
 
         let displayExactDate = exactDateStr;
         if (exactDateStr && exactDateStr !== 'Not Set') {
@@ -171,6 +222,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
           const parsed = parseISO(displayExactDate);
           if (!isNaN(parsed)) {
             scheduleDate = parsed;
+            scheduleEndDate = parsed;
             if (isBefore(parsed, today)) {
               isPastDue = true;
             }
@@ -182,6 +234,21 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
           }
         }
 
+        let displayEndDate = endDateStr;
+        if (endDateStr && task.frequency !== 'Weekly') {
+          const parts = endDateStr.split('-');
+          if (parts.length === 3) {
+            displayEndDate = `${parts[0]}-${parts[1]}-${parts[2]}`; // Keep as is or format similarly
+            const parsedEnd = parseISO(displayEndDate);
+            if (!isNaN(parsedEnd)) {
+               scheduleEndDate = parsedEnd;
+            }
+          }
+        } else if (task.frequency === 'Weekly') {
+           displayEndDate = displayExactDate;
+           scheduleEndDate = scheduleDate;
+        }
+
         list.push({
           task,
           site,
@@ -189,9 +256,11 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
           monthDate,
           monthDisplay: format(monthDate, 'MMM yyyy'),
           exactDate: displayExactDate,
+          endDate: displayEndDate,
           scope: getDefaultScopeOfWorkForMonth(task, monthDate) || schedule.scopeOfWork || '',
           isPastDue,
-          scheduleDate
+          scheduleDate,
+          scheduleEndDate
         });
       });
     });
@@ -222,12 +291,31 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
       return a.scheduleDate - b.scheduleDate;
     });
 
+    // Mock a completed task for demonstration in the calendar
+    const mockToday = startOfDay(new Date());
+    finalUpcoming.push({
+      task: { id: 'mock-completed-1', taskName: 'Quarterly Deep Clean (Demo)', frequency: 'Quarterly' },
+      site: { id: 'mock-site', siteName: 'Demo Site' },
+      schedule: { status: 'Completed', targetPeriod: format(mockToday, 'yyyy-MM'), completedHours: '4.5' },
+      monthDate: mockToday,
+      monthDisplay: format(mockToday, 'MMM yyyy'),
+      exactDate: format(mockToday, 'yyyy-MM-dd'),
+      endDate: '',
+      scope: 'Mocked demonstration task for Completed status.',
+      isPastDue: false,
+      scheduleDate: mockToday,
+      scheduleEndDate: mockToday
+    });
+
     return finalUpcoming;
-  }, [periodicalTasks, sites]);
+  }, [periodicalTasks, sites, selectedSiteFilter]);
 
   const filteredUpcomingSchedules = useMemo(() => {
-    if (upcomingFilter === 'all') return upcomingSchedules;
-    if (upcomingFilter === 'past_due') return upcomingSchedules.filter(item => item.isPastDue);
+    // Only show Scheduled tasks in the Upcoming list view
+    const onlyScheduled = upcomingSchedules.filter(item => item.schedule.status === 'Scheduled');
+
+    if (upcomingFilter === 'all') return onlyScheduled;
+    if (upcomingFilter === 'past_due') return onlyScheduled.filter(item => item.isPastDue);
     
     const today = startOfDay(new Date());
     let endDate;
@@ -239,7 +327,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
       endDate = addMonths(today, 1);
     }
 
-    return upcomingSchedules.filter(item => {
+    return onlyScheduled.filter(item => {
       // Do not include past due items in the upcoming timeframe filters
       if (item.isPastDue) return false;
 
@@ -248,21 +336,49 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
     });
   }, [upcomingSchedules, upcomingFilter]);
 
+  const calendarDays = useMemo(() => {
+    const monthStart = startOfMonth(calendarDate);
+    const monthEnd = endOfMonth(monthStart);
+    const startDate = startOfWeek(monthStart);
+    const endDate = endOfWeek(monthEnd);
+    return eachDayOfInterval({ start: startDate, end: endDate });
+  }, [calendarDate]);
+
+  const getTasksForDay = (day) => {
+    return upcomingSchedules.filter(item => {
+       const start = startOfDay(item.scheduleDate);
+       const end = startOfDay(item.scheduleEndDate);
+       const current = startOfDay(day);
+       return (current.getTime() >= start.getTime() && current.getTime() <= end.getTime());
+    });
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-notion-card border border-notion-warm-gray-200">
       {/* Header Controls */}
       <div className="p-4 border-b border-notion-warm-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-notion-warm-white rounded-t-xl">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <h3 className="font-bold text-notion-black text-base md:text-lg">Periodical Task List</h3>
-          <div className="flex bg-white rounded-micro p-1 shadow-sm border border-notion-warm-gray-200">
+          <div className="grid grid-cols-3 sm:flex w-full sm:w-auto bg-white rounded-micro p-1 shadow-sm border border-notion-warm-gray-200 gap-1 sm:gap-0">
             <button 
-               className={`px-3 py-1 rounded-micro text-xs font-bold transition-all ${viewMode === 'matrix' ? 'bg-notion-blue text-white shadow-sm' : 'text-notion-warm-gray-500 hover:text-notion-black'}`}
+               className={`px-1 sm:px-3 py-1.5 sm:py-1 rounded-micro text-[10px] sm:text-xs font-bold transition-all text-center truncate ${viewMode === 'matrix' ? 'bg-notion-blue text-white shadow-sm' : 'text-notion-warm-gray-500 hover:text-notion-black'}`}
                onClick={() => setViewMode('matrix')}
-            >Matrix View</button>
+            >Matrix</button>
             <button 
-               className={`px-3 py-1 rounded-micro text-xs font-bold transition-all ${viewMode === 'upcoming' ? 'bg-notion-blue text-white shadow-sm' : 'text-notion-warm-gray-500 hover:text-notion-black'}`}
+               className={`px-1 sm:px-3 py-1.5 sm:py-1 rounded-micro text-[10px] sm:text-xs font-bold transition-all text-center truncate ${viewMode === 'upcoming' ? 'bg-notion-blue text-white shadow-sm' : 'text-notion-warm-gray-500 hover:text-notion-black'}`}
                onClick={() => setViewMode('upcoming')}
-            >Upcoming Tasks</button>
+            >Upcoming</button>
+            <button 
+               className={`px-1 sm:px-3 py-1.5 sm:py-1 rounded-micro text-[10px] sm:text-xs font-bold transition-all text-center truncate ${viewMode === 'calendar' ? 'bg-notion-blue text-white shadow-sm' : 'text-notion-warm-gray-500 hover:text-notion-black'}`}
+               onClick={() => setViewMode('calendar')}
+            >Calendar</button>
+          </div>
+          <div className="w-full sm:w-48">
+            <Dropdown
+              value={selectedSiteFilter}
+              onChange={(val) => setSelectedSiteFilter(val)}
+              options={[{ value: 'all', label: 'All Sites' }, ...sites.map(s => ({ value: s.id, label: s.siteName }))]}
+            />
           </div>
         </div>
         
@@ -280,6 +396,28 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                   { value: '1month', label: 'Next 1 Month' }
                 ]}
               />
+            </div>
+          </div>
+        )}
+
+        {viewMode === 'calendar' && (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full md:w-auto">
+            <div className="flex items-center justify-between sm:justify-start gap-2 bg-white rounded-micro p-1 shadow-sm border border-notion-warm-gray-200 w-full sm:w-auto">
+              <button 
+                onClick={() => setCalendarDate(subMonths(calendarDate, 1))}
+                className="px-3 sm:px-2 py-2 sm:py-1 text-notion-warm-gray-500 hover:text-notion-black hover:bg-notion-warm-white rounded transition"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <div className="px-3 py-1 text-xs font-bold text-notion-black min-w-[120px] text-center flex-1 sm:flex-none">
+                {format(calendarDate, 'MMMM yyyy')}
+              </div>
+              <button 
+                onClick={() => setCalendarDate(addMonths(calendarDate, 1))}
+                className="px-3 sm:px-2 py-2 sm:py-1 text-notion-warm-gray-500 hover:text-notion-black hover:bg-notion-warm-white rounded transition"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </button>
             </div>
           </div>
         )}
@@ -378,6 +516,10 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                             key={month.toISOString()} 
                             onClick={() => {
                               if (schedule) {
+                                if (schedule.isAggregated) {
+                                  setShowAggregatedWarning(true);
+                                  return;
+                                }
                                 const defaultScope = getDefaultScopeOfWorkForMonth(task, month);
                                 setPopupScopeOfWork(schedule.scopeOfWork || defaultScope);
                                 setPopupStatus(schedule.status);
@@ -438,7 +580,9 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                           )}
                         </div>
                         {item.exactDate && item.exactDate !== 'Not Set' && (
-                           <span className="text-[10px] font-bold text-notion-warm-gray-400 uppercase tracking-widest">{item.exactDate}</span>
+                           <span className="text-[10px] font-bold text-notion-warm-gray-400 uppercase tracking-widest">
+                             {item.exactDate} {item.endDate ? ` - ${item.endDate}` : ''}
+                           </span>
                         )}
                       </div>
                     </td>
@@ -510,6 +654,88 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
         </div>
       )}
 
+      {/* Calendar View */}
+      {viewMode === 'calendar' && (
+        <div className="p-2 md:p-4 bg-white overflow-x-auto custom-scrollbar">
+          <div className="grid grid-cols-7 gap-px bg-zinc-300 border border-zinc-300 rounded-lg overflow-hidden shadow-sm min-w-[700px]">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+              <div key={day} className="bg-notion-warm-white py-2 text-center text-[10px] md:text-xs font-bold text-notion-warm-gray-500 uppercase tracking-widest">
+                {day}
+              </div>
+            ))}
+            {calendarDays.map((day, dayIdx) => {
+              const dayTasks = getTasksForDay(day);
+              const isCurrentMonth = isSameMonth(day, calendarDate);
+              const isTodayDate = isToday(day);
+              const dayKey = day.toISOString();
+              const isExpanded = expandedDays.has(dayKey);
+              
+              const visibleTasks = isExpanded ? dayTasks : dayTasks.slice(0, 3);
+              const hiddenCount = dayTasks.length - 3;
+
+              return (
+                <div 
+                  key={day.toString()} 
+                  className={`min-h-[120px] p-1 md:p-2 flex flex-col gap-1 transition-colors ${isCurrentMonth ? 'bg-white' : 'bg-notion-warm-white/50 opacity-60'}`}
+                >
+                  <div className="flex justify-between items-start shrink-0">
+                    <span className={`text-xs font-bold p-1 rounded-full w-6 h-6 flex items-center justify-center ${isTodayDate ? 'bg-notion-blue text-white' : 'text-notion-warm-gray-500'}`}>
+                      {format(day, 'd')}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1 mt-1 overflow-y-auto custom-scrollbar flex-1">
+                    {visibleTasks.map((item, idx) => (
+                      <div 
+                        key={idx}
+                        onClick={() => {
+                          setPopupScopeOfWork(item.scope);
+                          setPopupStatus(item.schedule.status);
+                          setPopupHours(item.schedule.completedHours || '');
+                          setPopupCompletionDate(item.schedule.completionDate || format(new Date(), 'yyyy-MM-dd'));
+                          setActivePopup({ task: item.task, schedule: item.schedule, monthDisplay: item.monthDisplay, monthDate: item.monthDate });
+                        }}
+                        className={`shrink-0 text-[9px] md:text-[10px] font-bold px-1.5 py-1.5 rounded cursor-pointer truncate shadow-sm transition hover:opacity-80 border-l-2 ${
+                          item.schedule.status === 'Completed' ? 'bg-amber-50 text-amber-900 border-amber-400' : 
+                          item.schedule.status === 'Scheduled' ? 'bg-blue-50 text-notion-blue border-notion-blue' :
+                          'bg-gray-100 text-gray-600 border-gray-400'
+                        }`}
+                        title={`${item.task.taskName} - ${item.site?.siteName}`}
+                      >
+                        {item.task.taskName}
+                      </div>
+                    ))}
+                    {hiddenCount > 0 && !isExpanded && (
+                      <button 
+                        onClick={() => {
+                          const newExpanded = new Set(expandedDays);
+                          newExpanded.add(dayKey);
+                          setExpandedDays(newExpanded);
+                        }}
+                        className="shrink-0 text-[10px] font-bold text-notion-warm-gray-500 hover:text-notion-black text-left pl-1 mt-0.5 hover:underline"
+                      >
+                        + {hiddenCount} more
+                      </button>
+                    )}
+                    {isExpanded && hiddenCount > 0 && (
+                      <button 
+                        onClick={() => {
+                          const newExpanded = new Set(expandedDays);
+                          newExpanded.delete(dayKey);
+                          setExpandedDays(newExpanded);
+                        }}
+                        className="shrink-0 text-[10px] font-bold text-notion-warm-gray-500 hover:text-notion-black text-left pl-1 mt-0.5 hover:underline"
+                      >
+                        Show less
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Status Update Popup */}
       {activePopup && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 overflow-hidden">
@@ -529,7 +755,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
               <div className="space-y-1 text-sm">
                 <p><span className="text-notion-warm-gray-500 font-medium">Task:</span> <span className="font-semibold text-notion-black">{activePopup.task.taskName} ({activePopup.task.taskCode})</span></p>
                 <p><span className="text-notion-warm-gray-500 font-medium">Period:</span> <span className="font-semibold text-notion-black">{activePopup.monthDisplay}</span></p>
-                <p><span className="text-notion-warm-gray-500 font-medium">Exact Date:</span> <span className="font-semibold text-notion-black">{getExactDateForMonth(activePopup.task, activePopup.monthDate)}</span></p>
+                <p><span className="text-notion-warm-gray-500 font-medium">Date Range:</span> <span className="font-semibold text-notion-black">{getExactDateForMonth(activePopup.task, activePopup.monthDate)} {getEndDateForMonth(activePopup.task, activePopup.monthDate) ? ` - ${getEndDateForMonth(activePopup.task, activePopup.monthDate)}` : ''}</span></p>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-notion-warm-gray-500 font-medium shrink-0 text-sm">Assigned To:</span>
                   {(activePopup.task.assignedTo && activePopup.task.assignedTo.length > 0) ? (
@@ -642,6 +868,41 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                 className="px-5 py-2 bg-notion-blue text-white hover:bg-blue-600 rounded-lg text-sm font-bold transition shadow-md disabled:opacity-30"
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Aggregated Warning Popup */}
+      {showAggregatedWarning && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-notion-card w-full max-w-sm flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-4 py-3 border-b border-notion-warm-gray-200 bg-amber-50 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-2 text-amber-900">
+                <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                <h3 className="font-bold text-sm">Action Restricted</h3>
+              </div>
+              <button 
+                onClick={() => setShowAggregatedWarning(false)}
+                className="text-amber-700 hover:text-amber-900 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-5 space-y-4 text-sm text-notion-black">
+              <p>This month contains <strong>multiple weekly tasks</strong>.</p>
+              <p className="text-notion-warm-gray-500">Please switch to the <strong className="text-notion-blue">Calendar</strong> or <strong className="text-notion-blue">Upcoming Tasks</strong> view to manage individual weekly visits.</p>
+            </div>
+            <div className="px-4 py-3 border-t border-notion-warm-gray-200 bg-notion-warm-white flex justify-end shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowAggregatedWarning(false)}
+                className="px-5 py-2 bg-notion-blue text-white hover:bg-blue-600 rounded-lg text-sm font-bold transition shadow-md"
+              >
+                Got it
               </button>
             </div>
           </div>
