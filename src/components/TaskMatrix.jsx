@@ -291,21 +291,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
       return a.scheduleDate - b.scheduleDate;
     });
 
-    // Mock a completed task for demonstration in the calendar
-    const mockToday = startOfDay(new Date());
-    finalUpcoming.push({
-      task: { id: 'mock-completed-1', taskName: 'Quarterly Deep Clean (Demo)', frequency: 'Quarterly' },
-      site: { id: 'mock-site', siteName: 'Demo Site' },
-      schedule: { status: 'Completed', targetPeriod: format(mockToday, 'yyyy-MM'), completedHours: '4.5' },
-      monthDate: mockToday,
-      monthDisplay: format(mockToday, 'MMM yyyy'),
-      exactDate: format(mockToday, 'yyyy-MM-dd'),
-      endDate: '',
-      scope: 'Mocked demonstration task for Completed status.',
-      isPastDue: false,
-      scheduleDate: mockToday,
-      scheduleEndDate: mockToday
-    });
+
 
     return finalUpcoming;
   }, [periodicalTasks, sites, selectedSiteFilter]);
