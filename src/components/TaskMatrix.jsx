@@ -111,13 +111,15 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
        let diff = monthIndex - (task.startingMonth || 0);
        if (diff < 0) diff += 12;
        const qIndex = Math.floor(diff / 3);
-       return periods[qIndex]?.exactDate || 'Not Set';
+       const expectedName = qIndex === 0 ? '1st Quarter' : qIndex === 1 ? '2nd Quarter' : qIndex === 2 ? '3rd Quarter' : '4th Quarter';
+       return periods.find(p => p.name === expectedName)?.exactDate || 'Not Set';
     }
     if (task.frequency === '6 Monthly') {
        let diff = monthIndex - (task.startingMonth || 0);
        if (diff < 0) diff += 12;
        const hIndex = Math.floor(diff / 6);
-       return periods[hIndex]?.exactDate || 'Not Set';
+       const expectedName = hIndex === 0 ? '1st Half' : '2nd Half';
+       return periods.find(p => p.name === expectedName)?.exactDate || 'Not Set';
     }
     if (task.frequency === 'Yearly' || task.frequency === 'Weekly') {
        return periods[0]?.exactDate || 'Not Set';
@@ -142,13 +144,15 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
        let diff = monthIndex - (task.startingMonth || 0);
        if (diff < 0) diff += 12;
        const qIndex = Math.floor(diff / 3);
-       return periods[qIndex]?.endDate || '';
+       const expectedName = qIndex === 0 ? '1st Quarter' : qIndex === 1 ? '2nd Quarter' : qIndex === 2 ? '3rd Quarter' : '4th Quarter';
+       return periods.find(p => p.name === expectedName)?.endDate || '';
     }
     if (task.frequency === '6 Monthly') {
        let diff = monthIndex - (task.startingMonth || 0);
        if (diff < 0) diff += 12;
        const hIndex = Math.floor(diff / 6);
-       return periods[hIndex]?.endDate || '';
+       const expectedName = hIndex === 0 ? '1st Half' : '2nd Half';
+       return periods.find(p => p.name === expectedName)?.endDate || '';
     }
     if (task.frequency === 'Yearly' || task.frequency === 'Weekly' || task.frequency === 'Custom Date') {
        return periods[0]?.endDate || '';
@@ -170,13 +174,15 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
        let diff = monthIndex - (task.startingMonth || 0);
        if (diff < 0) diff += 12;
        const qIndex = Math.floor(diff / 3);
-       return periods[qIndex]?.scopeOfWork || '';
+       const expectedName = qIndex === 0 ? '1st Quarter' : qIndex === 1 ? '2nd Quarter' : qIndex === 2 ? '3rd Quarter' : '4th Quarter';
+       return periods.find(p => p.name === expectedName)?.scopeOfWork || '';
     }
     if (task.frequency === '6 Monthly') {
        let diff = monthIndex - (task.startingMonth || 0);
        if (diff < 0) diff += 12;
        const hIndex = Math.floor(diff / 6);
-       return periods[hIndex]?.scopeOfWork || '';
+       const expectedName = hIndex === 0 ? '1st Half' : '2nd Half';
+       return periods.find(p => p.name === expectedName)?.scopeOfWork || '';
     }
     if (task.frequency === 'Yearly' || task.frequency === 'Weekly' || task.frequency === 'Custom Date') {
        return periods[0]?.scopeOfWork || '';
@@ -197,11 +203,15 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
     } else if (task.frequency === 'Quarterly') {
        let diff = monthIndex - (task.startingMonth || 0);
        if (diff < 0) diff += 12;
-       targetPeriod = periods[Math.floor(diff / 3)];
+       const qIndex = Math.floor(diff / 3);
+       const expectedName = qIndex === 0 ? '1st Quarter' : qIndex === 1 ? '2nd Quarter' : qIndex === 2 ? '3rd Quarter' : '4th Quarter';
+       targetPeriod = periods.find(p => p.name === expectedName);
     } else if (task.frequency === '6 Monthly') {
        let diff = monthIndex - (task.startingMonth || 0);
        if (diff < 0) diff += 12;
-       targetPeriod = periods[Math.floor(diff / 6)];
+       const hIndex = Math.floor(diff / 6);
+       const expectedName = hIndex === 0 ? '1st Half' : '2nd Half';
+       targetPeriod = periods.find(p => p.name === expectedName);
     } else if (task.frequency === 'Yearly' || task.frequency === 'Weekly' || task.frequency === 'Custom Date') {
        targetPeriod = periods[0];
     }
