@@ -59,7 +59,29 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
 
   const getScheduleForMonth = (task, monthDate) => {
     const targetPeriod = format(monthDate, 'yyyy-MM');
-    const monthSchedules = task.schedules?.filter(s => s.targetPeriod === targetPeriod);
+    const monthSchedules = task.schedules?.filter(s => {
+      const sMonthDate = parseISO(`${s.targetPeriod}-01`);
+      let exactDateStr;
+      if (task.frequency === 'Weekly' || task.frequency === 'Custom Date') {
+        exactDateStr = s.exactDate || getExactDateForMonth(task, sMonthDate);
+      } else {
+        exactDateStr = getExactDateForMonth(task, sMonthDate);
+      }
+      
+      if (exactDateStr && exactDateStr !== 'Not Set') {
+        const parts = exactDateStr.split('-');
+        if (parts.length === 3) {
+          let exactYear = parseInt(s.targetPeriod.split('-')[0], 10);
+          const targetMonth = parseInt(s.targetPeriod.split('-')[1], 10);
+          const exactMonth = parseInt(parts[1], 10);
+          if (exactMonth < targetMonth && (targetMonth - exactMonth) >= 6) {
+             exactYear += 1;
+          }
+          return exactYear === monthDate.getFullYear() && exactMonth === monthDate.getMonth() + 1;
+        }
+      }
+      return s.targetPeriod === targetPeriod;
+    });
     
     if (!monthSchedules || monthSchedules.length === 0) return undefined;
     if (monthSchedules.length === 1) return monthSchedules[0];
@@ -207,7 +229,12 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
         // Removed the filter here to allow all statuses (Scheduled, Completed, etc.) to be processed.
 
         const monthDate = parseISO(`${schedule.targetPeriod}-01`);
-        const exactDateStr = schedule.exactDate || getExactDateForMonth(task, monthDate);
+        let exactDateStr;
+        if (task.frequency === 'Weekly' || task.frequency === 'Custom Date') {
+          exactDateStr = schedule.exactDate || getExactDateForMonth(task, monthDate);
+        } else {
+          exactDateStr = getExactDateForMonth(task, monthDate);
+        }
         const endDateStr = getEndDateForMonth(task, monthDate);
         let isPastDue = false;
         let scheduleDate = monthDate;
@@ -217,7 +244,13 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
         if (exactDateStr && exactDateStr !== 'Not Set') {
           const parts = exactDateStr.split('-');
           if (parts.length === 3) {
-            displayExactDate = `${schedule.targetPeriod}-${parts[2]}`;
+            let exactYear = parseInt(schedule.targetPeriod.split('-')[0], 10);
+            const targetMonth = parseInt(schedule.targetPeriod.split('-')[1], 10);
+            const exactMonth = parseInt(parts[1], 10);
+            if (exactMonth < targetMonth && (targetMonth - exactMonth) >= 6) {
+               exactYear += 1;
+            }
+            displayExactDate = `${exactYear}-${parts[1]}-${parts[2]}`;
           }
           const parsed = parseISO(displayExactDate);
           if (!isNaN(parsed)) {
@@ -226,6 +259,15 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
             if (isBefore(parsed, today)) {
               isPastDue = true;
             }
+          }
+          if (task.taskName.includes('TESR')) {
+            console.log('TaskMatrix upcomingSchedules TESR! ->', {
+              targetPeriod: schedule.targetPeriod,
+              exactDateStr,
+              displayExactDate,
+              parsed,
+              scheduleDate
+            });
           }
         } else {
           // No exact date: past due if targetPeriod is before the current month
@@ -238,7 +280,24 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
         if (endDateStr && task.frequency !== 'Weekly') {
           const parts = endDateStr.split('-');
           if (parts.length === 3) {
-            displayEndDate = `${parts[0]}-${parts[1]}-${parts[2]}`; // Keep as is or format similarly
+            let endYear = displayExactDate && displayExactDate !== 'Not Set' 
+                ? parseInt(displayExactDate.split('-')[0], 10) 
+                : parseInt(schedule.targetPeriod.split('-')[0], 10);
+            const endMonth = parseInt(parts[1], 10);
+            
+            if (displayExactDate && displayExactDate !== 'Not Set') {
+              const exactMonth = parseInt(displayExactDate.split('-')[1], 10);
+              if (endMonth < exactMonth) {
+                endYear += 1;
+              }
+            } else {
+              const targetMonth = parseInt(schedule.targetPeriod.split('-')[1], 10);
+              if (endMonth < targetMonth && (targetMonth - endMonth) >= 6) {
+                endYear += 1;
+              }
+            }
+            
+            displayEndDate = `${endYear}-${parts[1]}-${parts[2]}`;
             const parsedEnd = parseISO(displayEndDate);
             if (!isNaN(parsedEnd)) {
                scheduleEndDate = parsedEnd;
@@ -511,7 +570,26 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                                 setPopupStatus(schedule.status);
                                 setPopupHours(schedule.completedHours || '');
                                 setPopupCompletionDate(schedule.completionDate || format(new Date(), 'yyyy-MM-dd'));
-                                setActivePopup({ task, schedule, monthDisplay: format(month, 'MMM yyyy'), monthDate: month });
+                                let popupScheduleDate = month;
+                                const sMonthDate = parseISO(`${schedule.targetPeriod}-01`);
+                                let exactDateStr;
+                                if (task.frequency === 'Weekly' || task.frequency === 'Custom Date') {
+                                  exactDateStr = schedule.exactDate || getExactDateForMonth(task, sMonthDate);
+                                } else {
+                                  exactDateStr = getExactDateForMonth(task, sMonthDate);
+                                }
+                                if (exactDateStr && exactDateStr !== 'Not Set') {
+                                  const parts = exactDateStr.split('-');
+                                  if (parts.length === 3) {
+                                    let exactYear = parseInt(schedule.targetPeriod.split('-')[0], 10);
+                                    const targetMonth = parseInt(schedule.targetPeriod.split('-')[1], 10);
+                                    const exactMonth = parseInt(parts[1], 10);
+                                    if (exactMonth < targetMonth && (targetMonth - exactMonth) >= 6) exactYear += 1;
+                                    const parsed = parseISO(`${exactYear}-${parts[1]}-${parts[2]}`);
+                                    if (!isNaN(parsed)) popupScheduleDate = parsed;
+                                  }
+                                }
+                                setActivePopup({ task, schedule, monthDisplay: format(month, 'MMM yyyy'), monthDate: sMonthDate, scheduleDate: popupScheduleDate });
                               }
                             }}
                             className={`border-r border-white border-b text-center cursor-pointer hover:opacity-80 transition-opacity ${
@@ -625,7 +703,13 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                           setPopupStatus(item.schedule.status);
                           setPopupHours(item.schedule.completedHours || '');
                           setPopupCompletionDate(item.schedule.completionDate || format(new Date(), 'yyyy-MM-dd'));
-                          setActivePopup({ task: item.task, schedule: item.schedule, monthDisplay: item.monthDisplay, monthDate: item.monthDate });
+                          setActivePopup({ 
+                            task: item.task, 
+                            schedule: item.schedule, 
+                            monthDisplay: item.monthDisplay, 
+                            monthDate: item.monthDate,
+                            scheduleDate: item.scheduleDate 
+                          });
                         }}
                         className="px-3 py-1.5 bg-white text-notion-blue text-xs font-bold border border-notion-warm-gray-200 rounded-micro hover:bg-notion-badge-blue-bg transition shadow-sm"
                       >
@@ -678,7 +762,13 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                           setPopupStatus(item.schedule.status);
                           setPopupHours(item.schedule.completedHours || '');
                           setPopupCompletionDate(item.schedule.completionDate || format(new Date(), 'yyyy-MM-dd'));
-                          setActivePopup({ task: item.task, schedule: item.schedule, monthDisplay: item.monthDisplay, monthDate: item.monthDate });
+                          setActivePopup({ 
+                            task: item.task, 
+                            schedule: item.schedule, 
+                            monthDisplay: item.monthDisplay, 
+                            monthDate: item.monthDate,
+                            scheduleDate: item.scheduleDate 
+                          });
                         }}
                         className={`shrink-0 text-[9px] md:text-[10px] font-bold px-1.5 py-1.5 rounded cursor-pointer truncate shadow-sm transition hover:opacity-80 border-l-2 ${
                           item.schedule.status === 'Completed' ? 'bg-amber-50 text-amber-900 border-amber-400' : 
@@ -740,7 +830,12 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
             <div className="p-4 sm:p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1">
               <div className="space-y-1 text-sm">
                 <p><span className="text-notion-warm-gray-500 font-medium">Task:</span> <span className="font-semibold text-notion-black">{activePopup.task.taskName} ({activePopup.task.taskCode})</span></p>
-                <p><span className="text-notion-warm-gray-500 font-medium">Period:</span> <span className="font-semibold text-notion-black">{activePopup.monthDisplay}</span></p>
+                <p className="text-sm mb-1 text-notion-warm-gray-600">
+                  <span className="text-notion-warm-gray-500 font-medium">Period:</span> 
+                  <span className="font-semibold text-notion-black">
+                    {format(activePopup.scheduleDate || activePopup.monthDate, 'MMM yyyy')}
+                  </span>
+                </p>
                 <p><span className="text-notion-warm-gray-500 font-medium">Date Range:</span> <span className="font-semibold text-notion-black">{getExactDateForMonth(activePopup.task, activePopup.monthDate)} {getEndDateForMonth(activePopup.task, activePopup.monthDate) ? ` - ${getEndDateForMonth(activePopup.task, activePopup.monthDate)}` : ''}</span></p>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-notion-warm-gray-500 font-medium shrink-0 text-sm">Assigned To:</span>

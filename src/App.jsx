@@ -124,16 +124,12 @@ function App() {
   const visiblePeriodicalTasks = React.useMemo(() => {
     if (isAdmin) return periodicalTasks;
     
-    const role = userProfileData?.role?.toLowerCase() || 'user';
-    if (role === 'supervisor' || role === 'manager') {
-      const visibleSiteIds = visibleSites.map(s => s.id);
-      return periodicalTasks.filter(t => visibleSiteIds.includes(t.siteId));
-    }
-
     const userEmail = userProfileData?.name;
     if (!userEmail || userEmail === 'Loading...') return [];
+
+    // Only show tasks specifically assigned to this user, regardless of whether they are a supervisor or normal user
     return periodicalTasks.filter(t => Array.isArray(t.assignedTo) ? t.assignedTo.includes(userEmail) : t.assignedTo === userEmail);
-  }, [periodicalTasks, isAdmin, userProfileData, visibleSites]);
+  }, [periodicalTasks, isAdmin, userProfileData]);
 
   const syncDataRef = React.useRef(null);
 
