@@ -19,7 +19,6 @@ const TaskBudgetMatrix = ({ sites, periodicalTasks }) => {
     return [];
   }, [filterFreq]);
 
-  // Calculate column totals
   const totals = useMemo(() => {
     let totalHrsAnnum = 0;
     let totalPriceAnnum = 0;
@@ -27,8 +26,9 @@ const TaskBudgetMatrix = ({ sites, periodicalTasks }) => {
 
     filteredTasks.forEach(task => {
       const periods = task.periodBudgets || [];
-      periods.forEach((p, idx) => {
-        if (idx < periodTotals.length) {
+      periodNames.forEach((name, idx) => {
+        const p = periods.find(period => period.name === name);
+        if (p && !p.isDisabled) {
           const hrs = p.hours || 0;
           const prc = p.pricing || 0;
           periodTotals[idx].hours += hrs;
@@ -99,8 +99,11 @@ const TaskBudgetMatrix = ({ sites, periodicalTasks }) => {
             {filteredTasks.map((task, idx) => {
               const site = sites.find(s => s.id === task.siteId);
               const periods = task.periodBudgets || [];
-              const taskTotalHrs = periods.reduce((sum, p) => sum + (p.hours || 0), 0);
-              const taskTotalPrice = periods.reduce((sum, p) => sum + (p.pricing || 0), 0);
+              
+              // Only sum active periods for task totals
+              const activePeriods = periods.filter(p => !p.isDisabled);
+              const taskTotalHrs = activePeriods.reduce((sum, p) => sum + (p.hours || 0), 0);
+              const taskTotalPrice = activePeriods.reduce((sum, p) => sum + (p.pricing || 0), 0);
 
               return (
                 <tr key={task.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-notion-warm-white'} border-b border-notion-warm-gray-200 hover:bg-yellow-50 transition-colors`}>
@@ -112,15 +115,19 @@ const TaskBudgetMatrix = ({ sites, periodicalTasks }) => {
                     {task.taskName}
                   </td>
                   
-                  {periodNames.map((_, i) => {
-                    const p = periods[i] || { hours: 0, pricing: 0 };
+                  {periodNames.map((name, i) => {
+                    const p = periods.find(period => period.name === name);
+                    const isActive = p && !p.isDisabled;
+                    const hours = isActive ? (p.hours || 0) : 0;
+                    const pricing = isActive ? (p.pricing || 0) : 0;
+                    
                     return (
                       <React.Fragment key={i}>
-                        <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-center tabular-nums text-notion-warm-gray-500">
-                          {p.hours ? p.hours.toFixed(2) : '-'}
+                        <td className={`px-3 py-1.5 border-r border-notion-warm-gray-200 text-center tabular-nums ${!isActive ? 'text-notion-warm-gray-300 bg-notion-warm-white/50' : 'text-notion-warm-gray-500'}`}>
+                          {hours ? hours.toFixed(2) : '-'}
                         </td>
-                        <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-right tabular-nums">
-                          {p.pricing ? `$ ${p.pricing.toFixed(2)}` : '-'}
+                        <td className={`px-3 py-1.5 border-r border-notion-warm-gray-200 text-right tabular-nums ${!isActive ? 'text-notion-warm-gray-300 bg-notion-warm-white/50' : ''}`}>
+                          {pricing ? `$ ${pricing.toFixed(2)}` : '-'}
                         </td>
                       </React.Fragment>
                     );

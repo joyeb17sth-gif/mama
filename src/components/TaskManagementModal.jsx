@@ -138,8 +138,9 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
   };
 
   const calculateTaskTotals = (taskPeriods, frequency, weeklyDays) => {
-    let totalHours = taskPeriods.reduce((sum, p) => sum + (p.hours || 0), 0);
-    let totalPrice = taskPeriods.reduce((sum, p) => sum + (p.pricing || 0), 0);
+    const activePeriods = taskPeriods.filter(p => !p.isDisabled);
+    let totalHours = activePeriods.reduce((sum, p) => sum + (p.hours || 0), 0);
+    let totalPrice = activePeriods.reduce((sum, p) => sum + (p.pricing || 0), 0);
     if (frequency === 'Weekly') {
       const occurrencesPerYear = (weeklyDays?.length || 0) * 52;
       totalHours *= occurrencesPerYear;
