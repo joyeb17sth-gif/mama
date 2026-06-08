@@ -5,7 +5,9 @@ const TaskBudgetMatrix = ({ sites, periodicalTasks }) => {
   const [filterFreq, setFilterFreq] = useState('Quarterly');
 
   const filteredTasks = useMemo(() => {
-    return periodicalTasks.filter(t => t.frequency === filterFreq);
+    return periodicalTasks
+      .filter(t => t.frequency === filterFreq)
+      .sort((a, b) => (parseInt(b.id) || 0) - (parseInt(a.id) || 0));
   }, [periodicalTasks, filterFreq]);
 
   // Determine period names based on selected frequency

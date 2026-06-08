@@ -36,7 +36,16 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
       }
       grouped[task.siteId].tasks.push(task);
     });
-    return grouped;
+
+    Object.values(grouped).forEach(group => {
+      group.tasks.sort((a, b) => (parseInt(b.id) || 0) - (parseInt(a.id) || 0));
+    });
+
+    return Object.values(grouped).sort((a, b) => {
+      const maxIdA = Math.max(...a.tasks.map(t => parseInt(t.id) || 0));
+      const maxIdB = Math.max(...b.tasks.map(t => parseInt(t.id) || 0));
+      return maxIdB - maxIdA;
+    });
   }, [periodicalTasks, sites, selectedSiteFilter]);
 
   const getStatusColor = (status) => {
@@ -532,7 +541,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
               </tr>
             </thead>
             <tbody>
-              {Object.values(groupedTasks).length === 0 && (
+              {groupedTasks.length === 0 && (
                 <tr>
                   <td colSpan={5 + months.length} className="px-6 py-8 text-center text-notion-warm-gray-500">
                     No periodical tasks configured yet. Manage tasks within the Sites configuration.
@@ -540,7 +549,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                 </tr>
               )}
               
-              {Object.values(groupedTasks).map(({ site, tasks }) => (
+              {groupedTasks.map(({ site, tasks }) => (
                 <React.Fragment key={site?.id || 'unknown'}>
                   {/* Site Header Row */}
                   <tr className="bg-[#a8d08d] text-notion-black border-b border-notion-warm-gray-200 text-xs md:text-sm">
