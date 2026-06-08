@@ -85,7 +85,7 @@ const SiteList = ({ sites, onEdit, onAddSubSite, onDelete, isAdmin = true }) => 
                   return (
                     <React.Fragment key={mainSite.id}>
                       {/* Main Site Row */}
-                      <tr className="bg-white group hover:bg-slate-50/50 transition-colors">
+                      <tr className="bg-blue-50/40 group hover:bg-blue-50/70 transition-colors border-b border-blue-100/50">
                         <td className="py-5 pl-12 pr-6 whitespace-nowrap">
                             <div className="flex items-center gap-4">
                               {subSites.length > 0 ? (
@@ -219,7 +219,7 @@ const SiteList = ({ sites, onEdit, onAddSubSite, onDelete, isAdmin = true }) => 
           const subSites = sites.filter(s => s.isSubSite && s.parentSiteId === mainSite.id);
 
           return (
-            <div key={mainSite.id} className="bg-white rounded-xl border border-zinc-100 p-4 shadow-sm space-y-4">
+            <div key={mainSite.id} className="bg-blue-50/30 rounded-xl border border-blue-100/50 p-4 shadow-sm space-y-4">
               {/* Site Header */}
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
