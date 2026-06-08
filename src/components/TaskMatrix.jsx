@@ -76,6 +76,8 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
           const exactMonth = parseInt(parts[1], 10);
           if (exactMonth < targetMonth && (targetMonth - exactMonth) >= 6) {
              exactYear += 1;
+          } else if (exactMonth > targetMonth && (exactMonth - targetMonth) >= 6) {
+             exactYear -= 1;
           }
           return exactYear === monthDate.getFullYear() && exactMonth === monthDate.getMonth() + 1;
         }
@@ -259,6 +261,8 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
             const exactMonth = parseInt(parts[1], 10);
             if (exactMonth < targetMonth && (targetMonth - exactMonth) >= 6) {
                exactYear += 1;
+            } else if (exactMonth > targetMonth && (exactMonth - targetMonth) >= 6) {
+               exactYear -= 1;
             }
             displayExactDate = `${exactYear}-${parts[1]}-${parts[2]}`;
           }
@@ -595,6 +599,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                                     const targetMonth = parseInt(schedule.targetPeriod.split('-')[1], 10);
                                     const exactMonth = parseInt(parts[1], 10);
                                     if (exactMonth < targetMonth && (targetMonth - exactMonth) >= 6) exactYear += 1;
+                                    else if (exactMonth > targetMonth && (exactMonth - targetMonth) >= 6) exactYear -= 1;
                                     const parsed = parseISO(`${exactYear}-${parts[1]}-${parts[2]}`);
                                     if (!isNaN(parsed)) popupScheduleDate = parsed;
                                   }
