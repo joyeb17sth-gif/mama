@@ -12,6 +12,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
   const [upcomingFilter, setUpcomingFilter] = useState('1week');
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [selectedSiteFilter, setSelectedSiteFilter] = useState('all');
+  const [selectedFrequencyFilter, setSelectedFrequencyFilter] = useState('all');
   const [expandedDays, setExpandedDays] = useState(new Set());
   const [showAggregatedWarning, setShowAggregatedWarning] = useState(false);
 
@@ -27,6 +28,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
     const grouped = {};
     periodicalTasks.forEach(task => {
       if (selectedSiteFilter !== 'all' && task.siteId !== selectedSiteFilter) return;
+      if (selectedFrequencyFilter !== 'all' && task.frequency !== selectedFrequencyFilter) return;
 
       if (!grouped[task.siteId]) {
         grouped[task.siteId] = {
@@ -46,7 +48,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
       const maxIdB = Math.max(...b.tasks.map(t => parseInt(t.id) || 0));
       return maxIdB - maxIdA;
     });
-  }, [periodicalTasks, sites, selectedSiteFilter]);
+  }, [periodicalTasks, sites, selectedSiteFilter, selectedFrequencyFilter]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -254,6 +256,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
 
     periodicalTasks.forEach(task => {
       if (selectedSiteFilter !== 'all' && task.siteId !== selectedSiteFilter) return;
+      if (selectedFrequencyFilter !== 'all' && task.frequency !== selectedFrequencyFilter) return;
 
       const site = sites.find(s => s.id === task.siteId);
       if (!task.schedules) return;
@@ -388,7 +391,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
 
 
     return finalUpcoming;
-  }, [periodicalTasks, sites, selectedSiteFilter]);
+  }, [periodicalTasks, sites, selectedSiteFilter, selectedFrequencyFilter]);
 
   const filteredUpcomingSchedules = useMemo(() => {
     // Only show Scheduled tasks in the Upcoming list view
@@ -453,12 +456,29 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                onClick={() => setViewMode('calendar')}
             >Calendar</button>
           </div>
-          <div className="w-full sm:w-48">
-            <Dropdown
-              value={selectedSiteFilter}
-              onChange={(val) => setSelectedSiteFilter(val)}
-              options={[{ value: 'all', label: 'All Sites' }, ...sites.map(s => ({ value: s.id, label: s.siteName }))]}
-            />
+          <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2">
+            <div className="w-full">
+              <Dropdown
+                value={selectedSiteFilter}
+                onChange={(val) => setSelectedSiteFilter(val)}
+                options={[{ value: 'all', label: 'All Sites' }, ...sites.map(s => ({ value: s.id, label: s.siteName }))]}
+              />
+            </div>
+            <div className="w-full">
+              <Dropdown
+                value={selectedFrequencyFilter}
+                onChange={(val) => setSelectedFrequencyFilter(val)}
+                options={[
+                  { value: 'all', label: 'All Frequencies' },
+                  { value: 'Weekly', label: 'Weekly' },
+                  { value: 'Monthly', label: 'Monthly' },
+                  { value: 'Quarterly', label: 'Quarterly' },
+                  { value: '6 Monthly', label: '6 Monthly' },
+                  { value: 'Yearly', label: 'Yearly' },
+                  { value: 'Custom Date', label: 'Custom Date' }
+                ]}
+              />
+            </div>
           </div>
         </div>
         
