@@ -336,6 +336,11 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
   };
 
   const handleSaveAll = () => {
+    if (isNewTaskOpen && newTask.taskName && newTask.taskCode) {
+      if (!window.confirm('You have an unsaved task in the form. Are you sure you want to discard it and close?')) {
+        return;
+      }
+    }
     onSave(site.id, tasks);
   };
 
@@ -741,7 +746,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                     </div>
                     <div className="col-span-1">
                       <div className="text-center font-bold text-amber-900 tabular-nums bg-amber-100 whisper-border px-2 py-1 rounded-micro shadow-sm inline-block whitespace-nowrap text-xs">
-                        {task.budgetHours?.toFixed(1)}h <span className="text-notion-blue ml-1">${task.budgetPrice?.toFixed(0)}</span>
+                        {calculateTaskTotals(task.periodBudgets || [], task.frequency, task.weeklyDays || []).totalHours.toFixed(1)}h <span className="text-notion-blue ml-1">${calculateTaskTotals(task.periodBudgets || [], task.frequency, task.weeklyDays || []).totalPrice.toFixed(0)}</span>
                       </div>
                     </div>
                     <div className="col-span-1 text-right flex justify-end gap-2">
@@ -806,7 +811,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                       <div>
                         <span className="text-[10px] font-semibold text-notion-warm-gray-400 block uppercase tracking-wider">Budget Allocation</span>
                         <span className="font-bold text-amber-950 text-xs bg-amber-100 px-2 py-0.5 rounded border border-amber-200/50">
-                          {task.budgetHours?.toFixed(1)}h <span className="text-notion-blue ml-1">${task.budgetPrice?.toFixed(0)}</span>
+                          {calculateTaskTotals(task.periodBudgets || [], task.frequency, task.weeklyDays || []).totalHours.toFixed(1)}h <span className="text-notion-blue ml-1">${calculateTaskTotals(task.periodBudgets || [], task.frequency, task.weeklyDays || []).totalPrice.toFixed(0)}</span>
                         </span>
                       </div>
                       <div className="flex gap-2">
