@@ -144,6 +144,20 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
     return [];
   };
 
+  const mergePeriods = (existingPeriods, frequency) => {
+    const initial = getInitialPeriods(frequency);
+    if (!existingPeriods || existingPeriods.length === 0) return initial;
+    
+    if (['Monthly', 'Quarterly', '6 Monthly', 'Yearly'].includes(frequency)) {
+       return initial.map(initPeriod => {
+          const existing = existingPeriods.find(p => p.name === initPeriod.name);
+          if (existing) return existing;
+          return { ...initPeriod, isDisabled: true };
+       });
+    }
+    return existingPeriods;
+  };
+
   const [editingTaskId, setEditingTaskId] = useState(null);
 
   const handleFileUpload = async (e, arrayIndex, isEditingTask = false) => {
@@ -328,7 +342,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
         expectedName = allPeriods[iteration % allPeriods.length]?.name;
       }
 
-      const isActive = expectedName ? periods.some(p => p.name === expectedName) : true;
+      const isActive = expectedName ? periods.some(p => p.name === expectedName && !p.isDisabled) : true;
 
       if (isActive) {
         const targetPeriod = format(currentDate, 'yyyy-MM');
@@ -359,7 +373,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
       contractType: taskToEdit.contractType || 'AD/HOC',
       assignedTo: Array.isArray(taskToEdit.assignedTo) ? taskToEdit.assignedTo : (taskToEdit.assignedTo ? [taskToEdit.assignedTo] : []),
       startingMonth: taskToEdit.startingMonth || 0,
-      periods: taskToEdit.periodBudgets || getInitialPeriods(taskToEdit.frequency || 'Custom Date'),
+      periods: mergePeriods(taskToEdit.periodBudgets, taskToEdit.frequency || 'Custom Date'),
       weeklyDays: taskToEdit.weeklyDays || (taskToEdit.frequency === 'Weekly' ? ['Mon'] : [])
     });
     setEditingTaskId(taskId);
@@ -878,17 +892,24 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                   <button
                     type="button"
                     onClick={() => {
-                      const newPeriods = newTask.periods.filter((_, i) => i !== arrayIndex);
+                      const newPeriods = [...newTask.periods];
+                      newPeriods[arrayIndex] = { ...newPeriods[arrayIndex], isDisabled: !period.isDisabled };
                       setNewTask({ ...newTask, periods: newPeriods });
                     }}
-                    className="absolute top-2 right-2 p-1 text-notion-warm-gray-200 hover:text-rose-600 hover:bg-notion-badge-rose-bg rounded transition-all opacity-0 group-hover:opacity-100"
-                    title="Remove Month"
+                    className={`absolute top-2 right-2 p-1 rounded transition-all ${period.isDisabled ? 'text-notion-blue hover:bg-notion-badge-blue-bg opacity-100' : 'text-notion-warm-gray-200 hover:text-rose-600 hover:bg-notion-badge-rose-bg opacity-0 group-hover:opacity-100'}`}
+                    title={period.isDisabled ? "Activate Period" : "Disable Period"}
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    {period.isDisabled ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                    )}
                   </button>
-                  <h5 className="font-bold text-[11px] text-notion-black mb-2 border-b border-notion-warm-gray-200 pb-1 pr-6">
+                  <h5 className={`font-bold text-[11px] text-notion-black mb-2 border-b border-notion-warm-gray-200 pb-1 pr-6 ${period.isDisabled ? 'line-through text-notion-warm-gray-400' : ''}`}>
                     {newTask.frequency === 'Monthly' ? `${period.name} ${new Date().getFullYear() + (trueMonthIndex < (newTask.startingMonth || 0) ? 1 : 0)}` : period.name}
+                    {period.isDisabled && <span className="text-[9px] text-notion-warm-gray-300 ml-2 uppercase tracking-widest bg-notion-warm-white px-1 py-0.5 rounded-micro no-underline">Disabled</span>}
                   </h5>
+                  <div className={`transition-all ${period.isDisabled ? 'opacity-40 pointer-events-none grayscale' : ''}`}>
 
                   {newTask.frequency === 'Weekly' && (
                     <div className="mb-3">
@@ -1032,6 +1053,7 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                           </div>
                         </div>
                       )}
+                      </div>
                     </div>
                   </div>
                 </div>
