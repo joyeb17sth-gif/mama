@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Dropdown from './Dropdown';
 import { getContractors } from '../utils/storage';
 import { supabase } from '../utils/supabaseClient';
