@@ -347,21 +347,15 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
   const showStartingMonth = newTask.frequency === 'Monthly';
 
   const supervisorOptions = useMemo(() => {
-    return [
-      { value: 'joyeb5730@gmail.com', label: 'Admin Supervisor' },
-      ...profileUsers
-        .filter(u => String(u.role || '').toLowerCase().includes('supervisor'))
-        .map(u => ({ value: u.email, label: `${u.name || u.email} (${u.role})` }))
-    ];
+    return profileUsers
+      .filter(u => String(u.role || '').toLowerCase().includes('supervisor'))
+      .map(u => ({ value: u.email, label: `${u.name || u.email} (${u.role})` }));
   }, [profileUsers]);
 
   const managerOptions = useMemo(() => {
-    return [
-      { value: 'saching@seetalgroup.com', label: 'saching (Manager)' },
-      ...profileUsers
-        .filter(u => String(u.role || '').toLowerCase().includes('manager'))
-        .map(u => ({ value: u.email, label: `${u.name || u.email} (${u.role})` }))
-    ];
+    return profileUsers
+      .filter(u => String(u.role || '').toLowerCase().includes('manager'))
+      .map(u => ({ value: u.email, label: `${u.name || u.email} (${u.role})` }));
   }, [profileUsers]);
 
   return (
@@ -446,12 +440,12 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                   ]}
                 />
               </div>
-              <div className="flex gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                 {(() => {
                   const assignedToArray = Array.isArray(newTask.assignedTo) ? newTask.assignedTo : (newTask.assignedTo ? [newTask.assignedTo] : []);
                   return (
                     <>
-                      <div className="w-1/2">
+                      <div>
                         <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Assign Supervisors</label>
                         <Dropdown
                           value={assignedToArray.filter(val => supervisorOptions.some(o => o.value === val))}
@@ -464,7 +458,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                           isMulti={true}
                         />
                       </div>
-                      <div className="w-1/2">
+                      <div>
                         <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Assign Managers</label>
                         <Dropdown
                           value={assignedToArray.filter(val => managerOptions.some(o => o.value === val))}
