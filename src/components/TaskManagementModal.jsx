@@ -447,32 +447,39 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                 />
               </div>
               <div className="flex gap-4">
-                <div className="w-1/2">
-                  <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Assign Supervisors</label>
-                  <Dropdown
-                    value={(newTask.assignedTo || []).filter(val => supervisorOptions.some(o => o.value === val))}
-                    onChange={(val) => {
-                      const others = (newTask.assignedTo || []).filter(v => !supervisorOptions.some(o => o.value === v));
-                      setNewTask({ ...newTask, assignedTo: [...others, ...val] });
-                    }}
-                    options={supervisorOptions}
-                    placeholder="Select supervisors..."
-                    isMulti={true}
-                  />
-                </div>
-                <div className="w-1/2">
-                  <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Assign Managers</label>
-                  <Dropdown
-                    value={(newTask.assignedTo || []).filter(val => managerOptions.some(o => o.value === val))}
-                    onChange={(val) => {
-                      const others = (newTask.assignedTo || []).filter(v => !managerOptions.some(o => o.value === v));
-                      setNewTask({ ...newTask, assignedTo: [...others, ...val] });
-                    }}
-                    options={managerOptions}
-                    placeholder="Select managers..."
-                    isMulti={true}
-                  />
-                </div>
+                {(() => {
+                  const assignedToArray = Array.isArray(newTask.assignedTo) ? newTask.assignedTo : (newTask.assignedTo ? [newTask.assignedTo] : []);
+                  return (
+                    <>
+                      <div className="w-1/2">
+                        <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Assign Supervisors</label>
+                        <Dropdown
+                          value={assignedToArray.filter(val => supervisorOptions.some(o => o.value === val))}
+                          onChange={(val) => {
+                            const others = assignedToArray.filter(v => !supervisorOptions.some(o => o.value === v));
+                            setNewTask({ ...newTask, assignedTo: [...others, ...val] });
+                          }}
+                          options={supervisorOptions}
+                          placeholder="Select supervisors..."
+                          isMulti={true}
+                        />
+                      </div>
+                      <div className="w-1/2">
+                        <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Assign Managers</label>
+                        <Dropdown
+                          value={assignedToArray.filter(val => managerOptions.some(o => o.value === val))}
+                          onChange={(val) => {
+                            const others = assignedToArray.filter(v => !managerOptions.some(o => o.value === v));
+                            setNewTask({ ...newTask, assignedTo: [...others, ...val] });
+                          }}
+                          options={managerOptions}
+                          placeholder="Select managers..."
+                          isMulti={true}
+                        />
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
