@@ -392,90 +392,91 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
             
             {isNewTaskOpen && (
               <div className="mt-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end mb-4">
                   <div>
                     <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Task Code</label>
                     <input
                       type="text"
                       value={newTask.taskCode}
-                  onChange={(e) => setNewTask({ ...newTask, taskCode: e.target.value })}
-                  placeholder="e.g. RWC001"
-                  className="w-full px-3 py-2 bg-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black transition-all uppercase tracking-widest text-badge"
-                />
-              </div>
-              <div>
-                <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Task Name</label>
-                <input
-                  type="text"
-                  value={newTask.taskName}
-                  onChange={(e) => setNewTask({ ...newTask, taskName: e.target.value })}
-                  placeholder="Shampoo Carpets"
-                  className="w-full px-3 py-2 bg-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black transition-all text-badge"
-                />
-              </div>
-              <div>
-                <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Frequency</label>
-                <Dropdown
-                  value={newTask.frequency}
-                  onChange={handleTaskFrequencyChange}
-                  options={[
-                    { value: 'Weekly', label: 'Weekly' },
-                    { value: 'Monthly', label: 'Monthly' },
-                    { value: 'Quarterly', label: 'Quarterly' },
-                    { value: '6 Monthly', label: '6 Monthly' },
-                    { value: 'Yearly', label: 'Yearly' },
-                    { value: 'Custom Date', label: 'Custom Date' }
-                  ]}
-                />
-              </div>
-              <div>
-                <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Contract Type</label>
-                <Dropdown
-                  value={newTask.contractType}
-                  onChange={(val) => setNewTask({ ...newTask, contractType: val })}
-                  options={[
-                    { value: 'AD/HOC', label: 'AD/HOC' },
-                    { value: 'On Request', label: 'On Request' },
-                    { value: 'Scheduled', label: 'Scheduled' }
-                  ]}
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                {(() => {
-                  const assignedToArray = Array.isArray(newTask.assignedTo) ? newTask.assignedTo : (newTask.assignedTo ? [newTask.assignedTo] : []);
-                  return (
-                    <>
-                      <div>
-                        <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Assign Supervisors</label>
-                        <Dropdown
-                          value={assignedToArray.filter(val => supervisorOptions.some(o => o.value === val))}
-                          onChange={(val) => {
-                            const others = assignedToArray.filter(v => !supervisorOptions.some(o => o.value === v));
-                            setNewTask({ ...newTask, assignedTo: [...others, ...val] });
-                          }}
-                          options={supervisorOptions}
-                          placeholder="Select supervisors..."
-                          isMulti={true}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Assign Managers</label>
-                        <Dropdown
-                          value={assignedToArray.filter(val => managerOptions.some(o => o.value === val))}
-                          onChange={(val) => {
-                            const others = assignedToArray.filter(v => !managerOptions.some(o => o.value === v));
-                            setNewTask({ ...newTask, assignedTo: [...others, ...val] });
-                          }}
-                          options={managerOptions}
-                          placeholder="Select managers..."
-                          isMulti={true}
-                        />
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
-            </div>
+                      onChange={(e) => setNewTask({ ...newTask, taskCode: e.target.value })}
+                      placeholder="e.g. RWC001"
+                      className="w-full px-3 py-2 bg-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black transition-all uppercase tracking-widest text-badge"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Task Name</label>
+                    <input
+                      type="text"
+                      value={newTask.taskName}
+                      onChange={(e) => setNewTask({ ...newTask, taskName: e.target.value })}
+                      placeholder="Shampoo Carpets"
+                      className="w-full px-3 py-2 bg-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black transition-all text-badge"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Frequency</label>
+                    <Dropdown
+                      value={newTask.frequency}
+                      onChange={handleTaskFrequencyChange}
+                      options={[
+                        { value: 'Weekly', label: 'Weekly' },
+                        { value: 'Monthly', label: 'Monthly' },
+                        { value: 'Quarterly', label: 'Quarterly' },
+                        { value: '6 Monthly', label: '6 Monthly' },
+                        { value: 'Yearly', label: 'Yearly' },
+                        { value: 'Custom Date', label: 'Custom Date' }
+                      ]}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Contract Type</label>
+                    <Dropdown
+                      value={newTask.contractType}
+                      onChange={(val) => setNewTask({ ...newTask, contractType: val })}
+                      options={[
+                        { value: 'AD/HOC', label: 'AD/HOC' },
+                        { value: 'On Request', label: 'On Request' },
+                        { value: 'Scheduled', label: 'Scheduled' }
+                      ]}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  {(() => {
+                    const assignedToArray = Array.isArray(newTask.assignedTo) ? newTask.assignedTo : (newTask.assignedTo ? [newTask.assignedTo] : []);
+                    return (
+                      <>
+                        <div>
+                          <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Assign Supervisors</label>
+                          <Dropdown
+                            value={assignedToArray.filter(val => supervisorOptions.some(o => o.value === val))}
+                            onChange={(val) => {
+                              const others = assignedToArray.filter(v => !supervisorOptions.some(o => o.value === v));
+                              setNewTask({ ...newTask, assignedTo: [...others, ...val] });
+                            }}
+                            options={supervisorOptions}
+                            placeholder="Select supervisors..."
+                            isMulti={true}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Assign Managers</label>
+                          <Dropdown
+                            value={assignedToArray.filter(val => managerOptions.some(o => o.value === val))}
+                            onChange={(val) => {
+                              const others = assignedToArray.filter(v => !managerOptions.some(o => o.value === v));
+                              setNewTask({ ...newTask, assignedTo: [...others, ...val] });
+                            }}
+                            options={managerOptions}
+                            placeholder="Select managers..."
+                            isMulti={true}
+                          />
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
 
             {/* Starting Month Selector */}
             {showStartingMonth && (
