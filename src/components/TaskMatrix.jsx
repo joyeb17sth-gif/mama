@@ -339,7 +339,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
           site,
           schedule,
           monthDate,
-          monthDisplay: format(monthDate, 'MMM yyyy'),
+          monthDisplay: displayExactDate && displayExactDate !== 'Not Set' ? format(parseISO(displayExactDate), 'MMM yyyy') : format(monthDate, 'MMM yyyy'),
           exactDate: displayExactDate,
           endDate: displayEndDate,
           scope: getDefaultScopeOfWorkForMonth(task, monthDate) || schedule.scopeOfWork || '',
