@@ -145,21 +145,21 @@ const Dashboard = ({ syncVersion, periodicalTasks: propPeriodicalTasks }) => {
                 if (periods.length) {
                     if (task.frequency === 'Monthly') {
                         const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex];
-                        timing = periods.find(p => p.name === monthName)?.timing || 'Early';
+                        timing = periods.find(p => p.name === monthName && !p.isDisabled)?.timing || 'Early';
                     } else if (task.frequency === 'Quarterly') {
                         let diff = monthIndex - (task.startingMonth || 0);
                         if (diff < 0) diff += 12;
                         const qIndex = Math.floor(diff / 3);
                         const expectedName = qIndex === 0 ? '1st Quarter' : qIndex === 1 ? '2nd Quarter' : qIndex === 2 ? '3rd Quarter' : '4th Quarter';
-                        timing = periods.find(p => p.name === expectedName)?.timing || 'Early';
+                        timing = periods.find(p => p.name === expectedName && !p.isDisabled)?.timing || 'Early';
                     } else if (task.frequency === '6 Monthly') {
                         let diff = monthIndex - (task.startingMonth || 0);
                         if (diff < 0) diff += 12;
                         const hIndex = Math.floor(diff / 6);
                         const expectedName = hIndex === 0 ? '1st Half' : '2nd Half';
-                        timing = periods.find(p => p.name === expectedName)?.timing || 'Early';
+                        timing = periods.find(p => p.name === expectedName && !p.isDisabled)?.timing || 'Early';
                     } else if (task.frequency === 'Yearly' || task.frequency === 'Weekly') {
-                        timing = periods[0]?.timing || 'Early';
+                        timing = periods[0]?.isDisabled ? 'Early' : (periods[0]?.timing || 'Early');
                     }
                 }
 

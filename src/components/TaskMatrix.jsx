@@ -114,14 +114,18 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
        if (diff < 0) diff += 12;
        const qIndex = Math.floor(diff / 3);
        const expectedName = qIndex === 0 ? '1st Quarter' : qIndex === 1 ? '2nd Quarter' : qIndex === 2 ? '3rd Quarter' : '4th Quarter';
-       return periods.find(p => p.name === expectedName)?.exactDate || 'Not Set';
+       const period = periods.find(p => p.name === expectedName);
+       if (period?.isDisabled) return 'Not Set';
+       return period?.exactDate || 'Not Set';
     }
     if (task.frequency === '6 Monthly') {
        let diff = monthIndex - (task.startingMonth || 0);
        if (diff < 0) diff += 12;
        const hIndex = Math.floor(diff / 6);
        const expectedName = hIndex === 0 ? '1st Half' : '2nd Half';
-       return periods.find(p => p.name === expectedName)?.exactDate || 'Not Set';
+       const period = periods.find(p => p.name === expectedName);
+       if (period?.isDisabled) return 'Not Set';
+       return period?.exactDate || 'Not Set';
     }
     if (task.frequency === 'Yearly' || task.frequency === 'Weekly') {
        return periods[0]?.exactDate || 'Not Set';
@@ -147,14 +151,18 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
        if (diff < 0) diff += 12;
        const qIndex = Math.floor(diff / 3);
        const expectedName = qIndex === 0 ? '1st Quarter' : qIndex === 1 ? '2nd Quarter' : qIndex === 2 ? '3rd Quarter' : '4th Quarter';
-       return periods.find(p => p.name === expectedName)?.endDate || '';
+       const period = periods.find(p => p.name === expectedName);
+       if (period?.isDisabled) return '';
+       return period?.endDate || '';
     }
     if (task.frequency === '6 Monthly') {
        let diff = monthIndex - (task.startingMonth || 0);
        if (diff < 0) diff += 12;
        const hIndex = Math.floor(diff / 6);
        const expectedName = hIndex === 0 ? '1st Half' : '2nd Half';
-       return periods.find(p => p.name === expectedName)?.endDate || '';
+       const period = periods.find(p => p.name === expectedName);
+       if (period?.isDisabled) return '';
+       return period?.endDate || '';
     }
     if (task.frequency === 'Yearly' || task.frequency === 'Weekly' || task.frequency === 'Custom Date') {
        return periods[0]?.endDate || '';
@@ -177,14 +185,18 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
        if (diff < 0) diff += 12;
        const qIndex = Math.floor(diff / 3);
        const expectedName = qIndex === 0 ? '1st Quarter' : qIndex === 1 ? '2nd Quarter' : qIndex === 2 ? '3rd Quarter' : '4th Quarter';
-       return periods.find(p => p.name === expectedName)?.scopeOfWork || '';
+       const period = periods.find(p => p.name === expectedName);
+       if (period?.isDisabled) return '';
+       return period?.scopeOfWork || '';
     }
     if (task.frequency === '6 Monthly') {
        let diff = monthIndex - (task.startingMonth || 0);
        if (diff < 0) diff += 12;
        const hIndex = Math.floor(diff / 6);
        const expectedName = hIndex === 0 ? '1st Half' : '2nd Half';
-       return periods.find(p => p.name === expectedName)?.scopeOfWork || '';
+       const period = periods.find(p => p.name === expectedName);
+       if (period?.isDisabled) return '';
+       return period?.scopeOfWork || '';
     }
     if (task.frequency === 'Yearly' || task.frequency === 'Weekly' || task.frequency === 'Custom Date') {
        return periods[0]?.scopeOfWork || '';
@@ -218,7 +230,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
        targetPeriod = periods[0];
     }
     
-    if (targetPeriod && targetPeriod.scopeFileUrl) {
+    if (targetPeriod && !targetPeriod.isDisabled && targetPeriod.scopeFileUrl) {
        return { url: targetPeriod.scopeFileUrl, name: targetPeriod.scopeFileName };
     }
     return null;
