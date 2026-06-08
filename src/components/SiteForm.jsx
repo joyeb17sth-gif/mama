@@ -449,6 +449,24 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
     setTasks(tasks.filter(t => t.id !== taskId));
   };
 
+  const supervisorOptions = useMemo(() => {
+    return [
+      { value: 'joyeb5730@gmail.com', label: 'Admin Supervisor' },
+      ...profileUsers
+        .filter(u => String(u.role || '').toLowerCase().includes('supervisor'))
+        .map(u => ({ value: u.email, label: `${u.name || u.email} (${u.role})` }))
+    ];
+  }, [profileUsers]);
+
+  const managerOptions = useMemo(() => {
+    return [
+      { value: 'saching@seetalgroup.com', label: 'saching (Manager)' },
+      ...profileUsers
+        .filter(u => String(u.role || '').toLowerCase().includes('manager'))
+        .map(u => ({ value: u.email, label: `${u.name || u.email} (${u.role})` }))
+    ];
+  }, [profileUsers]);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-10 animate-fade-in-up">
       {validationError && (
@@ -821,19 +839,33 @@ const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true
                 ]}
               />
             </div>
-            <div className="md:col-span-2">
-              <label className="text-badge font-bold text-notion-warm-gray-400 mb-3 block">Assign To</label>
-              <Dropdown
-                value={newTask.assignedTo}
-                onChange={(val) => setNewTask({ ...newTask, assignedTo: val })}
-                options={[
-                  { value: 'joyeb5730@gmail.com', label: 'Admin Supervisor' },
-                  { value: 'saching@seetalgroup.com', label: 'saching (Manager)' },
-                  ...profileUsers.map(u => ({ value: u.email, label: `${u.name || u.email} (${u.role})` }))
-                ]}
-                placeholder="Select assignees..."
-                isMulti={true}
-              />
+            <div className="md:col-span-2 flex gap-4">
+              <div className="w-1/2">
+                <label className="text-badge font-bold text-notion-warm-gray-400 mb-3 block">Assign Supervisors</label>
+                <Dropdown
+                  value={(newTask.assignedTo || []).filter(val => supervisorOptions.some(o => o.value === val))}
+                  onChange={(val) => {
+                    const others = (newTask.assignedTo || []).filter(v => !supervisorOptions.some(o => o.value === v));
+                    setNewTask({ ...newTask, assignedTo: [...others, ...val] });
+                  }}
+                  options={supervisorOptions}
+                  placeholder="Select supervisors..."
+                  isMulti={true}
+                />
+              </div>
+              <div className="w-1/2">
+                <label className="text-badge font-bold text-notion-warm-gray-400 mb-3 block">Assign Managers</label>
+                <Dropdown
+                  value={(newTask.assignedTo || []).filter(val => managerOptions.some(o => o.value === val))}
+                  onChange={(val) => {
+                    const others = (newTask.assignedTo || []).filter(v => !managerOptions.some(o => o.value === v));
+                    setNewTask({ ...newTask, assignedTo: [...others, ...val] });
+                  }}
+                  options={managerOptions}
+                  placeholder="Select managers..."
+                  isMulti={true}
+                />
+              </div>
             </div>
           </div>
 

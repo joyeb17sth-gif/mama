@@ -346,6 +346,24 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
 
   const showStartingMonth = newTask.frequency === 'Monthly';
 
+  const supervisorOptions = useMemo(() => {
+    return [
+      { value: 'joyeb5730@gmail.com', label: 'Admin Supervisor' },
+      ...profileUsers
+        .filter(u => String(u.role || '').toLowerCase().includes('supervisor'))
+        .map(u => ({ value: u.email, label: `${u.name || u.email} (${u.role})` }))
+    ];
+  }, [profileUsers]);
+
+  const managerOptions = useMemo(() => {
+    return [
+      { value: 'saching@seetalgroup.com', label: 'saching (Manager)' },
+      ...profileUsers
+        .filter(u => String(u.role || '').toLowerCase().includes('manager'))
+        .map(u => ({ value: u.email, label: `${u.name || u.email} (${u.role})` }))
+    ];
+  }, [profileUsers]);
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 sm:p-8 overflow-hidden">
       <div className="bg-white w-full max-w-5xl max-h-[95vh] rounded-xl shadow-2xl animate-fade-in-up flex flex-col">
@@ -428,19 +446,33 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                   ]}
                 />
               </div>
-              <div>
-                <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Assign To</label>
-                <Dropdown
-                  value={newTask.assignedTo}
-                  onChange={(val) => setNewTask({ ...newTask, assignedTo: val })}
-                  options={[
-                    { value: 'joyeb5730@gmail.com', label: 'Admin Supervisor' },
-                    { value: 'saching@seetalgroup.com', label: 'saching (Manager)' },
-                    ...profileUsers.map(u => ({ value: u.email, label: `${u.name || u.email} (${u.role})` }))
-                  ]}
-                  placeholder="Select assignees..."
-                  isMulti={true}
-                />
+              <div className="flex gap-4">
+                <div className="w-1/2">
+                  <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Assign Supervisors</label>
+                  <Dropdown
+                    value={(newTask.assignedTo || []).filter(val => supervisorOptions.some(o => o.value === val))}
+                    onChange={(val) => {
+                      const others = (newTask.assignedTo || []).filter(v => !supervisorOptions.some(o => o.value === v));
+                      setNewTask({ ...newTask, assignedTo: [...others, ...val] });
+                    }}
+                    options={supervisorOptions}
+                    placeholder="Select supervisors..."
+                    isMulti={true}
+                  />
+                </div>
+                <div className="w-1/2">
+                  <label className="text-badge font-bold text-notion-warm-gray-300 uppercase tracking-widest mb-2 block">Assign Managers</label>
+                  <Dropdown
+                    value={(newTask.assignedTo || []).filter(val => managerOptions.some(o => o.value === val))}
+                    onChange={(val) => {
+                      const others = (newTask.assignedTo || []).filter(v => !managerOptions.some(o => o.value === v));
+                      setNewTask({ ...newTask, assignedTo: [...others, ...val] });
+                    }}
+                    options={managerOptions}
+                    placeholder="Select managers..."
+                    isMulti={true}
+                  />
+                </div>
               </div>
             </div>
 

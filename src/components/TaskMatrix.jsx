@@ -383,8 +383,6 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
     finalUpcoming.sort((a, b) => {
       if (a.isPastDue && !b.isPastDue) return -1;
       if (!a.isPastDue && b.isPastDue) return 1;
-      const cmp = a.schedule.targetPeriod.localeCompare(b.schedule.targetPeriod);
-      if (cmp !== 0) return cmp;
       return a.scheduleDate - b.scheduleDate;
     });
 
@@ -605,7 +603,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                         {task.contractType}
                       </td>
                       <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-center font-semibold bg-emerald-100 text-emerald-700 border-b border-white">
-                        {task.budgetHours}
+                        {Number(task.budgetHours || 0).toFixed(2)}
                       </td>
                       
                       {/* Schedule Cells */}
