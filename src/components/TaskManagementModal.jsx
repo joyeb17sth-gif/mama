@@ -650,6 +650,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
                         )}
                       </div>
                     </div>
+                    </div>
                   </div>
                   );
                 })}
