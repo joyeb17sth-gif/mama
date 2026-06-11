@@ -11,6 +11,7 @@ import {
   getPayRatesAsync,
   getGlobalRatesAsync,
   getPeriodicalTasks, savePeriodicalTasks, getPeriodicalTasksAsync,
+  getProfitLossAsync,
   logAction,
   clearSyncTimestamps, setOnSaveError
 } from './utils/storage';
@@ -47,6 +48,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Toast from './components/Toast';
 import Layout from './components/Layout';
 import GlobalRatesConfig from './components/GlobalRatesConfig';
+import ProfitLoss from './components/ProfitLoss';
 
 function App() {
   const [authenticated, setAuthenticatedState] = useState(false);
@@ -142,7 +144,7 @@ function App() {
       
       let cloudContractors, cloudSites, cloudTimesheets, cloudPayRates,
           cloudReleases, cloudPublicHolidays, cloudPaymentSummaries,
-          cloudPeriodicalTasks, cloudGlobalRates;
+          cloudPeriodicalTasks, cloudGlobalRates, cloudProfitLoss;
 
       const promises = [];
       const promiseKeys = [];
@@ -158,7 +160,8 @@ function App() {
           getPublicHolidaysAsync(),
           getPaymentSummariesAsync(),
           getPeriodicalTasksAsync(),
-          getGlobalRatesAsync()
+          getGlobalRatesAsync(),
+          getProfitLossAsync()
         );
         promiseKeys.push(
           'contractors',
@@ -169,7 +172,8 @@ function App() {
           'publicHolidays',
           'paymentSummaries',
           'periodicalTasks',
-          'globalRates'
+          'globalRates',
+          'profitLoss'
         );
       } else if (role === 'supervisor' || role === 'manager') {
         promises.push(
@@ -221,6 +225,7 @@ function App() {
           else if (key === 'paymentSummaries') cloudPaymentSummaries = val;
           else if (key === 'periodicalTasks') cloudPeriodicalTasks = val;
           else if (key === 'globalRates') cloudGlobalRates = val;
+          else if (key === 'profitLoss') cloudProfitLoss = val;
         });
       }
 
@@ -284,6 +289,13 @@ function App() {
           memoryCache.periodicalTasks = cloudPeriodicalTasks;
           await localforage.setItem('periodicalTasks', encryptData(cloudPeriodicalTasks));
           setPeriodicalTasks(cloudPeriodicalTasks);
+        }
+      }
+      if (cloudProfitLoss !== undefined) {
+        hasChanges = true;
+        if (cloudProfitLoss) {
+          memoryCache.profitLoss = cloudProfitLoss;
+          await localforage.setItem('profitLoss', encryptData(cloudProfitLoss));
         }
       }
       if (cloudGlobalRates !== undefined) {
@@ -1217,6 +1229,11 @@ function App() {
 
 
 
+
+        {/* Profit & Loss Tab */}
+        {activeTab === 'profit-loss' && hasPermission('profit-loss') && (
+          <ProfitLoss syncVersion={syncVersion} />
+        )}
 
         {/* Global Rates Settings Tab */}
         {activeTab === 'settings' && hasPermission('settings') && (

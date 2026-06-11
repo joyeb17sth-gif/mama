@@ -21,6 +21,7 @@ export const memoryCache = {
   publicHolidays: [],
   periodicalTasks: [],
   globalRates: { ...DEFAULT_GLOBAL_RATES },
+  profitLoss: [],
   profiles: null
 };
 
@@ -255,6 +256,15 @@ export const saveGlobalRates = async (rates) => {
 };
 export const getGlobalRatesAsync = () => getSingleFromCloud('global_rates', 'main_list');
 export const getGlobalRates = () => ({ ...DEFAULT_GLOBAL_RATES, ...(memoryCache.globalRates || {}) });
+
+// --- PROFIT & LOSS ---
+export const saveProfitLoss = async (data) => {
+  memoryCache.profitLoss = data;
+  await localforage.setItem('profitLoss', encryptData(data));
+  await saveToCloud('profit_loss', 'main_list', data);
+};
+export const getProfitLossAsync = () => getSingleFromCloud('profit_loss', 'main_list');
+export const getProfitLoss = () => memoryCache.profitLoss;
 
 
 
