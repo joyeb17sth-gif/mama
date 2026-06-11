@@ -289,7 +289,7 @@ const AddSiteModal = ({ onAdd, onClose, existingNames }) => {
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
 const ProfitLoss = ({ syncVersion }) => {
-  const [view, setView] = useState('table'); // 'table' | 'analytics' | 'overhead'
+  const [view, setView] = useState('table'); // 'table' | 'analytics' | 'overhead' | 'range'
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [allPeriods, setAllPeriods] = useState([]);
@@ -297,6 +297,7 @@ const ProfitLoss = ({ syncVersion }) => {
   const [compareMode, setCompareMode] = useState(false);
   const [compareYear, setCompareYear] = useState(CURRENT_YEAR);
   const [compareMonth, setCompareMonth] = useState(new Date().getMonth() > 0 ? new Date().getMonth() - 1 : 11);
+  const [rangeMonths, setRangeMonths] = useState(3);
   const saveTimerRef = useRef(null);
 
   // Load data from cache
@@ -519,6 +520,74 @@ const ProfitLoss = ({ syncVersion }) => {
     gt.gpMargin = gt.totalRevenue > 0 ? (gt.grossProfit / gt.totalRevenue) * 100 : 0;
     return gt;
   }, [currentPeriod, siteTotals]);
+
+  // ─── Multi-Period Range Data ────────────────────────────────────────────
+  const rangeData = useMemo(() => {
+    if (view !== 'range' || allPeriods.length === 0) return null;
+
+    // Collect N periods going backwards from the selected month (inclusive)
+    const includedPeriods = [];
+    let yr = selectedYear;
+    let mo = selectedMonth;
+    for (let i = 0; i < rangeMonths; i++) {
+      const id = `${yr}-${String(mo + 1).padStart(2, '0')}`;
+      const found = allPeriods.find(p => p.id === id);
+      if (found) includedPeriods.push(found);
+      if (mo === 0) { mo = 11; yr--; } else mo--;
+    }
+
+    if (includedPeriods.length === 0) return null;
+
+    // Aggregate by site name
+    const siteMap = {};
+    includedPeriods.forEach(period => {
+      (period.sites || []).forEach(site => {
+        if (!siteMap[site.name]) {
+          siteMap[site.name] = {
+            name: site.name,
+            revenue: { regular: 0, extraWork: 0, supervisorAllowance: 0, other: 0 },
+            directCost: { regular: 0, extraWork: 0, motorVehicle: 0, other: 0 },
+            vehicleAllowanceIncome: 0,
+            overhead: { managerSalary: 0, chemical: 0, motorVehicle: 0, other: 0 },
+            managerAllocations: {},
+          };
+        }
+        const agg = siteMap[site.name];
+        REVENUE_ROWS.forEach(r => { agg.revenue[r.key] = (agg.revenue[r.key] || 0) + (site.revenue?.[r.key] || 0); });
+        COST_ROWS.forEach(r => { agg.directCost[r.key] = (agg.directCost[r.key] || 0) + (site.directCost?.[r.key] || 0); });
+        agg.vehicleAllowanceIncome += site.vehicleAllowanceIncome || 0;
+        OVERHEAD_ROWS.forEach(r => { agg.overhead[r.key] = (agg.overhead[r.key] || 0) + (site.overhead?.[r.key] || 0); });
+      });
+    });
+
+    const sites = Object.values(siteMap);
+    const rSiteTotals = sites.map(site => computeSite(site));
+
+    // Grand totals
+    const gt = {
+      revenue: { regular: 0, extraWork: 0, supervisorAllowance: 0, other: 0 },
+      directCost: { regular: 0, extraWork: 0, motorVehicle: 0, other: 0 },
+      totalRevenue: 0, totalCost: 0, grossProfit: 0,
+      vehicleAllowanceIncome: 0,
+      overhead: { managerSalary: 0, chemical: 0, motorVehicle: 0, other: 0 },
+      totalOverhead: 0, netProfit: 0,
+    };
+    sites.forEach((site, i) => {
+      REVENUE_ROWS.forEach(r => { gt.revenue[r.key] = (gt.revenue[r.key] || 0) + (site.revenue?.[r.key] || 0); });
+      COST_ROWS.forEach(r => { gt.directCost[r.key] = (gt.directCost[r.key] || 0) + (site.directCost?.[r.key] || 0); });
+      gt.vehicleAllowanceIncome += site.vehicleAllowanceIncome || 0;
+      OVERHEAD_ROWS.forEach(r => { gt.overhead[r.key] = (gt.overhead[r.key] || 0) + (site.overhead?.[r.key] || 0); });
+      const c = rSiteTotals[i];
+      gt.totalRevenue += c.totalRevenue;
+      gt.totalCost += c.totalCost;
+      gt.grossProfit += c.grossProfit;
+      gt.totalOverhead += c.totalOverhead;
+      gt.netProfit += c.netProfit;
+    });
+    gt.gpMargin = gt.totalRevenue > 0 ? (gt.grossProfit / gt.totalRevenue) * 100 : 0;
+
+    return { sites, siteTotals: rSiteTotals, grandTotals: gt, periods: [...includedPeriods].reverse().map(p => p.period), periodCount: includedPeriods.length };
+  }, [view, allPeriods, selectedYear, selectedMonth, rangeMonths]);
 
   // ─── Load Sample Data (for testing) ────────────────────────────────────
   const loadSampleData = useCallback(() => {
@@ -839,6 +908,7 @@ const ProfitLoss = ({ syncVersion }) => {
             {[
               { id: 'table', label: 'Data Entry', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> },
               { id: 'analytics', label: 'Analytics', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg> },
+              { id: 'range', label: 'Multi-Period', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" /></svg> },
               { id: 'overhead', label: 'Overhead Settings', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
             ].map(v => (
               <button
@@ -910,6 +980,22 @@ const ProfitLoss = ({ syncVersion }) => {
                   </select>
                 </>
               )}
+            </>
+          )}
+
+          {view === 'range' && (
+            <>
+              <div className="h-5 w-px bg-notion-warm-gray-200 mx-1"></div>
+              <span className="text-xs font-semibold text-notion-warm-gray-500">Ending:</span>
+              <div className="h-5 w-px bg-notion-warm-gray-200 mx-1"></div>
+              <span className="text-xs font-semibold text-notion-warm-gray-500">Show:</span>
+              <select
+                value={rangeMonths}
+                onChange={e => setRangeMonths(parseInt(e.target.value))}
+                className="px-2 py-1 whisper-border rounded-micro text-xs font-semibold bg-white focus:outline-none focus:ring-1 focus:ring-notion-blue"
+              >
+                {[2, 3, 6, 12].map(n => <option key={n} value={n}>{n} months</option>)}
+              </select>
             </>
           )}
 
@@ -1260,6 +1346,170 @@ const ProfitLoss = ({ syncVersion }) => {
                 </div>
               </div>
             </>
+          )}
+        </div>
+      )}
+
+      {/* ─── VIEW: MULTI-PERIOD RANGE ──────────────────────────────────── */}
+      {view === 'range' && (
+        <div className="space-y-4">
+          {/* Period Banner */}
+          <div className="notion-card p-4 bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-100">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-md bg-violet-500 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" /></svg>
+                </div>
+                <span className="text-xs font-bold text-violet-700 uppercase tracking-widest">Multi-Period Aggregate</span>
+              </div>
+              {rangeData ? (
+                <>
+                  <div className="flex flex-wrap gap-1.5">
+                    {rangeData.periods.map((p, i) => (
+                      <span key={i} className="px-2 py-0.5 bg-white border border-violet-200 text-violet-700 text-[11px] font-semibold rounded-full">{p}</span>
+                    ))}
+                  </div>
+                  <span className="text-[11px] text-violet-500 font-semibold ml-auto">
+                    {rangeData.periodCount} period{rangeData.periodCount !== 1 ? 's' : ''} · {rangeData.sites.length} site{rangeData.sites.length !== 1 ? 's' : ''} · Read-only
+                  </span>
+                </>
+              ) : (
+                <span className="text-xs text-violet-500">No data found for the selected range.</span>
+              )}
+            </div>
+          </div>
+
+          {!rangeData ? (
+            <div className="notion-card p-12 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-notion-warm-white flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-notion-warm-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              </div>
+              <h3 className="text-card-title text-notion-black mb-1">No data in selected range</h3>
+              <p className="text-caption text-notion-warm-gray-500">Enter data in the Data Entry tab for the selected months first.</p>
+            </div>
+          ) : (
+            <div className="notion-card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse min-w-[800px]">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-violet-50 to-indigo-50">
+                      <th className="text-left px-3 py-2.5 font-bold text-violet-500 text-[11px] uppercase tracking-widest border-b border-r border-violet-100 sticky left-0 bg-gradient-to-r from-violet-50 to-indigo-50 z-10 min-w-[180px]">Description</th>
+                      {rangeData.sites.map((site, i) => (
+                        <th key={i} className="text-center px-2 py-2.5 font-bold text-notion-black text-[11px] border-b border-r border-violet-100 min-w-[110px]">{site.name}</th>
+                      ))}
+                      <th className="text-center px-2 py-2.5 font-bold text-notion-black text-[11px] border-b border-violet-100 min-w-[100px] bg-emerald-50/50">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Revenue */}
+                    <tr className="bg-blue-50/30">
+                      <td className="px-3 py-1.5 font-bold text-notion-blue text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-blue-50 z-10">Revenue</td>
+                      <td colSpan={rangeData.sites.length + 1} className="border-b border-zinc-100"></td>
+                    </tr>
+                    {REVENUE_ROWS.map(row => (
+                      <tr key={`rrev-${row.key}`} className="hover:bg-blue-50/10 transition-colors">
+                        <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">{row.label}</td>
+                        {rangeData.sites.map((site, i) => (
+                          <td key={i} className="px-1.5 py-1 text-right border-r border-b border-zinc-50 text-notion-black">{fmt(site.revenue?.[row.key] || 0)}</td>
+                        ))}
+                        <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">{fmt(rangeData.grandTotals.revenue[row.key] || 0)}</td>
+                      </tr>
+                    ))}
+                    <tr className="bg-blue-50/50 font-bold">
+                      <td className="px-3 py-1.5 text-notion-blue border-r border-b border-zinc-100 sticky left-0 bg-blue-50 z-10">Total Revenue</td>
+                      {rangeData.sites.map((_, i) => (
+                        <td key={i} className="px-1.5 py-1.5 text-right text-notion-blue border-r border-b border-zinc-100">{fmt(rangeData.siteTotals[i]?.totalRevenue || 0)}</td>
+                      ))}
+                      <td className="px-1.5 py-1.5 text-right text-notion-blue border-b border-zinc-100 bg-emerald-50/50">{fmt(rangeData.grandTotals.totalRevenue)}</td>
+                    </tr>
+
+                    <tr><td colSpan={rangeData.sites.length + 2} className="h-1 border-b border-zinc-100"></td></tr>
+
+                    {/* Direct Staff Cost */}
+                    <tr className="bg-rose-50/30">
+                      <td className="px-3 py-1.5 font-bold text-red-500 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-rose-50 z-10">Direct Staff Cost</td>
+                      <td colSpan={rangeData.sites.length + 1} className="border-b border-zinc-100"></td>
+                    </tr>
+                    {COST_ROWS.map(row => (
+                      <tr key={`rcost-${row.key}`} className="hover:bg-rose-50/10 transition-colors">
+                        <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">{row.label}</td>
+                        {rangeData.sites.map((site, i) => (
+                          <td key={i} className="px-1.5 py-1 text-right border-r border-b border-zinc-50 text-notion-black">{fmt(site.directCost?.[row.key] || 0)}</td>
+                        ))}
+                        <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">{fmt(rangeData.grandTotals.directCost[row.key] || 0)}</td>
+                      </tr>
+                    ))}
+                    <tr className="bg-rose-50/50 font-bold">
+                      <td className="px-3 py-1.5 text-red-500 border-r border-b border-zinc-100 sticky left-0 bg-rose-50 z-10">Total Cost</td>
+                      {rangeData.sites.map((_, i) => (
+                        <td key={i} className="px-1.5 py-1.5 text-right text-red-500 border-r border-b border-zinc-100">{fmt(rangeData.siteTotals[i]?.totalCost || 0)}</td>
+                      ))}
+                      <td className="px-1.5 py-1.5 text-right text-red-500 border-b border-zinc-100 bg-emerald-50/50">{fmt(rangeData.grandTotals.totalCost)}</td>
+                    </tr>
+
+                    <tr><td colSpan={rangeData.sites.length + 2} className="h-1 border-b border-zinc-100"></td></tr>
+
+                    {/* Gross Profit */}
+                    <tr className="bg-emerald-50/60 font-bold text-sm">
+                      <td className="px-3 py-2 text-emerald-700 border-r border-b border-zinc-100 sticky left-0 bg-emerald-50 z-10">Gross Profit</td>
+                      {rangeData.sites.map((_, i) => {
+                        const gp = rangeData.siteTotals[i]?.grossProfit || 0;
+                        return <td key={i} className={`px-1.5 py-2 text-right border-r border-b border-zinc-100 font-bold ${gp >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{fmt(gp)}</td>;
+                      })}
+                      <td className={`px-1.5 py-2 text-right border-b border-zinc-100 font-bold bg-emerald-50/80 ${rangeData.grandTotals.grossProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{fmt(rangeData.grandTotals.grossProfit)}</td>
+                    </tr>
+                    <tr className="bg-emerald-50/30">
+                      <td className="px-3 py-1 text-emerald-600 font-semibold border-r border-b border-zinc-100 sticky left-0 bg-emerald-50 z-10">GP Margin</td>
+                      {rangeData.sites.map((_, i) => {
+                        const gp = rangeData.siteTotals[i]?.gpMargin || 0;
+                        return <td key={i} className={`px-1.5 py-1 text-right border-r border-b border-zinc-100 font-semibold ${gp >= 25 ? 'text-emerald-600' : gp >= 12 ? 'text-amber-600' : 'text-red-600'}`}>{fmtPct(gp)}</td>;
+                      })}
+                      <td className={`px-1.5 py-1 text-right border-b border-zinc-100 font-semibold bg-emerald-50/50 ${rangeData.grandTotals.gpMargin >= 25 ? 'text-emerald-600' : rangeData.grandTotals.gpMargin >= 12 ? 'text-amber-600' : 'text-red-600'}`}>{fmtPct(rangeData.grandTotals.gpMargin || 0)}</td>
+                    </tr>
+
+                    <tr><td colSpan={rangeData.sites.length + 2} className="h-1 border-b border-zinc-100"></td></tr>
+
+                    {/* Vehicle Allowance */}
+                    <tr className="hover:bg-zinc-50/50 transition-colors">
+                      <td className="px-3 py-0.5 text-notion-warm-gray-500 font-semibold border-r border-b border-zinc-100 sticky left-0 bg-white z-10">Vehicle Allowance - Income</td>
+                      {rangeData.sites.map((site, i) => (
+                        <td key={i} className="px-1.5 py-1 text-right border-r border-b border-zinc-100 text-notion-black">{fmt(site.vehicleAllowanceIncome || 0)}</td>
+                      ))}
+                      <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-100 bg-emerald-50/30">{fmt(rangeData.grandTotals.vehicleAllowanceIncome)}</td>
+                    </tr>
+
+                    <tr><td colSpan={rangeData.sites.length + 2} className="h-1 border-b border-zinc-100"></td></tr>
+
+                    {/* Overhead */}
+                    <tr className="bg-amber-50/30">
+                      <td className="px-3 py-1.5 font-bold text-amber-700 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-amber-50 z-10">Overhead</td>
+                      <td colSpan={rangeData.sites.length + 1} className="border-b border-zinc-100"></td>
+                    </tr>
+                    {OVERHEAD_ROWS.map(row => (
+                      <tr key={`roh-${row.key}`} className="hover:bg-amber-50/10 transition-colors">
+                        <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">{row.label}</td>
+                        {rangeData.sites.map((site, i) => (
+                          <td key={i} className="px-1.5 py-1 text-right border-r border-b border-zinc-50 text-notion-black">{fmt(site.overhead?.[row.key] || 0)}</td>
+                        ))}
+                        <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">{fmt(rangeData.grandTotals.overhead[row.key] || 0)}</td>
+                      </tr>
+                    ))}
+
+                    <tr><td colSpan={rangeData.sites.length + 2} className="h-2 border-b-2 border-zinc-200"></td></tr>
+
+                    {/* Net Profit */}
+                    <tr className="bg-gradient-to-r from-emerald-50 to-teal-50 font-bold text-sm">
+                      <td className="px-3 py-2.5 text-emerald-800 border-r border-zinc-200 sticky left-0 bg-gradient-to-r from-emerald-50 to-teal-50 z-10 text-sm">Net Profit</td>
+                      {rangeData.sites.map((_, i) => {
+                        const np = rangeData.siteTotals[i]?.netProfit || 0;
+                        return <td key={i} className={`px-1.5 py-2.5 text-right border-r border-zinc-200 text-sm font-bold ${np >= 0 ? 'text-emerald-800' : 'text-red-600'}`}>{fmt(np)}</td>;
+                      })}
+                      <td className={`px-1.5 py-2.5 text-right text-sm font-bold bg-emerald-100/50 ${rangeData.grandTotals.netProfit >= 0 ? 'text-emerald-800' : 'text-red-600'}`}>{fmt(rangeData.grandTotals.netProfit)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </div>
       )}
