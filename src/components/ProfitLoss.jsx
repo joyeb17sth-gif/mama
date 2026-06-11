@@ -10,25 +10,28 @@ const REVENUE_ROWS = [
   { key: 'regular', label: 'Regular' },
   { key: 'extraWork', label: 'Extra Work' },
   { key: 'supervisorAllowance', label: 'Supervisor Allowance' },
+  { key: 'other', label: 'Other' },
 ];
 const COST_ROWS = [
   { key: 'regular', label: 'Regular' },
   { key: 'extraWork', label: 'Extra Work' },
   { key: 'motorVehicle', label: 'Motor Vehicle Expenses' },
+  { key: 'other', label: 'Other' },
 ];
 const OVERHEAD_ROWS = [
   { key: 'managerSalary', label: 'Manager Salary' },
   { key: 'chemical', label: 'Chemical' },
   { key: 'motorVehicle', label: 'Motor Vehicle Expenses' },
+  { key: 'other', label: 'Other' },
 ];
 
 // ─── Helper: create empty site data ──────────────────────────────────────
 const createEmptySiteData = (name) => ({
   name,
-  revenue: { regular: 0, extraWork: 0, supervisorAllowance: 0 },
-  directCost: { regular: 0, extraWork: 0, motorVehicle: 0 },
+  revenue: { regular: 0, extraWork: 0, supervisorAllowance: 0, other: 0 },
+  directCost: { regular: 0, extraWork: 0, motorVehicle: 0, other: 0 },
   vehicleAllowanceIncome: 0,
-  overhead: { managerSalary: 0, chemical: 0, motorVehicle: 0 },
+  overhead: { managerSalary: 0, chemical: 0, motorVehicle: 0, other: 0 },
   managerAllocations: {},
 });
 
@@ -62,11 +65,11 @@ const recalculateManagerSalaries = (period) => {
 
 // ─── Helper: compute derived values for a site ───────────────────────────
 const computeSite = (site) => {
-  const totalRevenue = (site.revenue?.regular || 0) + (site.revenue?.extraWork || 0) + (site.revenue?.supervisorAllowance || 0);
-  const totalCost = (site.directCost?.regular || 0) + (site.directCost?.extraWork || 0) + (site.directCost?.motorVehicle || 0);
+  const totalRevenue = (site.revenue?.regular || 0) + (site.revenue?.extraWork || 0) + (site.revenue?.supervisorAllowance || 0) + (site.revenue?.other || 0);
+  const totalCost = (site.directCost?.regular || 0) + (site.directCost?.extraWork || 0) + (site.directCost?.motorVehicle || 0) + (site.directCost?.other || 0);
   const grossProfit = totalRevenue - totalCost;
   const gpMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
-  const totalOverhead = (site.overhead?.managerSalary || 0) + (site.overhead?.chemical || 0) + (site.overhead?.motorVehicle || 0);
+  const totalOverhead = (site.overhead?.managerSalary || 0) + (site.overhead?.chemical || 0) + (site.overhead?.motorVehicle || 0) + (site.overhead?.other || 0);
   const netProfit = grossProfit + (site.vehicleAllowanceIncome || 0) - totalOverhead;
   return { totalRevenue, totalCost, grossProfit, gpMargin, totalOverhead, netProfit };
 };
@@ -489,21 +492,22 @@ const ProfitLoss = ({ syncVersion }) => {
 
   const grandTotals = useMemo(() => {
     const gt = {
-      revenue: { regular: 0, extraWork: 0, supervisorAllowance: 0 },
-      directCost: { regular: 0, extraWork: 0, motorVehicle: 0 },
+      revenue: { regular: 0, extraWork: 0, supervisorAllowance: 0, other: 0 },
+      directCost: { regular: 0, extraWork: 0, motorVehicle: 0, other: 0 },
       totalRevenue: 0, totalCost: 0, grossProfit: 0,
       vehicleAllowanceIncome: 0,
-      overhead: { managerSalaryPct: 0, managerSalary: 0, chemical: 0, motorVehicle: 0 },
+      overhead: { managerSalaryPct: 0, managerSalary: 0, chemical: 0, motorVehicle: 0, other: 0 },
       totalOverhead: 0, netProfit: 0,
     };
     currentPeriod.sites.forEach((site, i) => {
-      REVENUE_ROWS.forEach(r => { gt.revenue[r.key] += site.revenue?.[r.key] || 0; });
-      COST_ROWS.forEach(r => { gt.directCost[r.key] += site.directCost?.[r.key] || 0; });
+      REVENUE_ROWS.forEach(r => { gt.revenue[r.key] = (gt.revenue[r.key] || 0) + (site.revenue?.[r.key] || 0); });
+      COST_ROWS.forEach(r => { gt.directCost[r.key] = (gt.directCost[r.key] || 0) + (site.directCost?.[r.key] || 0); });
       gt.vehicleAllowanceIncome += site.vehicleAllowanceIncome || 0;
       gt.overhead.managerSalaryPct += site.overhead?.managerSalaryPct || 0;
       gt.overhead.managerSalary += site.overhead?.managerSalary || 0;
       gt.overhead.chemical += site.overhead?.chemical || 0;
       gt.overhead.motorVehicle += site.overhead?.motorVehicle || 0;
+      gt.overhead.other += site.overhead?.other || 0;
 
       const computed = siteTotals[i];
       gt.totalRevenue += computed.totalRevenue;
