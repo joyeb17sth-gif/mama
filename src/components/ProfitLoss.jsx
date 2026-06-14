@@ -297,7 +297,15 @@ const ProfitLoss = ({ syncVersion }) => {
   const [compareMode, setCompareMode] = useState(false);
   const [compareYear, setCompareYear] = useState(CURRENT_YEAR);
   const [compareMonth, setCompareMonth] = useState(new Date().getMonth() > 0 ? new Date().getMonth() - 1 : 11);
-  const [rangeMonths, setRangeMonths] = useState(3);
+  const [rangeStart, setRangeStart] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 2);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  });
+  const [rangeEnd, setRangeEnd] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
+  });
   const saveTimerRef = useRef(null);
 
   // Load data from cache
@@ -523,17 +531,29 @@ const ProfitLoss = ({ syncVersion }) => {
 
   // ─── Multi-Period Range Data ────────────────────────────────────────────
   const rangeData = useMemo(() => {
-    if (view !== 'range' || allPeriods.length === 0) return null;
+    if (view !== 'range' || allPeriods.length === 0 || !rangeStart || !rangeEnd) return null;
 
-    // Collect N periods going backwards from the selected month (inclusive)
     const includedPeriods = [];
-    let yr = selectedYear;
-    let mo = selectedMonth;
-    for (let i = 0; i < rangeMonths; i++) {
+    let [startYr, startMo] = rangeStart.split('-').map(Number);
+    let [endYr, endMo] = rangeEnd.split('-').map(Number);
+
+    let startD = new Date(startYr, startMo - 1);
+    let endD = new Date(endYr, endMo - 1);
+
+    if (startD > endD) {
+      const temp = startD;
+      startD = endD;
+      endD = temp;
+    }
+
+    let curr = new Date(endD);
+    while (curr >= startD) {
+      const yr = curr.getFullYear();
+      const mo = curr.getMonth();
       const id = `${yr}-${String(mo + 1).padStart(2, '0')}`;
       const found = allPeriods.find(p => p.id === id);
       if (found) includedPeriods.push(found);
-      if (mo === 0) { mo = 11; yr--; } else mo--;
+      curr.setMonth(curr.getMonth() - 1);
     }
 
     if (includedPeriods.length === 0) return null;
@@ -587,7 +607,7 @@ const ProfitLoss = ({ syncVersion }) => {
     gt.gpMargin = gt.totalRevenue > 0 ? (gt.grossProfit / gt.totalRevenue) * 100 : 0;
 
     return { sites, siteTotals: rSiteTotals, grandTotals: gt, periods: [...includedPeriods].reverse().map(p => p.period), periodCount: includedPeriods.length };
-  }, [view, allPeriods, selectedYear, selectedMonth, rangeMonths]);
+  }, [view, allPeriods, rangeStart, rangeEnd]);
 
   // ─── Load Sample Data (for testing) ────────────────────────────────────
   const loadSampleData = useCallback(() => {
@@ -986,16 +1006,20 @@ const ProfitLoss = ({ syncVersion }) => {
           {view === 'range' && (
             <>
               <div className="h-5 w-px bg-notion-warm-gray-200 mx-1"></div>
-              <span className="text-xs font-semibold text-notion-warm-gray-500">Ending:</span>
-              <div className="h-5 w-px bg-notion-warm-gray-200 mx-1"></div>
-              <span className="text-xs font-semibold text-notion-warm-gray-500">Show:</span>
-              <select
-                value={rangeMonths}
-                onChange={e => setRangeMonths(parseInt(e.target.value))}
-                className="px-2 py-1 whisper-border rounded-micro text-xs font-semibold bg-white focus:outline-none focus:ring-1 focus:ring-notion-blue"
-              >
-                {[2, 3, 6, 12].map(n => <option key={n} value={n}>{n} months</option>)}
-              </select>
+              <span className="text-xs font-semibold text-notion-warm-gray-500">From:</span>
+              <input
+                type="date"
+                value={rangeStart}
+                onChange={e => setRangeStart(e.target.value)}
+                className="px-2 py-1 whisper-border rounded-micro text-xs font-semibold bg-white focus:outline-none focus:ring-1 focus:ring-notion-blue uppercase tabular-nums"
+              />
+              <span className="text-xs font-semibold text-notion-warm-gray-500 ml-1">To:</span>
+              <input
+                type="date"
+                value={rangeEnd}
+                onChange={e => setRangeEnd(e.target.value)}
+                className="px-2 py-1 whisper-border rounded-micro text-xs font-semibold bg-white focus:outline-none focus:ring-1 focus:ring-notion-blue uppercase tabular-nums"
+              />
             </>
           )}
 
