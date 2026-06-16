@@ -22,7 +22,8 @@ export const memoryCache = {
   periodicalTasks: [],
   globalRates: { ...DEFAULT_GLOBAL_RATES },
   profitLoss: [],
-  profiles: null
+  profiles: null,
+  leads: []
 };
 
 export const syncMetadata = {};
@@ -265,6 +266,15 @@ export const saveProfitLoss = async (data) => {
 };
 export const getProfitLossAsync = () => getSingleFromCloud('profit_loss', 'main_list');
 export const getProfitLoss = () => memoryCache.profitLoss;
+
+// --- LEADS ---
+export const saveLeads = async (leads) => {
+  memoryCache.leads = leads;
+  await localforage.setItem('leads', encryptData(leads));
+  await saveToCloud('leads', 'main_list', leads);
+};
+export const getLeadsAsync = () => getSingleFromCloud('leads', 'main_list');
+export const getLeads = () => memoryCache.leads;
 
 
 

@@ -12,6 +12,7 @@ import {
   getGlobalRatesAsync,
   getPeriodicalTasks, savePeriodicalTasks, getPeriodicalTasksAsync,
   getProfitLossAsync,
+  getLeads, saveLeads, getLeadsAsync,
   logAction,
   clearSyncTimestamps, setOnSaveError
 } from './utils/storage';
@@ -49,6 +50,7 @@ import Toast from './components/Toast';
 import Layout from './components/Layout';
 import GlobalRatesConfig from './components/GlobalRatesConfig';
 import ProfitLoss from './components/ProfitLoss';
+import LeadManager from './components/LeadManager';
 
 function App() {
   const [authenticated, setAuthenticatedState] = useState(false);
@@ -67,7 +69,7 @@ function App() {
     if (role === 'admin') return true;
 
     if (role === 'supervisor' || role === 'manager') {
-      return ['task-matrix', 'sites'].includes(tab);
+      return ['task-matrix', 'sites', 'lead-manager'].includes(tab);
     }
 
     if (role === 'payslip_management') {
@@ -92,6 +94,9 @@ function App() {
   // Periodical Tasks
   const [periodicalTasks, setPeriodicalTasks] = useState([]);
   const [managingTasksSite, setManagingTasksSite] = useState(null);
+
+  // Leads
+  const [leads, setLeads] = useState([]);
 
   // Timesheets
   const [selectedSiteForTimesheet, setSelectedSiteForTimesheet] = useState(null);
@@ -144,7 +149,7 @@ function App() {
       
       let cloudContractors, cloudSites, cloudTimesheets, cloudPayRates,
           cloudReleases, cloudPublicHolidays, cloudPaymentSummaries,
-          cloudPeriodicalTasks, cloudGlobalRates, cloudProfitLoss;
+          cloudPeriodicalTasks, cloudGlobalRates, cloudProfitLoss, cloudLeads;
 
       const promises = [];
       const promiseKeys = [];
@@ -161,7 +166,8 @@ function App() {
           getPaymentSummariesAsync(),
           getPeriodicalTasksAsync(),
           getGlobalRatesAsync(),
-          getProfitLossAsync()
+          getProfitLossAsync(),
+          getLeadsAsync()
         );
         promiseKeys.push(
           'contractors',
@@ -173,18 +179,21 @@ function App() {
           'paymentSummaries',
           'periodicalTasks',
           'globalRates',
-          'profitLoss'
+          'profitLoss',
+          'leads'
         );
       } else if (role === 'supervisor' || role === 'manager') {
         promises.push(
           getContractorsAsync(),
           getSitesAsync(),
-          getPeriodicalTasksAsync()
+          getPeriodicalTasksAsync(),
+          getLeadsAsync()
         );
         promiseKeys.push(
           'contractors',
           'sites',
-          'periodicalTasks'
+          'periodicalTasks',
+          'leads'
         );
       } else if (role === 'payslip_management') {
         promises.push(
@@ -226,6 +235,7 @@ function App() {
           else if (key === 'periodicalTasks') cloudPeriodicalTasks = val;
           else if (key === 'globalRates') cloudGlobalRates = val;
           else if (key === 'profitLoss') cloudProfitLoss = val;
+          else if (key === 'leads') cloudLeads = val;
         });
       }
 
@@ -303,6 +313,14 @@ function App() {
         if (cloudGlobalRates) {
           memoryCache.globalRates = cloudGlobalRates;
           await localforage.setItem('globalRates', encryptData(cloudGlobalRates));
+        }
+      }
+      if (cloudLeads !== undefined) {
+        hasChanges = true;
+        if (cloudLeads) {
+          memoryCache.leads = cloudLeads;
+          await localforage.setItem('leads', encryptData(cloudLeads));
+          setLeads(cloudLeads);
         }
       }
 
@@ -403,6 +421,7 @@ function App() {
         setContractors(getContractors());
         setSites(getSites());
         setPeriodicalTasks(getPeriodicalTasks());
+        setLeads(getLeads());
         
         // Force fresh download on login by clearing stale timestamps, then sync
         if (document.visibilityState === 'visible') {
@@ -615,6 +634,27 @@ function App() {
     setPeriodicalTasks(updatedTasks);
     savePeriodicalTasks(updatedTasks);
     logAction('UPDATE_TASK_STATUS', { taskId: task.id, scheduleId: schedule.id, newStatus, scopeOfWork: scopeOfWork || '', completedHours, completionDate });
+  };
+
+  // Lead Manager handler
+  const handleSaveLeads = (leadData, actionType) => {
+    let updatedLeads;
+    if (actionType === 'DELETE') {
+      updatedLeads = leadData; // leadData contains the updated array
+      logAction('DELETE_LEAD', { count: leads.length - updatedLeads.length });
+    } else {
+      const isEditing = actionType;
+      if (isEditing) {
+        updatedLeads = leads.map(l => l.id === leadData.id ? leadData : l);
+        logAction('UPDATE_LEAD', { id: leadData.id, name: leadData.name });
+      } else {
+        updatedLeads = [leadData, ...leads]; // Add to beginning
+        logAction('CREATE_LEAD', { id: leadData.id, name: leadData.name });
+      }
+    }
+    setLeads(updatedLeads);
+    saveLeads(updatedLeads);
+    showToastMessage('Leads saved successfully', 'success');
   };
 
   // Timesheet handler
@@ -971,7 +1011,10 @@ function App() {
           />
         )}
 
-
+        {/* Lead Manager Tab */}
+        {activeTab === 'lead-manager' && hasPermission('lead-manager') && (
+          <LeadManager leads={leads} onSave={handleSaveLeads} />
+        )}
 
         {/* Timesheets Tab */}
         {activeTab === 'timesheets' && hasPermission('timesheets') && (
