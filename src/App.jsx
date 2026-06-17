@@ -641,6 +641,38 @@ function App() {
     logAction('UPDATE_TASK_STATUS', { taskId: task.id, scheduleId: schedule.id, newStatus, scopeOfWork: scopeOfWork || '', completedHours, completionDate });
   };
 
+  const handleUpdateScheduleOverrides = (taskId, scheduleId, overrides) => {
+    const updatedTasks = periodicalTasks.map(t => {
+      if (t.id === taskId) {
+        const updatedSchedules = t.schedules.map(s => {
+          if (s.id === scheduleId) {
+            // Check if exactDate has changed across month boundaries
+            let updatedTargetPeriod = s.targetPeriod;
+            if (overrides.exactDate) {
+               const newDateStr = overrides.exactDate; // expected yyyy-MM-dd
+               const parts = newDateStr.split('-');
+               if (parts.length >= 2) {
+                 updatedTargetPeriod = `${parts[0]}-${parts[1]}`;
+               }
+            }
+            return { 
+              ...s, 
+              ...overrides,
+              targetPeriod: updatedTargetPeriod
+            };
+          }
+          return s;
+        });
+        return { ...t, schedules: updatedSchedules };
+      }
+      return t;
+    });
+
+    setPeriodicalTasks(updatedTasks);
+    savePeriodicalTasks(updatedTasks);
+    logAction('UPDATE_SCHEDULE_OVERRIDES', { taskId, scheduleId, overrides });
+  };
+
   // Lead Manager handler
   const handleSaveLeads = (leadData, actionType) => {
     let updatedLeads;
@@ -992,6 +1024,7 @@ function App() {
               sites={visibleSites} 
               periodicalTasks={visiblePeriodicalTasks} 
               onToggleStatus={handleToggleTaskStatus}
+              onUpdateScheduleOverrides={handleUpdateScheduleOverrides}
               onManageTasks={(site) => setManagingTasksSite(site)}
             />
           </div>

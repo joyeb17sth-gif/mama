@@ -99,7 +99,8 @@ const Layout = ({
             return navItems.filter(item => !['task-matrix', 'profit-loss', 'settings'].includes(item.id));
         }
 
-        return navItems;
+        // Default user
+        return navItems.filter(item => ['dashboard', 'timesheets'].includes(item.id));
     };
 
     const filteredNavItems = getFilteredNavItems();

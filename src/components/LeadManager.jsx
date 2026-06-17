@@ -13,9 +13,8 @@ const LeadManager = ({ leads, onSave }) => {
     const sources = ['Website', 'Referral', 'Social Media', 'Walk in'];
     const names = ['John Doe', 'Sarah Smith', 'Michael Johnson', 'Emily Davis', 'Chris Wilson', 'Anna Brown', 'James Taylor', 'Laura Martinez', 'David Anderson', 'Lisa Thomas'];
     
-    // Generate 80 leads across the entire year of 2026
-    for (let i = 0; i < 80; i++) {
-      // Created randomly between Jan and Dec 2026
+    // Generate 200 leads across 2025 and 2026
+    for (let i = 0; i < 200; i++) {
       const createdDate = new Date();
       createdDate.setFullYear(2026);
       createdDate.setMonth(Math.floor(Math.random() * 12)); // 0 (Jan) to 11 (Dec)
@@ -28,6 +27,7 @@ const LeadManager = ({ leads, onSave }) => {
       let stageUpdatedAt = null;
       let status = null;
       let stage = null;
+      let updatedAt = createdDate;
       const historyLog = [];
 
       // Initial Creation log
@@ -35,15 +35,21 @@ const LeadManager = ({ leads, onSave }) => {
 
       if (randConversion > 0.4) {
         conversion = 'yes';
-        status = ['application', 'still thinking'][Math.floor(Math.random() * 2)];
+        status = ['application', 'still thinking', 'did not respond'][Math.floor(Math.random() * 3)];
         if (status === 'application') {
           stage = ['payment', 'deposit', 'still thinking'][Math.floor(Math.random() * 3)];
         }
         
-        // Converted date logic: 70% chance they converted the same month, 30% chance they converted 1-2 months later
+        // Converted date logic: 60% chance same month, 40% chance later
         convertedDate = new Date(createdDate);
-        if (Math.random() > 0.7) {
-          convertedDate.setMonth(convertedDate.getMonth() + Math.floor(Math.random() * 2) + 1);
+        if (Math.random() > 0.6) {
+          convertedDate.setMonth(convertedDate.getMonth() + Math.floor(Math.random() * 3) + 1);
+        }
+
+        // Simulate Prior Month DNA
+        if (Math.random() > 0.8 && convertedDate.getMonth() !== createdDate.getMonth()) {
+           historyLog.push({ id: crypto.randomUUID(), date: createdDate.toISOString(), action: 'Conversion Update', detail: `Changed to DNA` });
+           // They were DNA, now they are 'yes'
         }
 
         historyLog.push({ id: crypto.randomUUID(), date: convertedDate.toISOString(), action: 'Conversion Update', detail: `Changed to yes` });
@@ -56,16 +62,37 @@ const LeadManager = ({ leads, onSave }) => {
           stageUpdatedAt = new Date(statusUpdatedAt);
           stageUpdatedAt.setDate(stageUpdatedAt.getDate() + 2);
           historyLog.push({ id: crypto.randomUUID(), date: stageUpdatedAt.toISOString(), action: 'Stage Update', detail: `Moved to ${stage}` });
+          updatedAt = stageUpdatedAt;
+        } else {
+          updatedAt = statusUpdatedAt;
         }
 
-      } else if (randConversion > 0.1) {
+      } else if (randConversion > 0.2) {
         conversion = 'no';
         convertedDate = new Date(createdDate);
+        if (Math.random() > 0.7) {
+          convertedDate.setMonth(convertedDate.getMonth() + Math.floor(Math.random() * 2) + 1);
+        }
+
+        // Simulate Prior Month DNA
+        if (Math.random() > 0.8 && convertedDate.getMonth() !== createdDate.getMonth()) {
+           historyLog.push({ id: crypto.randomUUID(), date: createdDate.toISOString(), action: 'Conversion Update', detail: `Changed to DNA` });
+        }
+
         historyLog.push({ id: crypto.randomUUID(), date: convertedDate.toISOString(), action: 'Conversion Update', detail: `Changed to no` });
+        updatedAt = convertedDate;
       } else {
         conversion = 'DNA';
         convertedDate = new Date(createdDate);
         historyLog.push({ id: crypto.randomUUID(), date: convertedDate.toISOString(), action: 'Conversion Update', detail: `Changed to DNA` });
+        
+        // Make some DNA leads very old so they show as "Dropped" (inactive for 30+ days)
+        if (Math.random() > 0.5) {
+          updatedAt = new Date(createdDate);
+          updatedAt.setDate(updatedAt.getDate() - 40); // force older than 30 days
+        } else {
+          updatedAt = new Date(); // force recent so they show as "Still Chasing"
+        }
       }
 
       fakeLeads.push({
@@ -83,7 +110,7 @@ const LeadManager = ({ leads, onSave }) => {
         statusUpdatedAt: statusUpdatedAt ? statusUpdatedAt.toISOString() : null,
         stageUpdatedAt: stageUpdatedAt ? stageUpdatedAt.toISOString() : null,
         historyLog,
-        updatedAt: (convertedDate || createdDate).toISOString()
+        updatedAt: updatedAt.toISOString()
       });
     }
 

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { format, addMonths, subMonths, parseISO, startOfYear, endOfYear, eachMonthOfInterval, addDays, addWeeks, startOfDay, isBefore, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isToday } from 'date-fns';
 import Dropdown from './Dropdown';
 
-const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) => {
+const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOverrides, onManageTasks }) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [activePopup, setActivePopup] = useState(null); // { task, schedule, monthDisplay }
   const [popupScopeOfWork, setPopupScopeOfWork] = useState('');
@@ -15,6 +15,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
   const [selectedFrequencyFilter, setSelectedFrequencyFilter] = useState('all');
   const [expandedDays, setExpandedDays] = useState(new Set());
   const [showAggregatedWarning, setShowAggregatedWarning] = useState(false);
+  const [editingScheduleOverride, setEditingScheduleOverride] = useState(null);
 
   // Generate 12 months for the selected year
   const months = useMemo(() => {
@@ -265,13 +266,8 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
         // Removed the filter here to allow all statuses (Scheduled, Completed, etc.) to be processed.
 
         const monthDate = parseISO(`${schedule.targetPeriod}-01`);
-        let exactDateStr;
-        if (task.frequency === 'Weekly' || task.frequency === 'Custom Date') {
-          exactDateStr = schedule.exactDate || getExactDateForMonth(task, monthDate);
-        } else {
-          exactDateStr = getExactDateForMonth(task, monthDate);
-        }
-        const endDateStr = getEndDateForMonth(task, monthDate);
+        let exactDateStr = schedule.exactDate || getExactDateForMonth(task, monthDate);
+        const endDateStr = schedule.endDateOverride || getEndDateForMonth(task, monthDate);
         let isPastDue = false;
         let scheduleDate = monthDate;
         let scheduleEndDate = monthDate;
@@ -307,34 +303,41 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
         }
 
         let displayEndDate = endDateStr;
+        let parsedEnd = null;
         if (endDateStr && task.frequency !== 'Weekly') {
           const parts = endDateStr.split('-');
           if (parts.length === 3) {
-            let endYear = displayExactDate && displayExactDate !== 'Not Set' 
+             displayEndDate = endDateStr;
+             parsedEnd = parseISO(displayEndDate);
+          } else if (parts.length === 2) {
+             let endYear = displayExactDate && displayExactDate !== 'Not Set' 
                 ? parseInt(displayExactDate.split('-')[0], 10) 
                 : parseInt(schedule.targetPeriod.split('-')[0], 10);
-            const endMonth = parseInt(parts[1], 10);
-            
-            if (displayExactDate && displayExactDate !== 'Not Set') {
-              const exactMonth = parseInt(displayExactDate.split('-')[1], 10);
-              if (endMonth < exactMonth) {
-                endYear += 1;
-              }
-            } else {
-              const targetMonth = parseInt(schedule.targetPeriod.split('-')[1], 10);
-              if (endMonth < targetMonth && (targetMonth - endMonth) >= 6) {
-                endYear += 1;
-              }
-            }
-            
-            displayEndDate = `${endYear}-${parts[1]}-${parts[2]}`;
-            const parsedEnd = parseISO(displayEndDate);
-            if (!isNaN(parsedEnd)) {
-               scheduleEndDate = parsedEnd;
-            }
+             const endMonth = parseInt(parts[0], 10);
+             
+             if (displayExactDate && displayExactDate !== 'Not Set') {
+               const exactMonth = parseInt(displayExactDate.split('-')[1], 10);
+               if (endMonth < exactMonth) {
+                 endYear += 1;
+               }
+             } else {
+               const targetMonth = parseInt(schedule.targetPeriod.split('-')[1], 10);
+               if (endMonth < targetMonth && (targetMonth - endMonth) >= 6) {
+                 endYear += 1;
+               }
+             }
+             
+             displayEndDate = `${endYear}-${parts[0]}-${parts[1]}`;
+             parsedEnd = parseISO(displayEndDate);
           }
         } else if (task.frequency === 'Weekly') {
            displayEndDate = displayExactDate;
+           parsedEnd = scheduleDate;
+        }
+
+        if (parsedEnd && !isNaN(parsedEnd)) {
+           scheduleEndDate = parsedEnd;
+        } else {
            scheduleEndDate = scheduleDate;
         }
 
@@ -651,6 +654,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                             className={`border-r border-white border-b text-center cursor-pointer hover:opacity-80 transition-opacity ${
                               schedule ? getStatusColor(schedule.status) : 'bg-transparent border-r-notion-warm-gray-200'
                             }`}
+                            title={schedule ? `${schedule.taskNameOverride || task.taskName}\nDate: ${schedule.exactDate || 'Default'}\nBudget: ${schedule.budgetHoursOverride !== undefined ? schedule.budgetHoursOverride : task.budgetHours} Hrs` : ''}
                           >
                              <span className="text-[10px] font-bold">
                                {schedule ? getStatusDisplay(schedule.status) : ''}
@@ -712,18 +716,18 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <span className="px-1.5 py-0.5 bg-notion-warm-white text-[10px] font-bold text-notion-warm-gray-500 uppercase tracking-widest rounded border whisper-border">
-                          {item.task.taskCode}
+                          {item.schedule.taskCodeOverride || item.task.taskCode}
                         </span>
-                        <span className="font-semibold text-notion-black">{item.task.taskName}</span>
+                        <span className="font-semibold text-notion-black">{item.schedule.taskNameOverride || item.task.taskName}</span>
                       </div>
                       <div className="text-[10px] text-notion-warm-gray-400 mt-1 uppercase tracking-widest">
                         {item.task.frequency} • {item.task.contractType}
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      {(item.task.assignedTo && item.task.assignedTo.length > 0) ? (
+                      {((item.schedule.assignedToOverride !== undefined ? item.schedule.assignedToOverride : item.task.assignedTo) && (item.schedule.assignedToOverride !== undefined ? item.schedule.assignedToOverride : item.task.assignedTo).length > 0) ? (
                         <div className="flex items-center -space-x-1.5">
-                          {(Array.isArray(item.task.assignedTo) ? item.task.assignedTo : [item.task.assignedTo]).map((assignee, idx) => {
+                          {(Array.isArray(item.schedule.assignedToOverride !== undefined ? item.schedule.assignedToOverride : item.task.assignedTo) ? (item.schedule.assignedToOverride !== undefined ? item.schedule.assignedToOverride : item.task.assignedTo) : [item.schedule.assignedToOverride !== undefined ? item.schedule.assignedToOverride : item.task.assignedTo]).map((assignee, idx) => {
                             const colors = ['bg-blue-500','bg-emerald-500','bg-violet-500','bg-amber-500','bg-rose-500','bg-cyan-500','bg-indigo-500','bg-pink-500'];
                             const letter = (assignee || '?')[0].toUpperCase();
                             return (
@@ -753,24 +757,44 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => {
-                          setPopupScopeOfWork(item.scope);
-                          setPopupStatus(item.schedule.status);
-                          setPopupHours(item.schedule.completedHours || '');
-                          setPopupCompletionDate(item.schedule.completionDate || format(new Date(), 'yyyy-MM-dd'));
-                          setActivePopup({ 
-                            task: item.task, 
-                            schedule: item.schedule, 
-                            monthDisplay: item.monthDisplay, 
-                            monthDate: item.monthDate,
-                            scheduleDate: item.scheduleDate 
-                          });
-                        }}
-                        className="px-3 py-1.5 bg-white text-notion-blue text-xs font-bold border border-notion-warm-gray-200 rounded-micro hover:bg-notion-badge-blue-bg transition shadow-sm"
-                      >
-                        Update Status
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingScheduleOverride({
+                              task: item.task,
+                              schedule: item.schedule,
+                              taskNameOverride: item.schedule.taskNameOverride || item.task.taskName,
+                              taskCodeOverride: item.schedule.taskCodeOverride || item.task.taskCode,
+                              budgetHoursOverride: item.schedule.budgetHoursOverride !== undefined ? item.schedule.budgetHoursOverride : item.task.budgetHours,
+                              assignedToOverride: item.schedule.assignedToOverride !== undefined ? item.schedule.assignedToOverride : item.task.assignedTo,
+                              exactDate: item.schedule.exactDate || getExactDateForMonth(item.task, item.monthDate),
+                              endDateOverride: item.schedule.endDateOverride || getEndDateForMonth(item.task, item.monthDate)
+                            });
+                          }}
+                          className="px-3 py-1.5 bg-white text-notion-warm-gray-600 text-xs font-bold border border-notion-warm-gray-200 rounded-micro hover:bg-notion-warm-white transition shadow-sm flex items-center gap-1"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPopupScopeOfWork(item.scope);
+                            setPopupStatus(item.schedule.status);
+                            setPopupHours(item.schedule.completedHours || '');
+                            setPopupCompletionDate(item.schedule.completionDate || format(new Date(), 'yyyy-MM-dd'));
+                            setActivePopup({ 
+                              task: item.task, 
+                              schedule: item.schedule, 
+                              monthDisplay: item.monthDisplay, 
+                              monthDate: item.monthDate,
+                              scheduleDate: item.scheduleDate 
+                            });
+                          }}
+                          className="px-3 py-1.5 bg-white text-notion-blue text-xs font-bold border border-notion-warm-gray-200 rounded-micro hover:bg-notion-badge-blue-bg transition shadow-sm"
+                        >
+                          Update Status
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -831,9 +855,9 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                           item.schedule.status === 'Scheduled' ? 'bg-blue-50 text-notion-blue border-notion-blue' :
                           'bg-gray-100 text-gray-600 border-gray-400'
                         }`}
-                        title={`${item.task.taskName} - ${item.site?.siteName}`}
+                        title={`${item.schedule.taskNameOverride || item.task.taskName} - ${item.site?.siteName}`}
                       >
-                        {item.task.taskName}
+                        {item.schedule.taskNameOverride || item.task.taskName}
                       </div>
                     ))}
                     {hiddenCount > 0 && !isExpanded && (
@@ -874,30 +898,51 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
           <div className="bg-white rounded-xl shadow-notion-card w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="px-4 py-3 border-b border-notion-warm-gray-200 bg-notion-warm-white flex justify-between items-center shrink-0">
               <h3 className="font-bold text-notion-black text-sm">Update Task Status</h3>
-              <button 
-                onClick={() => setActivePopup(null)}
-                className="text-notion-warm-gray-500 hover:text-notion-black transition-colors"
-              >
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setEditingScheduleOverride({
+                      task: activePopup.task,
+                      schedule: activePopup.schedule,
+                      taskNameOverride: activePopup.schedule.taskNameOverride || activePopup.task.taskName,
+                      taskCodeOverride: activePopup.schedule.taskCodeOverride || activePopup.task.taskCode,
+                      budgetHoursOverride: activePopup.schedule.budgetHoursOverride !== undefined ? activePopup.schedule.budgetHoursOverride : activePopup.task.budgetHours,
+                      assignedToOverride: activePopup.schedule.assignedToOverride !== undefined ? activePopup.schedule.assignedToOverride : activePopup.task.assignedTo,
+                      exactDate: activePopup.schedule.exactDate || getExactDateForMonth(activePopup.task, activePopup.monthDate),
+                      endDateOverride: activePopup.schedule.endDateOverride || getEndDateForMonth(activePopup.task, activePopup.monthDate)
+                    });
+                  }}
+                  className="px-2 py-1 bg-white border border-notion-warm-gray-200 text-notion-warm-gray-600 hover:bg-notion-warm-white rounded-md text-xs font-semibold transition shadow-sm flex items-center gap-1"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  Edit Instance
+                </button>
+                <button 
+                  onClick={() => setActivePopup(null)}
+                  className="text-notion-warm-gray-500 hover:text-notion-black transition-colors"
+                >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
+              </div>
             </div>
             <div className="p-4 sm:p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1">
               <div className="space-y-1 text-sm">
-                <p><span className="text-notion-warm-gray-500 font-medium">Task:</span> <span className="font-semibold text-notion-black">{activePopup.task.taskName} ({activePopup.task.taskCode})</span></p>
+                <p><span className="text-notion-warm-gray-500 font-medium">Task:</span> <span className="font-semibold text-notion-black">{activePopup.schedule.taskNameOverride || activePopup.task.taskName} ({activePopup.schedule.taskCodeOverride || activePopup.task.taskCode})</span></p>
+                <p><span className="text-notion-warm-gray-500 font-medium">Budget:</span> <span className="font-semibold text-notion-black">{Number(activePopup.schedule.budgetHoursOverride !== undefined ? activePopup.schedule.budgetHoursOverride : (activePopup.task.budgetHours || 0)).toFixed(2)} Hrs</span></p>
                 <p className="text-sm mb-1 text-notion-warm-gray-600">
                   <span className="text-notion-warm-gray-500 font-medium">Period:</span> 
                   <span className="font-semibold text-notion-black">
                     {format(activePopup.scheduleDate || activePopup.monthDate, 'MMM yyyy')}
                   </span>
                 </p>
-                <p><span className="text-notion-warm-gray-500 font-medium">Date Range:</span> <span className="font-semibold text-notion-black">{getExactDateForMonth(activePopup.task, activePopup.monthDate)} {getEndDateForMonth(activePopup.task, activePopup.monthDate) ? ` - ${getEndDateForMonth(activePopup.task, activePopup.monthDate)}` : ''}</span></p>
+                <p><span className="text-notion-warm-gray-500 font-medium">Date Range:</span> <span className="font-semibold text-notion-black">{activePopup.schedule.exactDate || getExactDateForMonth(activePopup.task, activePopup.monthDate)} {(activePopup.schedule.endDateOverride || getEndDateForMonth(activePopup.task, activePopup.monthDate)) ? ` - ${(activePopup.schedule.endDateOverride || getEndDateForMonth(activePopup.task, activePopup.monthDate))}` : ''}</span></p>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-notion-warm-gray-500 font-medium shrink-0 text-sm">Assigned To:</span>
-                  {(activePopup.task.assignedTo && activePopup.task.assignedTo.length > 0) ? (
+                  {((activePopup.schedule.assignedToOverride !== undefined ? activePopup.schedule.assignedToOverride : activePopup.task.assignedTo) && (activePopup.schedule.assignedToOverride !== undefined ? activePopup.schedule.assignedToOverride : activePopup.task.assignedTo).length > 0) ? (
                     <div className="flex items-center -space-x-1.5">
-                      {(Array.isArray(activePopup.task.assignedTo) ? activePopup.task.assignedTo : [activePopup.task.assignedTo]).map((assignee, idx) => {
+                      {(Array.isArray(activePopup.schedule.assignedToOverride !== undefined ? activePopup.schedule.assignedToOverride : activePopup.task.assignedTo) ? (activePopup.schedule.assignedToOverride !== undefined ? activePopup.schedule.assignedToOverride : activePopup.task.assignedTo) : [activePopup.schedule.assignedToOverride !== undefined ? activePopup.schedule.assignedToOverride : activePopup.task.assignedTo]).map((assignee, idx) => {
                         const colors = ['bg-blue-500','bg-emerald-500','bg-violet-500','bg-amber-500','bg-rose-500','bg-cyan-500','bg-indigo-500','bg-pink-500'];
                         const letter = (assignee || '?')[0].toUpperCase();
                         return (
@@ -1040,6 +1085,130 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
                 className="px-5 py-2 bg-notion-blue text-white hover:bg-blue-600 rounded-lg text-sm font-bold transition shadow-md"
               >
                 Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Schedule Instance Override Popup */}
+      {editingScheduleOverride && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-notion-card w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-5 py-4 border-b border-notion-warm-gray-200 bg-notion-warm-white flex justify-between items-center shrink-0">
+              <div>
+                <h3 className="font-bold text-notion-black text-base">Edit Instance Details</h3>
+                <p className="text-xs text-notion-warm-gray-500 mt-0.5">Changes apply only to this specific visit.</p>
+              </div>
+              <button 
+                onClick={() => setEditingScheduleOverride(null)}
+                className="text-notion-warm-gray-500 hover:text-notion-black transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-notion-warm-gray-500 uppercase tracking-widest mb-1.5">Start Date</label>
+                  <input
+                    type="date"
+                    value={editingScheduleOverride.exactDate || ''}
+                    onChange={(e) => setEditingScheduleOverride(prev => ({ ...prev, exactDate: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white border border-notion-warm-gray-200 rounded-lg text-sm focus:border-notion-blue focus:ring-1 focus:ring-notion-blue outline-none text-notion-black transition-all"
+                  />
+                  <p className="text-[10px] text-notion-warm-gray-500 mt-1">Changing the start month moves the instance.</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-notion-warm-gray-500 uppercase tracking-widest mb-1.5">End Date</label>
+                  <input
+                    type="date"
+                    value={editingScheduleOverride.endDateOverride || ''}
+                    onChange={(e) => setEditingScheduleOverride(prev => ({ ...prev, endDateOverride: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white border border-notion-warm-gray-200 rounded-lg text-sm focus:border-notion-blue focus:ring-1 focus:ring-notion-blue outline-none text-notion-black transition-all"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-notion-warm-gray-500 uppercase tracking-widest mb-1.5">Task Name</label>
+                  <input
+                    type="text"
+                    value={editingScheduleOverride.taskNameOverride || ''}
+                    onChange={(e) => setEditingScheduleOverride(prev => ({ ...prev, taskNameOverride: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white border border-notion-warm-gray-200 rounded-lg text-sm focus:border-notion-blue focus:ring-1 focus:ring-notion-blue outline-none text-notion-black transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-notion-warm-gray-500 uppercase tracking-widest mb-1.5">Task Code</label>
+                  <input
+                    type="text"
+                    value={editingScheduleOverride.taskCodeOverride || ''}
+                    onChange={(e) => setEditingScheduleOverride(prev => ({ ...prev, taskCodeOverride: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white border border-notion-warm-gray-200 rounded-lg text-sm focus:border-notion-blue focus:ring-1 focus:ring-notion-blue outline-none text-notion-black transition-all"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-notion-warm-gray-500 uppercase tracking-widest mb-1.5">Budget Hours</label>
+                  <input
+                    type="number"
+                    step="0.25"
+                    value={editingScheduleOverride.budgetHoursOverride !== undefined ? editingScheduleOverride.budgetHoursOverride : ''}
+                    onChange={(e) => setEditingScheduleOverride(prev => ({ ...prev, budgetHoursOverride: e.target.value !== '' ? parseFloat(e.target.value) : undefined }))}
+                    className="w-full px-3 py-2 bg-white border border-notion-warm-gray-200 rounded-lg text-sm focus:border-notion-blue focus:ring-1 focus:ring-notion-blue outline-none text-notion-black transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-notion-warm-gray-500 uppercase tracking-widest mb-1.5">Assigned To (Emails)</label>
+                  <input
+                    type="text"
+                    value={Array.isArray(editingScheduleOverride.assignedToOverride) ? editingScheduleOverride.assignedToOverride.join(', ') : (editingScheduleOverride.assignedToOverride || '')}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const arr = val.split(',').map(s => s.trim()).filter(Boolean);
+                      setEditingScheduleOverride(prev => ({ ...prev, assignedToOverride: arr.length > 0 ? arr : undefined }));
+                    }}
+                    placeholder="email1, email2..."
+                    className="w-full px-3 py-2 bg-white border border-notion-warm-gray-200 rounded-lg text-sm focus:border-notion-blue focus:ring-1 focus:ring-notion-blue outline-none text-notion-black transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-notion-warm-gray-200 bg-notion-warm-white flex justify-end gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setEditingScheduleOverride(null)}
+                className="px-4 py-2 bg-white whisper-border text-notion-warm-gray-500 hover:bg-notion-warm-white rounded-lg text-sm font-medium transition shadow-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onUpdateScheduleOverrides) {
+                    onUpdateScheduleOverrides(
+                      editingScheduleOverride.task.id, 
+                      editingScheduleOverride.schedule.id, 
+                      {
+                        taskNameOverride: editingScheduleOverride.taskNameOverride,
+                        taskCodeOverride: editingScheduleOverride.taskCodeOverride,
+                        budgetHoursOverride: editingScheduleOverride.budgetHoursOverride,
+                        assignedToOverride: editingScheduleOverride.assignedToOverride,
+                        exactDate: editingScheduleOverride.exactDate,
+                        endDateOverride: editingScheduleOverride.endDateOverride
+                      }
+                    );
+                  }
+                  setEditingScheduleOverride(null);
+                  setActivePopup(null); // Close the status popup too since it might be stale or moved
+                }}
+                className="px-5 py-2 bg-notion-blue text-white hover:bg-blue-600 rounded-lg text-sm font-bold transition shadow-md"
+              >
+                Save Changes
               </button>
             </div>
           </div>

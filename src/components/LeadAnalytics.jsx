@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { format, parseISO, isValid, startOfMonth, subMonths, endOfMonth } from 'date-fns';
+import LeadCohortDashboard from './LeadCohortDashboard';
 
 const LeadAnalytics = ({ leads, onLeadClick }) => {
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [startMonth, setStartMonth] = useState('2026-01');
   const [endMonth, setEndMonth] = useState('2026-12');
   const [selectedCell, setSelectedCell] = useState(null);
@@ -133,13 +135,33 @@ const LeadAnalytics = ({ leads, onLeadClick }) => {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       
-      {/* Date Range Picker Area */}
-      <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-zinc-100 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-extrabold text-notion-black">Analytics Date Range</h3>
-          <p className="text-sm text-notion-warm-gray-500 mt-1">Filter your cohorts and metrics by the date the lead was acquired.</p>
-        </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+      {/* Tabs */}
+      <div className="flex border-b border-zinc-200">
+        <button
+          onClick={() => setActiveTab('dashboard')}
+          className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'dashboard' ? 'border-notion-blue text-notion-blue' : 'border-transparent text-notion-warm-gray-500 hover:text-notion-black hover:border-zinc-300'}`}
+        >
+          Cohort Dashboard
+        </button>
+        <button
+          onClick={() => setActiveTab('general')}
+          className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'general' ? 'border-notion-blue text-notion-blue' : 'border-transparent text-notion-warm-gray-500 hover:text-notion-black hover:border-zinc-300'}`}
+        >
+          General Analytics
+        </button>
+      </div>
+
+      {activeTab === 'dashboard' ? (
+        <LeadCohortDashboard leads={leads} />
+      ) : (
+        <div className="space-y-8 animate-in fade-in duration-500">
+          {/* Date Range Picker Area */}
+          <div className="bg-white rounded-2xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-zinc-100 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-extrabold text-notion-black">Analytics Date Range</h3>
+              <p className="text-sm text-notion-warm-gray-500 mt-1">Filter your cohorts and metrics by the date the lead was acquired.</p>
+            </div>
+            <div className="flex items-center gap-3 w-full sm:w-auto">
           <div className="flex flex-col flex-1 sm:flex-none">
             <label className="text-[10px] font-bold text-notion-warm-gray-500 uppercase tracking-wider mb-1 ml-1">From Month</label>
             <input 
@@ -325,7 +347,8 @@ const LeadAnalytics = ({ leads, onLeadClick }) => {
           </div>
         </div>
       )}
-
+        </div>
+      )}
     </div>
   );
 };
