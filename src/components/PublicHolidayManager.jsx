@@ -24,7 +24,7 @@ const PublicHolidayManager = () => {
             return;
         }
 
-        const updated = [...holidays, { ...newHoliday, id: Date.now().toString() }].sort((a, b) => a.date.localeCompare(b.date));
+        const updated = [...holidays, { ...newHoliday, id: crypto.randomUUID() }].sort((a, b) => a.date.localeCompare(b.date));
         setHolidays(updated);
         savePublicHolidays(updated);
         logAction('ADD_PUBLIC_HOLIDAY', { date: newHoliday.date, name: newHoliday.name });

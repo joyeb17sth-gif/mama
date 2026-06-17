@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { loginUser, registerUser, setAuthenticated, isAccountLocked, getLockoutRemainingSeconds } from '../utils/auth';
 
 const Login = ({ onLogin }) => {
-  const [isLoginMode, setIsLoginMode] = useState(true);
+  // Registration is disabled for security — only admins can create users via User Management
+  const isLoginMode = true;
 
   // Form State
   const [email, setEmail] = useState('');
@@ -198,14 +199,6 @@ const Login = ({ onLogin }) => {
         </form>
 
         <div className="mt-6 flex flex-col gap-3 text-center">
-          <button
-            type="button"
-            onClick={toggleMode}
-            disabled={loading}
-            className="text-sm text-gray-500 hover:text-gray-700 hover:underline disabled:opacity-50"
-          >
-            {isLoginMode ? "Don't have an account? Create one" : "Already have an account? Login"}
-          </button>
           {isLoginMode && (
             <button
               type="button"

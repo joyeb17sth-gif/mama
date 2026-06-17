@@ -73,8 +73,8 @@ function App() {
     }
 
     if (role === 'payslip_management') {
-      // Payslip management can access all but task matrix and user management
-      return tab !== 'task-matrix' && tab !== 'users';
+      // Payslip management can access most tabs except task matrix, user management, profit-loss, and settings
+      return !['task-matrix', 'users', 'profit-loss', 'settings'].includes(tab);
     }
 
     // Default basic role
@@ -388,24 +388,20 @@ function App() {
         if (session && session.user) {
           const email = session.user.email;
           let role = 'user';
-          if (email === 'jungjoyeb@gmail.com') role = 'admin';
           
           try {
              const { data: profile, error: profileError } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
              
              if (profileError && profileError.code === 'PGRST116') {
-               // Profile doesn't exist, create it
+               // Profile doesn't exist, create it with default 'user' role
                await supabase.from('profiles').insert({
                  id: session.user.id,
                  email: email,
-                 role: (email === 'jungjoyeb@gmail.com') ? 'admin' : 'user'
+                 role: 'user'
                });
              } else if (profile && profile.role) {
                role = profile.role;
              }
-
-             // If this is the specific admin email, ensure it stays admin in state
-             if (email === 'jungjoyeb@gmail.com') role = 'admin';
           } catch(e) {
             if (import.meta.env.DEV) console.error('Profile check failed:', e);
           }
@@ -484,7 +480,7 @@ function App() {
       });
     } else {
       const newContractor = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         ...formData,
       };
       const updated = [...contractors, newContractor];
@@ -550,7 +546,7 @@ function App() {
         changes: formData
       });
     } else {
-      siteId = Date.now().toString();
+      siteId = crypto.randomUUID();
       const newSite = {
         id: siteId,
         allocatedContractors: [],
@@ -573,7 +569,9 @@ function App() {
     try {
       const latestCloud = await getPeriodicalTasksAsync();
       if (latestCloud) currentGlobalTasks = latestCloud;
-    } catch (e) {}
+    } catch (e) {
+      if (import.meta.env.DEV) console.error('Failed to fetch latest cloud tasks before merge:', e);
+    }
 
     // Merge into global periodicalTasks (remove old ones for this site, add new ones)
     const otherTasks = isAdmin 
@@ -594,6 +592,13 @@ function App() {
       const updated = sites.filter(s => s.id !== id);
       setSites(updated);
       saveSites(updated);
+
+      // Cascade: clean up orphaned periodical tasks for this site
+      const cleanedTasks = periodicalTasks.filter(t => t.siteId !== id);
+      if (cleanedTasks.length !== periodicalTasks.length) {
+        setPeriodicalTasks(cleanedTasks);
+        savePeriodicalTasks(cleanedTasks);
+      }
 
       logAction('DELETE_SITE', { 
         id,

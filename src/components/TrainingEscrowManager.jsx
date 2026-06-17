@@ -148,7 +148,7 @@ const TrainingEscrowManager = () => {
         setIsSaving(true);
 
         const newRelease = {
-            id: Date.now().toString(),
+            id: crypto.randomUUID(),
             contractorId: selectedContractor.id,
             contractorName: selectedContractor.name,
             amount: amount,

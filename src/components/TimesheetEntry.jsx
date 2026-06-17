@@ -267,7 +267,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
   const handleQuickCreateContractor = (formData) => {
     try {
       const newContractor = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         ...formData,
       };
 
@@ -434,7 +434,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
     );
 
     const timesheet = {
-      id: initialData?.id || existingTs?.id || `${site.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: initialData?.id || existingTs?.id || crypto.randomUUID(),
       siteId: site.id,
       siteName: site.siteName,
       periodStart,

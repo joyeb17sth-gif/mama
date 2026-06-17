@@ -5,13 +5,12 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true,
-    allowedHosts: ['audible-shabby-wiring.ngrok-free.dev'],
   },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    // Enable source maps for production debugging
-    sourcemap: true,
+    // Source maps disabled in production for security (prevents source code exposure)
+    sourcemap: false,
     // Chunk splitting for better caching
     rollupOptions: {
       output: {

@@ -155,7 +155,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
       const customDate = periods[0]?.customDate;
       if (customDate) {
         const targetPeriod = customDate.substring(0, 7); // yyyy-MM
-        schedules.push({ id: Date.now().toString() + Math.random().toString(36).substr(2, 9), targetPeriod, exactDate: customDate, status: 'Scheduled' });
+        schedules.push({ id: crypto.randomUUID(), targetPeriod, exactDate: customDate, status: 'Scheduled' });
       }
       return schedules;
     }
@@ -193,7 +193,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
             schedules.push(existing);
           } else {
             schedules.push({
-              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              id: crypto.randomUUID(),
               targetPeriod,
               exactDate,
               status: 'Scheduled'
@@ -236,7 +236,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
           schedules.push(existing);
         } else {
           schedules.push({
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            id: crypto.randomUUID(),
             targetPeriod,
             status: 'Scheduled'
           });
@@ -301,7 +301,7 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
       setEditingTaskId(null);
     } else {
       const taskToAdd = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         siteId: site?.id || '',
         taskCode: newTask.taskCode.toUpperCase().trim(),
         taskName: newTask.taskName,

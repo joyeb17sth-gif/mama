@@ -535,7 +535,7 @@ const PaymentSummary = ({ syncVersion }) => {
 
     // Save summary
     const summaryRecord = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       period: selectedPeriod,
       summary: filteredSummary,
       generatedAt: new Date().toISOString(),

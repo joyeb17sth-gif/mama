@@ -206,7 +206,7 @@ const Dashboard = ({ syncVersion, periodicalTasks: propPeriodicalTasks }) => {
         setIsSaving(true);
 
         const newRelease = {
-            id: Date.now().toString(),
+            id: crypto.randomUUID(),
             contractorId: selectedContractor.id,
             contractorName: selectedContractor.name,
             amount: amount,

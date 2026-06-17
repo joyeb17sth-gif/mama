@@ -1,13 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 const Toast = ({ message, type = 'success', onClose }) => {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      onClose();
+      onCloseRef.current();
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, [onClose]);
+  }, []);
 
   return (
     <div className="fixed top-4 right-4 z-50 animate-slide-in">
@@ -32,3 +35,4 @@ const Toast = ({ message, type = 'success', onClose }) => {
 };
 
 export default Toast;
+

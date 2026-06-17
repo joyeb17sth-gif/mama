@@ -96,7 +96,7 @@ const Layout = ({
         }
 
         if (role === 'payslip_management') {
-            return navItems.filter(item => item.id !== 'task-matrix');
+            return navItems.filter(item => !['task-matrix', 'profit-loss', 'settings'].includes(item.id));
         }
 
         return navItems;

@@ -45,7 +45,12 @@ export const getDayType = (date, publicHolidays = []) => {
   const dateStr = typeof date === 'string' ? date : format(date, 'yyyy-MM-dd');
   
   // Check if it's a public holiday
-  if (publicHolidays.includes(dateStr)) {
+  // publicHolidays can be an array of objects {id, date, name} or raw date strings
+  const isPublicHoliday = publicHolidays.some(h => {
+    if (typeof h === 'string') return h === dateStr;
+    return h?.date === dateStr;
+  });
+  if (isPublicHoliday) {
     return 'publicHoliday';
   }
   

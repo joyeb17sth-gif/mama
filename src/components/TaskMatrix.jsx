@@ -294,11 +294,8 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
           if (!isNaN(parsed)) {
             scheduleDate = parsed;
             scheduleEndDate = parsed;
-            if (isBefore(parsed, today)) {
-              isPastDue = true;
-            }
           }
-          if (task.taskName.includes('TESR')) {
+          if (import.meta.env.DEV && task.taskName.includes('TESR')) {
             console.log('TaskMatrix upcomingSchedules TESR! ->', {
               targetPeriod: schedule.targetPeriod,
               exactDateStr,
@@ -306,11 +303,6 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
               parsed,
               scheduleDate
             });
-          }
-        } else {
-          // No exact date: past due if targetPeriod is before the current month
-          if (schedule.targetPeriod < currentMonthStr) {
-            isPastDue = true;
           }
         }
 
@@ -344,6 +336,16 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onManageTasks }) =
         } else if (task.frequency === 'Weekly') {
            displayEndDate = displayExactDate;
            scheduleEndDate = scheduleDate;
+        }
+
+        if (exactDateStr && exactDateStr !== 'Not Set') {
+          if (isBefore(scheduleEndDate, today)) {
+            isPastDue = true;
+          }
+        } else {
+          if (schedule.targetPeriod < currentMonthStr) {
+            isPastDue = true;
+          }
         }
 
         list.push({

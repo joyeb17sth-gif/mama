@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import LeadAnalytics from './LeadAnalytics';
 import { saveLeads } from '../utils/storage';
+import DOMPurify from 'dompurify';
 
 const LeadManager = ({ leads, onSave }) => {
   const [showForm, setShowForm] = useState(false);
@@ -30,7 +31,7 @@ const LeadManager = ({ leads, onSave }) => {
       const historyLog = [];
 
       // Initial Creation log
-      historyLog.push({ id: Date.now().toString() + i + 'a', date: createdDate.toISOString(), action: 'Lead Acquired', detail: `Source: ${sources[Math.floor(Math.random() * sources.length)]}` });
+      historyLog.push({ id: crypto.randomUUID(), date: createdDate.toISOString(), action: 'Lead Acquired', detail: `Source: ${sources[Math.floor(Math.random() * sources.length)]}` });
 
       if (randConversion > 0.4) {
         conversion = 'yes';
@@ -45,30 +46,30 @@ const LeadManager = ({ leads, onSave }) => {
           convertedDate.setMonth(convertedDate.getMonth() + Math.floor(Math.random() * 2) + 1);
         }
 
-        historyLog.push({ id: Date.now().toString() + i + 'c', date: convertedDate.toISOString(), action: 'Conversion Update', detail: `Changed to yes` });
+        historyLog.push({ id: crypto.randomUUID(), date: convertedDate.toISOString(), action: 'Conversion Update', detail: `Changed to yes` });
         
         statusUpdatedAt = new Date(convertedDate);
         statusUpdatedAt.setDate(statusUpdatedAt.getDate() + 1);
-        historyLog.push({ id: Date.now().toString() + i + 's', date: statusUpdatedAt.toISOString(), action: 'Status Update', detail: `Moved to ${status}` });
+        historyLog.push({ id: crypto.randomUUID(), date: statusUpdatedAt.toISOString(), action: 'Status Update', detail: `Moved to ${status}` });
 
         if (stage) {
           stageUpdatedAt = new Date(statusUpdatedAt);
           stageUpdatedAt.setDate(stageUpdatedAt.getDate() + 2);
-          historyLog.push({ id: Date.now().toString() + i + 'st', date: stageUpdatedAt.toISOString(), action: 'Stage Update', detail: `Moved to ${stage}` });
+          historyLog.push({ id: crypto.randomUUID(), date: stageUpdatedAt.toISOString(), action: 'Stage Update', detail: `Moved to ${stage}` });
         }
 
       } else if (randConversion > 0.1) {
         conversion = 'no';
         convertedDate = new Date(createdDate);
-        historyLog.push({ id: Date.now().toString() + i + 'c', date: convertedDate.toISOString(), action: 'Conversion Update', detail: `Changed to no` });
+        historyLog.push({ id: crypto.randomUUID(), date: convertedDate.toISOString(), action: 'Conversion Update', detail: `Changed to no` });
       } else {
         conversion = 'DNA';
         convertedDate = new Date(createdDate);
-        historyLog.push({ id: Date.now().toString() + i + 'c', date: convertedDate.toISOString(), action: 'Conversion Update', detail: `Changed to DNA` });
+        historyLog.push({ id: crypto.randomUUID(), date: convertedDate.toISOString(), action: 'Conversion Update', detail: `Changed to DNA` });
       }
 
       fakeLeads.push({
-        id: Date.now().toString() + i,
+        id: crypto.randomUUID(),
         name: names[i % names.length] + ' ' + (i+1),
         phone: '555-01' + Math.floor(Math.random() * 99).toString().padStart(2, '0'),
         email: `lead${i}@example.com`,
@@ -152,13 +153,13 @@ const LeadManager = ({ leads, onSave }) => {
     let historyLog = pipelineLead.historyLog || [];
     
     if (pipelineLead.conversion !== conversion) {
-      historyLog = [...historyLog, { id: Date.now().toString() + 'c', date: now, action: 'Conversion Update', detail: `Changed to ${conversion || 'None'}` }];
+      historyLog = [...historyLog, { id: crypto.randomUUID(), date: now, action: 'Conversion Update', detail: `Changed to ${conversion || 'None'}` }];
     }
     if (pipelineLead.status !== newStatus && newStatus) {
-      historyLog = [...historyLog, { id: Date.now().toString() + 's', date: now, action: 'Status Update', detail: `Moved to ${newStatus}` }];
+      historyLog = [...historyLog, { id: crypto.randomUUID(), date: now, action: 'Status Update', detail: `Moved to ${newStatus}` }];
     }
     if (pipelineLead.stage !== newStage && newStage) {
-      historyLog = [...historyLog, { id: Date.now().toString() + 'st', date: now, action: 'Stage Update', detail: `Moved to ${newStage}` }];
+      historyLog = [...historyLog, { id: crypto.randomUUID(), date: now, action: 'Stage Update', detail: `Moved to ${newStage}` }];
     }
 
     const updatedLead = {
@@ -181,12 +182,12 @@ const LeadManager = ({ leads, onSave }) => {
     const isNew = !editingLead;
     const now = new Date().toISOString();
     const leadData = {
-      id: editingLead ? editingLead.id : Date.now().toString(),
-      name,
-      phone,
-      email,
-      notes,
-      source,
+      id: editingLead ? editingLead.id : crypto.randomUUID(),
+      name: DOMPurify.sanitize(name),
+      phone: DOMPurify.sanitize(phone),
+      email: DOMPurify.sanitize(email),
+      notes: DOMPurify.sanitize(notes),
+      source: DOMPurify.sanitize(source),
       conversion: editingLead ? editingLead.conversion : conversion,
       status: editingLead ? editingLead.status : status,
       stage: editingLead ? editingLead.stage : stage,
@@ -194,7 +195,7 @@ const LeadManager = ({ leads, onSave }) => {
       convertedAt: editingLead ? editingLead.convertedAt : null,
       statusUpdatedAt: editingLead ? editingLead.statusUpdatedAt : null,
       stageUpdatedAt: editingLead ? editingLead.stageUpdatedAt : null,
-      historyLog: isNew ? [{ id: Date.now().toString() + 'a', date: now, action: 'Lead Acquired', detail: `Source: ${source}` }] : (editingLead.historyLog || []),
+      historyLog: isNew ? [{ id: crypto.randomUUID(), date: now, action: 'Lead Acquired', detail: `Source: ${source}` }] : (editingLead.historyLog || []),
       updatedAt: now
     };
     onSave(leadData, !!editingLead);

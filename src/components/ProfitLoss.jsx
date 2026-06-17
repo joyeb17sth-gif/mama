@@ -390,7 +390,7 @@ const ProfitLoss = ({ syncVersion }) => {
   const handleAddManager = useCallback(() => {
     const updated = JSON.parse(JSON.stringify(currentPeriod));
     updated.managers.push({
-      id: `mgr-${Date.now()}`,
+      id: `mgr-${crypto.randomUUID()}`,
       name: 'New Manager',
       totalSalary: 0
     });
