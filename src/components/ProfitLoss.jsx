@@ -312,7 +312,16 @@ const ProfitLoss = ({ syncVersion }) => {
   useEffect(() => {
     const cached = getProfitLoss();
     if (cached && Array.isArray(cached) && cached.length > 0) {
-      setAllPeriods(cached);
+      // Automatically clean up any existing sample data
+      const hasSampleData = cached.some(p => p.id === '2025-09' || p.id === '2025-10');
+      if (hasSampleData) {
+        const organicOnly = cached.filter(p => p.id !== '2025-09' && p.id !== '2025-10');
+        setAllPeriods(organicOnly);
+        // Fire save asynchronously so it updates local and cloud
+        setTimeout(() => saveProfitLoss(organicOnly), 100);
+      } else {
+        setAllPeriods(cached);
+      }
     }
   }, [syncVersion]);
 
@@ -363,82 +372,123 @@ const ProfitLoss = ({ syncVersion }) => {
   }, []);
 
   // Update a period in allPeriods
-  const updatePeriod = useCallback((updatedPeriod) => {
-    updatedPeriod.updatedAt = new Date().toISOString();
+  const updatePeriod = useCallback((updater) => {
     setAllPeriods(prev => {
+      let updatedPeriod;
+      
+      if (typeof updater === 'function') {
+        const found = prev.find(p => p.id === periodId) || createEmptyPeriod(selectedYear, selectedMonth);
+        const p = JSON.parse(JSON.stringify(found));
+
+        // Migration: managers array
+        if (!p.managers) {
+          p.managers = [];
+          if (p.overheadTotals?.managerSalaryTotal) {
+            p.managers.push({
+              id: 'mgr-legacy',
+              name: 'Manager 1',
+              totalSalary: p.overheadTotals.managerSalaryTotal
+            });
+          }
+        }
+
+        // Migration: managerAllocations
+        p.sites.forEach(site => {
+          if (!site.managerAllocations) {
+            site.managerAllocations = {};
+            if (site.overhead?.managerSalaryPct !== undefined && p.managers.length > 0) {
+              site.managerAllocations['mgr-legacy'] = site.overhead.managerSalaryPct;
+            }
+          }
+        });
+
+        const migrated = recalculateManagerSalaries(p);
+        updatedPeriod = updater(migrated);
+      } else {
+        updatedPeriod = updater;
+      }
+
+      updatedPeriod.updatedAt = new Date().toISOString();
       const idx = prev.findIndex(p => p.id === updatedPeriod.id);
       const next = idx >= 0 ? prev.map(p => p.id === updatedPeriod.id ? updatedPeriod : p) : [...prev, updatedPeriod];
+      
       saveData(next);
       return next;
     });
-  }, [saveData]);
+  }, [periodId, selectedYear, selectedMonth, saveData]);
 
   // Update a specific site field
   const updateSiteField = useCallback((siteIndex, group, key, value) => {
-    const updated = JSON.parse(JSON.stringify(currentPeriod));
-    if (group === 'vehicleAllowanceIncome') {
-      updated.sites[siteIndex].vehicleAllowanceIncome = value;
-    } else {
-      updated.sites[siteIndex][group][key] = value;
-    }
-
-
-    updatePeriod(updated);
-  }, [currentPeriod, updatePeriod]);
+    updatePeriod((updated) => {
+      if (group === 'vehicleAllowanceIncome') {
+        updated.sites[siteIndex].vehicleAllowanceIncome = value;
+      } else {
+        updated.sites[siteIndex][group][key] = value;
+      }
+      return updated;
+    });
+  }, [updatePeriod]);
 
   // ─── Manager Handlers ──────────────────────────────────────────────────
   const handleAddManager = useCallback(() => {
-    const updated = JSON.parse(JSON.stringify(currentPeriod));
-    updated.managers.push({
-      id: `mgr-${crypto.randomUUID()}`,
-      name: 'New Manager',
-      totalSalary: 0
+    updatePeriod((updated) => {
+      updated.managers.push({
+        id: `mgr-${crypto.randomUUID()}`,
+        name: 'New Manager',
+        totalSalary: 0
+      });
+      return updated;
     });
-    updatePeriod(updated);
-  }, [currentPeriod, updatePeriod]);
+  }, [updatePeriod]);
 
   const handleUpdateManager = useCallback((mgrId, field, value) => {
-    const updated = JSON.parse(JSON.stringify(currentPeriod));
-    const mgr = updated.managers.find(m => m.id === mgrId);
-    if (mgr) {
-      mgr[field] = value;
-      updatePeriod(recalculateManagerSalaries(updated));
-    }
-  }, [currentPeriod, updatePeriod]);
+    updatePeriod((updated) => {
+      const mgr = updated.managers.find(m => m.id === mgrId);
+      if (mgr) {
+        mgr[field] = value;
+        return recalculateManagerSalaries(updated);
+      }
+      return updated;
+    });
+  }, [updatePeriod]);
 
   const handleRemoveManager = useCallback((mgrId) => {
     if (!window.confirm("Remove this manager?")) return;
-    const updated = JSON.parse(JSON.stringify(currentPeriod));
-    updated.managers = updated.managers.filter(m => m.id !== mgrId);
-    updated.sites.forEach(site => {
-      if (site.managerAllocations) delete site.managerAllocations[mgrId];
+    updatePeriod((updated) => {
+      updated.managers = updated.managers.filter(m => m.id !== mgrId);
+      updated.sites.forEach(site => {
+        if (site.managerAllocations) delete site.managerAllocations[mgrId];
+      });
+      return recalculateManagerSalaries(updated);
     });
-    updatePeriod(recalculateManagerSalaries(updated));
-  }, [currentPeriod, updatePeriod]);
+  }, [updatePeriod]);
 
   const handleUpdateManagerAllocation = useCallback((siteIndex, mgrId, pct) => {
-    const updated = JSON.parse(JSON.stringify(currentPeriod));
-    if (!updated.sites[siteIndex].managerAllocations) {
-      updated.sites[siteIndex].managerAllocations = {};
-    }
-    updated.sites[siteIndex].managerAllocations[mgrId] = pct;
-    updatePeriod(recalculateManagerSalaries(updated));
-  }, [currentPeriod, updatePeriod]);
+    updatePeriod((updated) => {
+      if (!updated.sites[siteIndex].managerAllocations) {
+        updated.sites[siteIndex].managerAllocations = {};
+      }
+      updated.sites[siteIndex].managerAllocations[mgrId] = pct;
+      return recalculateManagerSalaries(updated);
+    });
+  }, [updatePeriod]);
 
   // Add new site column
   const handleAddSite = useCallback((name) => {
-    const updated = JSON.parse(JSON.stringify(currentPeriod));
-    updated.sites.push(createEmptySiteData(name));
-    updatePeriod(updated);
+    updatePeriod((updated) => {
+      updated.sites.push(createEmptySiteData(name));
+      return updated;
+    });
     setShowAddSite(false);
-  }, [currentPeriod, updatePeriod]);
+  }, [updatePeriod]);
 
   // Remove site column
   const handleRemoveSite = useCallback((siteIndex) => {
     if (!window.confirm(`Remove "${currentPeriod.sites[siteIndex]?.name}" from this period?`)) return;
-    const updated = JSON.parse(JSON.stringify(currentPeriod));
-    updated.sites.splice(siteIndex, 1);
-    updatePeriod(updated);
+    updatePeriod((updated) => {
+      updated.sites.splice(siteIndex, 1);
+      return updated;
+    });
   }, [currentPeriod, updatePeriod]);
 
   // Copy from previous period
@@ -481,18 +531,19 @@ const ProfitLoss = ({ syncVersion }) => {
 
   // Update overhead totals
   const updateOverheadTotal = useCallback((key, value) => {
-    const updated = JSON.parse(JSON.stringify(currentPeriod));
-    updated.overheadTotals[key] = value;
+    updatePeriod((updated) => {
+      updated.overheadTotals[key] = value;
 
-    // Recalculate manager salary for all sites based on their %
-    if (key === 'managerSalaryTotal') {
-      updated.sites.forEach(s => {
-        s.overhead.managerSalary = Math.round(((s.overhead.managerSalaryPct || 0) / 100) * value);
-      });
-    }
+      // Recalculate manager salary for all sites based on their %
+      if (key === 'managerSalaryTotal') {
+        updated.sites.forEach(s => {
+          s.overhead.managerSalary = Math.round(((s.overhead.managerSalaryPct || 0) / 100) * value);
+        });
+      }
 
-    updatePeriod(updated);
-  }, [currentPeriod, updatePeriod]);
+      return updated;
+    });
+  }, [updatePeriod]);
 
   // Computed totals across all sites
   const siteTotals = useMemo(() => {
@@ -609,306 +660,6 @@ const ProfitLoss = ({ syncVersion }) => {
     return { sites, siteTotals: rSiteTotals, grandTotals: gt, periods: [...includedPeriods].reverse().map(p => p.period), periodCount: includedPeriods.length };
   }, [view, allPeriods, rangeStart, rangeEnd]);
 
-  // ─── Load Sample Data (for testing) ────────────────────────────────────
-  const loadSampleData = useCallback(() => {
-    if (allPeriods.length > 0 && !window.confirm('This will replace ALL existing P&L data with sample data. Continue?')) return;
-
-    const mgrTotal = 11294;
-    const chemTotal = 8268;
-    const mvTotal = 19562;
-
-    // Helper to compute manager salary from pct
-    const mgr = (pct) => Math.round((pct / 100) * mgrTotal);
-
-    // ─── October 2025 data (matches your Excel screenshot) ───────────
-    const oct2025 = {
-      id: '2025-10',
-      period: 'October 2025',
-      year: 2025,
-      month: 9, // 0-indexed
-      overheadTotals: { managerSalaryTotal: mgrTotal, chemicalTotal: chemTotal, motorVehicleTotal: mvTotal },
-      createdAt: '2025-11-01T10:00:00Z',
-      updatedAt: '2025-11-15T14:30:00Z',
-      sites: [
-        {
-          name: 'Solo Shoalhaven',
-          revenue: { regular: 40230, extraWork: 1650, supervisorAllowance: 4450 },
-          directCost: { regular: 38558, extraWork: 825, motorVehicle: 0 },
-          vehicleAllowanceIncome: 4871,
-          overhead: { managerSalaryPct: 10, managerSalary: mgr(10), chemical: 6201, motorVehicle: 7350 },
-        },
-        {
-          name: 'Solo IWC-CC',
-          revenue: { regular: 31262, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 23775, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 10, managerSalary: mgr(10), chemical: 0, motorVehicle: 1129 },
-        },
-        {
-          name: 'Bayton Kopwa',
-          revenue: { regular: 30776, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 21990, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 10, managerSalary: mgr(10), chemical: 0, motorVehicle: 1129 },
-        },
-        {
-          name: 'Bayton Barangaroo',
-          revenue: { regular: 33387, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 19223, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 5, managerSalary: mgr(5), chemical: 0, motorVehicle: 565 },
-        },
-        {
-          name: 'Bayton Q.Tart',
-          revenue: { regular: 11488, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 10036, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 5, managerSalary: mgr(5), chemical: 0, motorVehicle: 565 },
-        },
-        {
-          name: 'Bayton Abrins',
-          revenue: { regular: 11543, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 7524, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 5, managerSalary: mgr(5), chemical: 0, motorVehicle: 565 },
-        },
-        {
-          name: 'Bayton Catholic HC',
-          revenue: { regular: 3465, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 2024, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 5, managerSalary: mgr(5), chemical: 0, motorVehicle: 565 },
-        },
-        {
-          name: 'Bayton CC',
-          revenue: { regular: 5707, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 6395, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 0, managerSalary: 0, chemical: 0, motorVehicle: 0 },
-        },
-        {
-          name: 'Solo Lycee',
-          revenue: { regular: 48554, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 43291, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 5, managerSalary: mgr(5), chemical: 0, motorVehicle: 565 },
-        },
-        {
-          name: 'Solo IWC',
-          revenue: { regular: 58784, extraWork: 0, supervisorAllowance: 1034 },
-          directCost: { regular: 51134, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 2730,
-          overhead: { managerSalaryPct: 20, managerSalary: mgr(20), chemical: 2067, motorVehicle: 1326 },
-        },
-        {
-          name: 'Solo Strathfield',
-          revenue: { regular: 16753, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 11720, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 5, managerSalary: mgr(5), chemical: 0, motorVehicle: 565 },
-        },
-        {
-          name: 'Solo Liverpool',
-          revenue: { regular: 16731, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 13804, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 0, managerSalary: 0, chemical: 0, motorVehicle: 565 },
-        },
-        {
-          name: 'Solo Woollahra',
-          revenue: { regular: 18268, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 17533, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 0, managerSalary: 0, chemical: 1129, motorVehicle: 0 },
-        },
-        {
-          name: 'Solo Waverley',
-          revenue: { regular: 96875, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 84885, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 7601,
-          overhead: { managerSalaryPct: 10, managerSalary: mgr(10), chemical: 0, motorVehicle: 226 },
-        },
-        {
-          name: 'Maritime Wharf',
-          revenue: { regular: 2821, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 2170, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 2, managerSalary: mgr(2), chemical: 0, motorVehicle: 0 },
-        },
-        {
-          name: 'Solo La Parouse',
-          revenue: { regular: 7280, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 5632, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 3, managerSalary: mgr(3), chemical: 0, motorVehicle: 0 },
-        },
-        {
-          name: '147 King St',
-          revenue: { regular: 4032, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 2079, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 5, managerSalary: mgr(5), chemical: 0, motorVehicle: 0 },
-        },
-        {
-          name: 'IHS',
-          revenue: { regular: 8364, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 0, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 0, managerSalary: 0, chemical: 0, motorVehicle: 1129 },
-        },
-      ],
-    };
-
-    // ─── September 2025 data (slightly different for comparison) ─────
-    const sep2025 = {
-      id: '2025-09',
-      period: 'September 2025',
-      year: 2025,
-      month: 8,
-      overheadTotals: { managerSalaryTotal: 10800, chemicalTotal: 7950, motorVehicleTotal: 18200 },
-      createdAt: '2025-10-01T10:00:00Z',
-      updatedAt: '2025-10-15T14:30:00Z',
-      sites: [
-        {
-          name: 'Solo Shoalhaven',
-          revenue: { regular: 38500, extraWork: 2100, supervisorAllowance: 4200 },
-          directCost: { regular: 36800, extraWork: 950, motorVehicle: 0 },
-          vehicleAllowanceIncome: 4600,
-          overhead: { managerSalaryPct: 10, managerSalary: 1080, chemical: 5900, motorVehicle: 7100 },
-        },
-        {
-          name: 'Solo IWC-CC',
-          revenue: { regular: 29800, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 22100, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 10, managerSalary: 1080, chemical: 0, motorVehicle: 1050 },
-        },
-        {
-          name: 'Bayton Kopwa',
-          revenue: { regular: 28900, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 20500, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 10, managerSalary: 1080, chemical: 0, motorVehicle: 1050 },
-        },
-        {
-          name: 'Bayton Barangaroo',
-          revenue: { regular: 31500, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 18500, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 5, managerSalary: 540, chemical: 0, motorVehicle: 525 },
-        },
-        {
-          name: 'Bayton Q.Tart',
-          revenue: { regular: 10800, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 9500, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 5, managerSalary: 540, chemical: 0, motorVehicle: 525 },
-        },
-        {
-          name: 'Bayton Abrins',
-          revenue: { regular: 10900, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 7100, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 5, managerSalary: 540, chemical: 0, motorVehicle: 525 },
-        },
-        {
-          name: 'Bayton Catholic HC',
-          revenue: { regular: 3200, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 1900, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 5, managerSalary: 540, chemical: 0, motorVehicle: 525 },
-        },
-        {
-          name: 'Bayton CC',
-          revenue: { regular: 5400, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 5800, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 0, managerSalary: 0, chemical: 0, motorVehicle: 0 },
-        },
-        {
-          name: 'Solo Lycee',
-          revenue: { regular: 46200, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 41500, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 5, managerSalary: 540, chemical: 0, motorVehicle: 525 },
-        },
-        {
-          name: 'Solo IWC',
-          revenue: { regular: 55600, extraWork: 0, supervisorAllowance: 980 },
-          directCost: { regular: 48900, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 2500,
-          overhead: { managerSalaryPct: 20, managerSalary: 2160, chemical: 1900, motorVehicle: 1200 },
-        },
-        {
-          name: 'Solo Strathfield',
-          revenue: { regular: 15800, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 11200, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 5, managerSalary: 540, chemical: 0, motorVehicle: 525 },
-        },
-        {
-          name: 'Solo Liverpool',
-          revenue: { regular: 15900, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 13100, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 0, managerSalary: 0, chemical: 0, motorVehicle: 525 },
-        },
-        {
-          name: 'Solo Woollahra',
-          revenue: { regular: 17400, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 16700, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 0, managerSalary: 0, chemical: 1050, motorVehicle: 0 },
-        },
-        {
-          name: 'Solo Waverley',
-          revenue: { regular: 92500, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 81200, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 7200,
-          overhead: { managerSalaryPct: 10, managerSalary: 1080, chemical: 0, motorVehicle: 210 },
-        },
-        {
-          name: 'Maritime Wharf',
-          revenue: { regular: 2650, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 2050, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 2, managerSalary: 216, chemical: 0, motorVehicle: 0 },
-        },
-        {
-          name: 'Solo La Parouse',
-          revenue: { regular: 6900, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 5300, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 3, managerSalary: 324, chemical: 0, motorVehicle: 0 },
-        },
-        {
-          name: '147 King St',
-          revenue: { regular: 3800, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 1950, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 5, managerSalary: 540, chemical: 0, motorVehicle: 0 },
-        },
-        {
-          name: 'IHS',
-          revenue: { regular: 7900, extraWork: 0, supervisorAllowance: 0 },
-          directCost: { regular: 0, extraWork: 0, motorVehicle: 0 },
-          vehicleAllowanceIncome: 0,
-          overhead: { managerSalaryPct: 0, managerSalary: 0, chemical: 0, motorVehicle: 1050 },
-        },
-      ],
-    };
-
-    const sampleData = [sep2025, oct2025];
-    setAllPeriods(sampleData);
-    saveProfitLoss(sampleData);
-
-    // Navigate to October 2025 to show the loaded data
-    setSelectedYear(2025);
-    setSelectedMonth(9); // October (0-indexed)
-    setCompareYear(2025);
-    setCompareMonth(8); // September for comparison
-  }, [allPeriods]);
-
   // ═══════════════════════════════════════════════════════════════════════
   // ─── RENDER ────────────────────────────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════════════
@@ -941,15 +692,6 @@ const ProfitLoss = ({ syncVersion }) => {
             ))}
           </div>
 
-          {/* Load Sample Data */}
-          <button
-            onClick={loadSampleData}
-            className="px-3 py-1.5 text-xs font-semibold text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 whisper-border border-amber-200 rounded-micro transition-all flex items-center gap-1"
-            title="Load sample P&L data for testing"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            Load Sample Data
-          </button>
         </div>
       </div>
 
@@ -1048,9 +790,6 @@ const ProfitLoss = ({ syncVersion }) => {
                 </button>
                 <button onClick={handleCopyPrevious} className="px-4 py-2 text-sm whisper-border text-notion-warm-gray-500 rounded-micro hover:bg-notion-warm-white transition font-semibold">
                   Copy Previous Period
-                </button>
-                <button onClick={loadSampleData} className="px-4 py-2 text-sm bg-amber-50 text-amber-700 border border-amber-200 rounded-micro hover:bg-amber-100 transition font-semibold">
-                  🧪 Load Sample Data
                 </button>
               </div>
             </div>
