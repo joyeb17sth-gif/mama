@@ -246,7 +246,7 @@ const EditableCell = ({ value, onChange, isPct = false, className = '' }) => {
 };
 
 // ─── Add Site Modal ──────────────────────────────────────────────────────
-const AddSiteModal = ({ onAdd, onClose, existingNames }) => {
+const AddSiteModal = ({ onAdd, onClose, existingNames, historicalSites = [] }) => {
   const [name, setName] = useState('');
   const inputRef = useRef(null);
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -267,15 +267,42 @@ const AddSiteModal = ({ onAdd, onClose, existingNames }) => {
       <div className="bg-white rounded-standard shadow-notion-deep p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
         <h3 className="text-card-title text-notion-black mb-4">Add P&L Site Column</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            ref={inputRef}
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="e.g., Solo Shoalhaven"
-            className="w-full px-3 py-2 whisper-border rounded-micro text-sm focus:outline-none focus:ring-1 focus:ring-notion-blue"
-          />
-          <div className="flex gap-2 justify-end">
+          <div>
+            <input
+              ref={inputRef}
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="e.g., Solo Shoalhaven"
+              list="historical-sites"
+              className="w-full px-3 py-2 whisper-border rounded-micro text-sm focus:outline-none focus:ring-1 focus:ring-notion-blue"
+            />
+            {historicalSites.length > 0 && (
+              <datalist id="historical-sites">
+                {historicalSites.map((site, i) => (
+                  <option key={i} value={site} />
+                ))}
+              </datalist>
+            )}
+          </div>
+          {historicalSites.length > 0 && (
+            <div className="mt-2">
+              <p className="text-[10px] font-bold text-notion-warm-gray-400 uppercase tracking-widest mb-1.5">Previous Sites</p>
+              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+                {historicalSites.map((site, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setName(site)}
+                    className="px-2 py-1 bg-notion-warm-white text-notion-warm-gray-600 hover:bg-zinc-200 text-[11px] rounded-sm transition-colors border border-zinc-200"
+                  >
+                    {site}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="flex gap-2 justify-end pt-2">
             <button type="button" onClick={onClose} className="px-4 py-1.5 text-sm text-notion-warm-gray-500 hover:text-notion-black transition">Cancel</button>
             <button type="submit" className="px-4 py-1.5 text-sm bg-notion-blue text-white rounded-micro hover:bg-notion-blue-active transition font-semibold">Add Site</button>
           </div>
@@ -1393,13 +1420,21 @@ const ProfitLoss = ({ syncVersion }) => {
       )}
 
       {/* ─── Add Site Modal ───────────────────────────────────────────── */}
-      {showAddSite && (
-        <AddSiteModal
-          onAdd={handleAddSite}
-          onClose={() => setShowAddSite(false)}
-          existingNames={currentPeriod.sites.map(s => s.name)}
-        />
-      )}
+      {showAddSite && (() => {
+        const historicalSites = new Set();
+        allPeriods.forEach(p => p.sites?.forEach(s => historicalSites.add(s.name)));
+        // Remove currently existing sites from the suggestions
+        currentPeriod.sites.forEach(s => historicalSites.delete(s.name));
+        
+        return (
+          <AddSiteModal
+            onAdd={handleAddSite}
+            onClose={() => setShowAddSite(false)}
+            existingNames={currentPeriod.sites.map(s => s.name)}
+            historicalSites={Array.from(historicalSites).sort()}
+          />
+        );
+      })()}
     </div>
   );
 };
