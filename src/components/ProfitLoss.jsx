@@ -192,12 +192,13 @@ const GpGauge = ({ percent, label }) => {
 };
 
 // ─── Editable Cell ───────────────────────────────────────────────────────
-const EditableCell = ({ value, onChange, isPct = false, className = '' }) => {
+const EditableCell = ({ value, onChange, isPct = false, isEditable = true, className = '' }) => {
   const [editing, setEditing] = useState(false);
   const [inputVal, setInputVal] = useState('');
   const inputRef = useRef(null);
 
   const handleStartEdit = () => {
+    if (!isEditable) return;
     setEditing(true);
     setInputVal(value === 0 ? '' : String(value));
   };
@@ -237,8 +238,8 @@ const EditableCell = ({ value, onChange, isPct = false, className = '' }) => {
   return (
     <div
       onClick={handleStartEdit}
-      className={`w-full h-full px-1.5 py-1 text-right text-xs cursor-pointer hover:bg-notion-blue/5 rounded-sm transition-colors select-none ${className}`}
-      title="Click to edit"
+      className={`w-full h-full px-1.5 py-1 text-right text-xs rounded-sm select-none ${className} ${isEditable ? 'cursor-pointer hover:bg-notion-blue/5 transition-colors' : 'cursor-default'}`}
+      title={isEditable ? "Click to edit" : ""}
     >
       {isPct ? (value ? fmtPct(value) : '-') : fmt(value)}
     </div>
@@ -320,6 +321,8 @@ const ProfitLoss = ({ syncVersion }) => {
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [allPeriods, setAllPeriods] = useState([]);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [backupPeriods, setBackupPeriods] = useState([]);
   const [showAddSite, setShowAddSite] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const [compareYear, setCompareYear] = useState(CURRENT_YEAR);
@@ -439,10 +442,9 @@ const ProfitLoss = ({ syncVersion }) => {
       const idx = prev.findIndex(p => p.id === updatedPeriod.id);
       const next = idx >= 0 ? prev.map(p => p.id === updatedPeriod.id ? updatedPeriod : p) : [...prev, updatedPeriod];
       
-      saveData(next);
       return next;
     });
-  }, [periodId, selectedYear, selectedMonth, saveData]);
+  }, [periodId, selectedYear, selectedMonth]);
 
   // Update a specific site field
   const updateSiteField = useCallback((siteIndex, group, key, value) => {
@@ -742,15 +744,35 @@ const ProfitLoss = ({ syncVersion }) => {
 
           <div className="h-5 w-px bg-notion-warm-gray-200 mx-1"></div>
 
-          <button onClick={handleCopyPrevious} className="px-3 py-1.5 text-xs font-semibold text-notion-warm-gray-500 hover:text-notion-blue whisper-border rounded-micro hover:bg-blue-50/50 transition-all flex items-center gap-1.5">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
-            Copy Previous Period
-          </button>
+          {!isEditMode ? (
+            <button onClick={() => { setBackupPeriods(JSON.parse(JSON.stringify(allPeriods))); setIsEditMode(true); }} className="px-3 py-1.5 text-xs font-semibold text-white bg-notion-blue hover:bg-notion-blue-active rounded-micro transition-all shadow-sm">
+              Edit Data
+            </button>
+          ) : (
+            <>
+              <button onClick={() => { setAllPeriods(backupPeriods); setBackupPeriods([]); setIsEditMode(false); }} className="px-3 py-1.5 text-xs font-semibold text-notion-warm-gray-500 hover:text-notion-black whisper-border rounded-micro transition-all">
+                Cancel
+              </button>
+              <button onClick={() => { saveProfitLoss(allPeriods); setBackupPeriods([]); setIsEditMode(false); }} className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-micro transition-all shadow-sm">
+                Save Changes
+              </button>
+            </>
+          )}
 
-          <button onClick={() => setShowAddSite(true)} className="px-3 py-1.5 text-xs font-semibold text-white bg-notion-blue hover:bg-notion-blue-active rounded-micro transition-all flex items-center gap-1.5 shadow-sm">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-            Add Site
-          </button>
+          {isEditMode && (
+            <>
+              <div className="h-5 w-px bg-notion-warm-gray-200 mx-1"></div>
+              <button onClick={handleCopyPrevious} className="px-3 py-1.5 text-xs font-semibold text-notion-warm-gray-500 hover:text-notion-blue whisper-border rounded-micro hover:bg-blue-50/50 transition-all flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
+                Copy Previous Period
+              </button>
+
+              <button onClick={() => setShowAddSite(true)} className="px-3 py-1.5 text-xs font-semibold text-white bg-notion-blue hover:bg-notion-blue-active rounded-micro transition-all flex items-center gap-1.5 shadow-sm">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+                Add Site
+              </button>
+            </>
+          )}
 
           {view === 'analytics' && (
             <>
@@ -812,12 +834,20 @@ const ProfitLoss = ({ syncVersion }) => {
               <h3 className="text-card-title text-notion-black mb-1">No sites configured for {MONTHS[selectedMonth]} {selectedYear}</h3>
               <p className="text-caption text-notion-warm-gray-500 mb-4">Add site columns or copy from a previous period to get started.</p>
               <div className="flex gap-2 justify-center flex-wrap">
-                <button onClick={() => setShowAddSite(true)} className="px-4 py-2 text-sm bg-notion-blue text-white rounded-micro hover:bg-notion-blue-active transition font-semibold shadow-sm">
-                  + Add Site
-                </button>
-                <button onClick={handleCopyPrevious} className="px-4 py-2 text-sm whisper-border text-notion-warm-gray-500 rounded-micro hover:bg-notion-warm-white transition font-semibold">
-                  Copy Previous Period
-                </button>
+                {!isEditMode ? (
+                  <button onClick={() => { setBackupPeriods(JSON.parse(JSON.stringify(allPeriods))); setIsEditMode(true); }} className="px-4 py-2 text-sm bg-notion-blue text-white rounded-micro hover:bg-notion-blue-active transition font-semibold shadow-sm">
+                    Edit Data
+                  </button>
+                ) : (
+                  <>
+                    <button onClick={() => setShowAddSite(true)} className="px-4 py-2 text-sm bg-notion-blue text-white rounded-micro hover:bg-notion-blue-active transition font-semibold shadow-sm">
+                      + Add Site
+                    </button>
+                    <button onClick={handleCopyPrevious} className="px-4 py-2 text-sm whisper-border text-notion-warm-gray-500 rounded-micro hover:bg-notion-warm-white transition font-semibold">
+                      Copy Previous Period
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ) : (
@@ -831,11 +861,13 @@ const ProfitLoss = ({ syncVersion }) => {
                     {currentPeriod.sites.map((site, i) => (
                       <th key={i} className="text-center px-2 py-2.5 font-bold text-notion-black text-[11px] border-b border-r border-zinc-100 min-w-[110px] relative group">
                         <span>{site.name}</span>
-                        <button
-                          onClick={() => handleRemoveSite(i)}
-                          className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 text-[9px] leading-none opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                          title="Remove site"
-                        >×</button>
+                        {isEditMode && (
+                          <button
+                            onClick={() => handleRemoveSite(i)}
+                            className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 text-[9px] leading-none opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                            title="Remove site"
+                          >×</button>
+                        )}
                       </th>
                     ))}
                     <th className="text-center px-2 py-2.5 font-bold text-notion-black text-[11px] border-b border-zinc-100 min-w-[100px] bg-emerald-50/50">
@@ -854,7 +886,7 @@ const ProfitLoss = ({ syncVersion }) => {
                       <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">{row.label}</td>
                       {currentPeriod.sites.map((site, i) => (
                         <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-50">
-                          <EditableCell value={site.revenue?.[row.key] || 0} onChange={v => updateSiteField(i, 'revenue', row.key, v)} />
+                          <EditableCell isEditable={isEditMode} value={site.revenue?.[row.key] || 0} onChange={v => updateSiteField(i, 'revenue', row.key, v)} />
                         </td>
                       ))}
                       <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">{fmt(grandTotals.revenue[row.key])}</td>
@@ -882,7 +914,7 @@ const ProfitLoss = ({ syncVersion }) => {
                       <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">{row.label}</td>
                       {currentPeriod.sites.map((site, i) => (
                         <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-50">
-                          <EditableCell value={site.directCost?.[row.key] || 0} onChange={v => updateSiteField(i, 'directCost', row.key, v)} />
+                          <EditableCell isEditable={isEditMode} value={site.directCost?.[row.key] || 0} onChange={v => updateSiteField(i, 'directCost', row.key, v)} />
                         </td>
                       ))}
                       <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">{fmt(grandTotals.directCost[row.key])}</td>
@@ -932,7 +964,7 @@ const ProfitLoss = ({ syncVersion }) => {
                     <td className="px-3 py-0.5 text-notion-warm-gray-500 font-semibold border-r border-b border-zinc-100 sticky left-0 bg-white z-10">Vehicle Allowance - Income</td>
                     {currentPeriod.sites.map((site, i) => (
                       <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-100">
-                        <EditableCell value={site.vehicleAllowanceIncome || 0} onChange={v => updateSiteField(i, 'vehicleAllowanceIncome', null, v)} />
+                        <EditableCell isEditable={isEditMode} value={site.vehicleAllowanceIncome || 0} onChange={v => updateSiteField(i, 'vehicleAllowanceIncome', null, v)} />
                       </td>
                     ))}
                     <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-100 bg-emerald-50/30">{fmt(grandTotals.vehicleAllowanceIncome)}</td>
@@ -958,7 +990,7 @@ const ProfitLoss = ({ syncVersion }) => {
                       </td>
                       {currentPeriod.sites.map((site, i) => (
                         <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-50">
-                          <EditableCell value={site.managerAllocations?.[mgr.id] || 0} onChange={v => handleUpdateManagerAllocation(i, mgr.id, v)} isPct={true} />
+                          <EditableCell isEditable={isEditMode} value={site.managerAllocations?.[mgr.id] || 0} onChange={v => handleUpdateManagerAllocation(i, mgr.id, v)} isPct={true} />
                         </td>
                       ))}
                       <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">
@@ -975,7 +1007,7 @@ const ProfitLoss = ({ syncVersion }) => {
                           {row.key === 'managerSalary' ? (
                             <div className="w-full h-full px-1.5 py-1 text-right text-xs text-notion-warm-gray-400 font-semibold cursor-not-allowed bg-zinc-50/50" title="Auto-calculated in Overhead Settings">{fmt(site.overhead?.managerSalary || 0)}</div>
                           ) : (
-                            <EditableCell value={site.overhead?.[row.key] || 0} onChange={v => updateSiteField(i, 'overhead', row.key, v)} isPct={row.isPct} />
+                            <EditableCell isEditable={isEditMode} value={site.overhead?.[row.key] || 0} onChange={v => updateSiteField(i, 'overhead', row.key, v)} isPct={row.isPct} />
                           )}
                         </td>
                       ))}
