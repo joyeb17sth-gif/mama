@@ -21,7 +21,7 @@ export const memoryCache = {
   publicHolidays: [],
   periodicalTasks: [],
   globalRates: { ...DEFAULT_GLOBAL_RATES },
-  profitLoss: [],
+  profitLoss: null,
   profiles: null,
   leads: []
 };
@@ -46,7 +46,7 @@ export const initStorage = async () => {
   const keys = Object.keys(memoryCache);
   for (const key of keys) {
     let stored = await localforage.getItem(key);
-    
+
     // Migration from old localStorage
     if (!stored) {
       const legacyStored = localStorage.getItem(key);
@@ -124,7 +124,7 @@ const getSingleFromCloud = async (table, id) => {
         .single();
 
       if (error) return null;
-      
+
       const decrypted = decryptData(data.data);
       if (data.updated_at) {
         const cacheKey = `${table}_${id}`;
@@ -258,14 +258,56 @@ export const saveGlobalRates = async (rates) => {
 export const getGlobalRatesAsync = () => getSingleFromCloud('global_rates', 'main_list');
 export const getGlobalRates = () => ({ ...DEFAULT_GLOBAL_RATES, ...(memoryCache.globalRates || {}) });
 
-// --- PROFIT & LOSS ---
+// --- PROFIT & LOSS (Multi-Company) ---
+// Data shape: { version: 2, profiles: [...], companies: { companyId: [...periods] } }
+// Backward compat: if loaded data is an old-style array, it gets auto-migrated.
+
+const DEFAULT_PL_PROFILES = [
+  { id: 'seetal_management', name: 'Seetal Management', type: 'site_based', color: '#0075de', icon: 'building' },
+  { id: 'search_education', name: 'Search Education', type: 'income_expense', color: '#7c3aed', icon: 'graduation' },
+  { id: 'medisafe', name: 'Medisafe', type: 'cogs_based', color: '#059669', icon: 'medical' },
+];
+
+export const migrateProfitLossData = (raw) => {
+  // Already new format
+  if (raw && raw.version === 2 && raw.profiles && raw.companies) {
+    return raw;
+  }
+  // Old format: an array of periods — migrate to Seetal Management
+  if (Array.isArray(raw)) {
+    return {
+      version: 2,
+      profiles: [...DEFAULT_PL_PROFILES],
+      companies: {
+        seetal_management: raw,
+        search_education: [],
+        medisafe: [],
+      },
+    };
+  }
+  // Empty / null
+  return {
+    version: 2,
+    profiles: [...DEFAULT_PL_PROFILES],
+    companies: {
+      seetal_management: [],
+      search_education: [],
+      medisafe: [],
+    },
+  };
+};
+
 export const saveProfitLoss = async (data) => {
-  memoryCache.profitLoss = data;
-  await localforage.setItem('profitLoss', encryptData(data));
-  await saveToCloud('profit_loss', 'main_list', data);
+  const migrated = migrateProfitLossData(data);
+  memoryCache.profitLoss = migrated;
+  await localforage.setItem('profitLoss', encryptData(migrated));
+  await saveToCloud('profit_loss', 'main_list', migrated);
 };
 export const getProfitLossAsync = () => getSingleFromCloud('profit_loss', 'main_list');
-export const getProfitLoss = () => memoryCache.profitLoss;
+export const getProfitLoss = () => {
+  const raw = memoryCache.profitLoss;
+  return migrateProfitLossData(raw);
+};
 
 // --- LEADS ---
 export const saveLeads = async (leads) => {

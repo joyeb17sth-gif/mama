@@ -79,7 +79,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
       } else {
         exactDateStr = getExactDateForMonth(task, sMonthDate);
       }
-      
+
       if (exactDateStr && exactDateStr !== 'Not Set') {
         const parts = exactDateStr.split('-');
         if (parts.length === 3) {
@@ -87,27 +87,27 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
           const targetMonth = parseInt(s.targetPeriod.split('-')[1], 10);
           const exactMonth = parseInt(parts[1], 10);
           if (exactMonth < targetMonth && (targetMonth - exactMonth) >= 6) {
-             exactYear += 1;
+            exactYear += 1;
           } else if (exactMonth > targetMonth && (exactMonth - targetMonth) >= 6) {
-             exactYear -= 1;
+            exactYear -= 1;
           }
           return exactYear === monthDate.getFullYear() && exactMonth === monthDate.getMonth() + 1;
         }
       }
       return s.targetPeriod === targetPeriod;
     });
-    
+
     if (!monthSchedules || monthSchedules.length === 0) return undefined;
     if (monthSchedules.length === 1) return monthSchedules[0];
 
     // Aggregate status for multiple schedules (e.g. Weekly)
     const allCompleted = monthSchedules.every(s => s.status === 'Completed' || s.status === 'Completed Not Claimed');
     const allNotClaimed = monthSchedules.every(s => s.status === 'Completed Not Claimed');
-    
+
     let overallStatus = 'Scheduled';
     if (allNotClaimed) overallStatus = 'Completed Not Claimed';
     else if (allCompleted) overallStatus = 'Completed';
-    
+
     return { ...monthSchedules[0], status: overallStatus, isAggregated: true };
   };
 
@@ -116,34 +116,34 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
     const monthIndex = monthDate.getMonth();
     const periods = task.periodBudgets || [];
     if (!periods.length) return 'Not Set';
-    
+
     if (task.frequency === 'Monthly') {
-       const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex];
-       return periods.find(p => p.name === monthName)?.exactDate || 'Not Set';
+      const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex];
+      return periods.find(p => p.name === monthName)?.exactDate || 'Not Set';
     }
     if (task.frequency === 'Quarterly') {
-       let diff = monthIndex - (task.startingMonth || 0);
-       if (diff < 0) diff += 12;
-       const qIndex = Math.floor(diff / 3);
-       const expectedName = qIndex === 0 ? '1st Quarter' : qIndex === 1 ? '2nd Quarter' : qIndex === 2 ? '3rd Quarter' : '4th Quarter';
-       const period = periods.find(p => p.name === expectedName);
-       if (period?.isDisabled) return 'Not Set';
-       return period?.exactDate || 'Not Set';
+      let diff = monthIndex - (task.startingMonth || 0);
+      if (diff < 0) diff += 12;
+      const qIndex = Math.floor(diff / 3);
+      const expectedName = qIndex === 0 ? '1st Quarter' : qIndex === 1 ? '2nd Quarter' : qIndex === 2 ? '3rd Quarter' : '4th Quarter';
+      const period = periods.find(p => p.name === expectedName);
+      if (period?.isDisabled) return 'Not Set';
+      return period?.exactDate || 'Not Set';
     }
     if (task.frequency === '6 Monthly') {
-       let diff = monthIndex - (task.startingMonth || 0);
-       if (diff < 0) diff += 12;
-       const hIndex = Math.floor(diff / 6);
-       const expectedName = hIndex === 0 ? '1st Half' : '2nd Half';
-       const period = periods.find(p => p.name === expectedName);
-       if (period?.isDisabled) return 'Not Set';
-       return period?.exactDate || 'Not Set';
+      let diff = monthIndex - (task.startingMonth || 0);
+      if (diff < 0) diff += 12;
+      const hIndex = Math.floor(diff / 6);
+      const expectedName = hIndex === 0 ? '1st Half' : '2nd Half';
+      const period = periods.find(p => p.name === expectedName);
+      if (period?.isDisabled) return 'Not Set';
+      return period?.exactDate || 'Not Set';
     }
     if (task.frequency === 'Yearly' || task.frequency === 'Weekly') {
-       return periods[0]?.exactDate || 'Not Set';
+      return periods[0]?.exactDate || 'Not Set';
     }
     if (task.frequency === 'Custom Date') {
-       return periods[0]?.customDate || 'Not Set';
+      return periods[0]?.customDate || 'Not Set';
     }
     return 'Not Set';
   };
@@ -153,31 +153,31 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
     const monthIndex = monthDate.getMonth();
     const periods = task.periodBudgets || [];
     if (!periods.length) return '';
-    
+
     if (task.frequency === 'Monthly') {
-       const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex];
-       return periods.find(p => p.name === monthName)?.endDate || '';
+      const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex];
+      return periods.find(p => p.name === monthName)?.endDate || '';
     }
     if (task.frequency === 'Quarterly') {
-       let diff = monthIndex - (task.startingMonth || 0);
-       if (diff < 0) diff += 12;
-       const qIndex = Math.floor(diff / 3);
-       const expectedName = qIndex === 0 ? '1st Quarter' : qIndex === 1 ? '2nd Quarter' : qIndex === 2 ? '3rd Quarter' : '4th Quarter';
-       const period = periods.find(p => p.name === expectedName);
-       if (period?.isDisabled) return '';
-       return period?.endDate || '';
+      let diff = monthIndex - (task.startingMonth || 0);
+      if (diff < 0) diff += 12;
+      const qIndex = Math.floor(diff / 3);
+      const expectedName = qIndex === 0 ? '1st Quarter' : qIndex === 1 ? '2nd Quarter' : qIndex === 2 ? '3rd Quarter' : '4th Quarter';
+      const period = periods.find(p => p.name === expectedName);
+      if (period?.isDisabled) return '';
+      return period?.endDate || '';
     }
     if (task.frequency === '6 Monthly') {
-       let diff = monthIndex - (task.startingMonth || 0);
-       if (diff < 0) diff += 12;
-       const hIndex = Math.floor(diff / 6);
-       const expectedName = hIndex === 0 ? '1st Half' : '2nd Half';
-       const period = periods.find(p => p.name === expectedName);
-       if (period?.isDisabled) return '';
-       return period?.endDate || '';
+      let diff = monthIndex - (task.startingMonth || 0);
+      if (diff < 0) diff += 12;
+      const hIndex = Math.floor(diff / 6);
+      const expectedName = hIndex === 0 ? '1st Half' : '2nd Half';
+      const period = periods.find(p => p.name === expectedName);
+      if (period?.isDisabled) return '';
+      return period?.endDate || '';
     }
     if (task.frequency === 'Yearly' || task.frequency === 'Weekly' || task.frequency === 'Custom Date') {
-       return periods[0]?.endDate || '';
+      return periods[0]?.endDate || '';
     }
     return '';
   };
@@ -187,31 +187,31 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
     const monthIndex = monthDate.getMonth();
     const periods = task.periodBudgets || [];
     if (!periods.length) return '';
-    
+
     if (task.frequency === 'Monthly') {
-       const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex];
-       return periods.find(p => p.name === monthName)?.scopeOfWork || '';
+      const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex];
+      return periods.find(p => p.name === monthName)?.scopeOfWork || '';
     }
     if (task.frequency === 'Quarterly') {
-       let diff = monthIndex - (task.startingMonth || 0);
-       if (diff < 0) diff += 12;
-       const qIndex = Math.floor(diff / 3);
-       const expectedName = qIndex === 0 ? '1st Quarter' : qIndex === 1 ? '2nd Quarter' : qIndex === 2 ? '3rd Quarter' : '4th Quarter';
-       const period = periods.find(p => p.name === expectedName);
-       if (period?.isDisabled) return '';
-       return period?.scopeOfWork || '';
+      let diff = monthIndex - (task.startingMonth || 0);
+      if (diff < 0) diff += 12;
+      const qIndex = Math.floor(diff / 3);
+      const expectedName = qIndex === 0 ? '1st Quarter' : qIndex === 1 ? '2nd Quarter' : qIndex === 2 ? '3rd Quarter' : '4th Quarter';
+      const period = periods.find(p => p.name === expectedName);
+      if (period?.isDisabled) return '';
+      return period?.scopeOfWork || '';
     }
     if (task.frequency === '6 Monthly') {
-       let diff = monthIndex - (task.startingMonth || 0);
-       if (diff < 0) diff += 12;
-       const hIndex = Math.floor(diff / 6);
-       const expectedName = hIndex === 0 ? '1st Half' : '2nd Half';
-       const period = periods.find(p => p.name === expectedName);
-       if (period?.isDisabled) return '';
-       return period?.scopeOfWork || '';
+      let diff = monthIndex - (task.startingMonth || 0);
+      if (diff < 0) diff += 12;
+      const hIndex = Math.floor(diff / 6);
+      const expectedName = hIndex === 0 ? '1st Half' : '2nd Half';
+      const period = periods.find(p => p.name === expectedName);
+      if (period?.isDisabled) return '';
+      return period?.scopeOfWork || '';
     }
     if (task.frequency === 'Yearly' || task.frequency === 'Weekly' || task.frequency === 'Custom Date') {
-       return periods[0]?.scopeOfWork || '';
+      return periods[0]?.scopeOfWork || '';
     }
     return '';
   };
@@ -221,29 +221,29 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
     const monthIndex = monthDate.getMonth();
     const periods = task.periodBudgets || [];
     if (!periods.length) return null;
-    
+
     let targetPeriod = null;
     if (task.frequency === 'Monthly') {
-       const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex];
-       targetPeriod = periods.find(p => p.name === monthName);
+      const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex];
+      targetPeriod = periods.find(p => p.name === monthName);
     } else if (task.frequency === 'Quarterly') {
-       let diff = monthIndex - (task.startingMonth || 0);
-       if (diff < 0) diff += 12;
-       const qIndex = Math.floor(diff / 3);
-       const expectedName = qIndex === 0 ? '1st Quarter' : qIndex === 1 ? '2nd Quarter' : qIndex === 2 ? '3rd Quarter' : '4th Quarter';
-       targetPeriod = periods.find(p => p.name === expectedName);
+      let diff = monthIndex - (task.startingMonth || 0);
+      if (diff < 0) diff += 12;
+      const qIndex = Math.floor(diff / 3);
+      const expectedName = qIndex === 0 ? '1st Quarter' : qIndex === 1 ? '2nd Quarter' : qIndex === 2 ? '3rd Quarter' : '4th Quarter';
+      targetPeriod = periods.find(p => p.name === expectedName);
     } else if (task.frequency === '6 Monthly') {
-       let diff = monthIndex - (task.startingMonth || 0);
-       if (diff < 0) diff += 12;
-       const hIndex = Math.floor(diff / 6);
-       const expectedName = hIndex === 0 ? '1st Half' : '2nd Half';
-       targetPeriod = periods.find(p => p.name === expectedName);
+      let diff = monthIndex - (task.startingMonth || 0);
+      if (diff < 0) diff += 12;
+      const hIndex = Math.floor(diff / 6);
+      const expectedName = hIndex === 0 ? '1st Half' : '2nd Half';
+      targetPeriod = periods.find(p => p.name === expectedName);
     } else if (task.frequency === 'Yearly' || task.frequency === 'Weekly' || task.frequency === 'Custom Date') {
-       targetPeriod = periods[0];
+      targetPeriod = periods[0];
     }
-    
+
     if (targetPeriod && !targetPeriod.isDisabled && targetPeriod.scopeFileUrl) {
-       return { url: targetPeriod.scopeFileUrl, name: targetPeriod.scopeFileName };
+      return { url: targetPeriod.scopeFileUrl, name: targetPeriod.scopeFileName };
     }
     return null;
   };
@@ -280,9 +280,9 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
             const targetMonth = parseInt(schedule.targetPeriod.split('-')[1], 10);
             const exactMonth = parseInt(parts[1], 10);
             if (exactMonth < targetMonth && (targetMonth - exactMonth) >= 6) {
-               exactYear += 1;
+              exactYear += 1;
             } else if (exactMonth > targetMonth && (exactMonth - targetMonth) >= 6) {
-               exactYear -= 1;
+              exactYear -= 1;
             }
             displayExactDate = `${exactYear}-${parts[1]}-${parts[2]}`;
           }
@@ -307,38 +307,38 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
         if (endDateStr && task.frequency !== 'Weekly') {
           const parts = endDateStr.split('-');
           if (parts.length === 3) {
-             displayEndDate = endDateStr;
-             parsedEnd = parseISO(displayEndDate);
+            displayEndDate = endDateStr;
+            parsedEnd = parseISO(displayEndDate);
           } else if (parts.length === 2) {
-             let endYear = displayExactDate && displayExactDate !== 'Not Set' 
-                ? parseInt(displayExactDate.split('-')[0], 10) 
-                : parseInt(schedule.targetPeriod.split('-')[0], 10);
-             const endMonth = parseInt(parts[0], 10);
-             
-             if (displayExactDate && displayExactDate !== 'Not Set') {
-               const exactMonth = parseInt(displayExactDate.split('-')[1], 10);
-               if (endMonth < exactMonth) {
-                 endYear += 1;
-               }
-             } else {
-               const targetMonth = parseInt(schedule.targetPeriod.split('-')[1], 10);
-               if (endMonth < targetMonth && (targetMonth - endMonth) >= 6) {
-                 endYear += 1;
-               }
-             }
-             
-             displayEndDate = `${endYear}-${parts[0]}-${parts[1]}`;
-             parsedEnd = parseISO(displayEndDate);
+            let endYear = displayExactDate && displayExactDate !== 'Not Set'
+              ? parseInt(displayExactDate.split('-')[0], 10)
+              : parseInt(schedule.targetPeriod.split('-')[0], 10);
+            const endMonth = parseInt(parts[0], 10);
+
+            if (displayExactDate && displayExactDate !== 'Not Set') {
+              const exactMonth = parseInt(displayExactDate.split('-')[1], 10);
+              if (endMonth < exactMonth) {
+                endYear += 1;
+              }
+            } else {
+              const targetMonth = parseInt(schedule.targetPeriod.split('-')[1], 10);
+              if (endMonth < targetMonth && (targetMonth - endMonth) >= 6) {
+                endYear += 1;
+              }
+            }
+
+            displayEndDate = `${endYear}-${parts[0]}-${parts[1]}`;
+            parsedEnd = parseISO(displayEndDate);
           }
         } else if (task.frequency === 'Weekly') {
-           displayEndDate = displayExactDate;
-           parsedEnd = scheduleDate;
+          displayEndDate = displayExactDate;
+          parsedEnd = scheduleDate;
         }
 
         if (parsedEnd && !isNaN(parsedEnd)) {
-           scheduleEndDate = parsedEnd;
+          scheduleEndDate = parsedEnd;
         } else {
-           scheduleEndDate = scheduleDate;
+          scheduleEndDate = scheduleDate;
         }
 
         if (exactDateStr && exactDateStr !== 'Not Set') {
@@ -402,7 +402,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
 
     if (upcomingFilter === 'all') return onlyScheduled;
     if (upcomingFilter === 'past_due') return onlyScheduled.filter(item => item.isPastDue);
-    
+
     const today = startOfDay(new Date());
     let endDate;
     if (upcomingFilter === '1week') {
@@ -432,10 +432,10 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
 
   const getTasksForDay = (day) => {
     return upcomingSchedules.filter(item => {
-       const start = startOfDay(item.scheduleDate);
-       const end = startOfDay(item.scheduleEndDate);
-       const current = startOfDay(day);
-       return (current.getTime() >= start.getTime() && current.getTime() <= end.getTime());
+      const start = startOfDay(item.scheduleDate);
+      const end = startOfDay(item.scheduleEndDate);
+      const current = startOfDay(day);
+      return (current.getTime() >= start.getTime() && current.getTime() <= end.getTime());
     });
   };
 
@@ -446,17 +446,17 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <h3 className="font-bold text-notion-black text-base md:text-lg">Periodical Task List</h3>
           <div className="grid grid-cols-3 sm:flex w-full sm:w-auto bg-white rounded-micro p-1 shadow-sm border border-notion-warm-gray-200 gap-1 sm:gap-0">
-            <button 
-               className={`px-1 sm:px-3 py-1.5 sm:py-1 rounded-micro text-[10px] sm:text-xs font-bold transition-all text-center truncate ${viewMode === 'matrix' ? 'bg-notion-blue text-white shadow-sm' : 'text-notion-warm-gray-500 hover:text-notion-black'}`}
-               onClick={() => setViewMode('matrix')}
+            <button
+              className={`px-1 sm:px-3 py-1.5 sm:py-1 rounded-micro text-[10px] sm:text-xs font-bold transition-all text-center truncate ${viewMode === 'matrix' ? 'bg-notion-blue text-white shadow-sm' : 'text-notion-warm-gray-500 hover:text-notion-black'}`}
+              onClick={() => setViewMode('matrix')}
             >Matrix</button>
-            <button 
-               className={`px-1 sm:px-3 py-1.5 sm:py-1 rounded-micro text-[10px] sm:text-xs font-bold transition-all text-center truncate ${viewMode === 'upcoming' ? 'bg-notion-blue text-white shadow-sm' : 'text-notion-warm-gray-500 hover:text-notion-black'}`}
-               onClick={() => setViewMode('upcoming')}
+            <button
+              className={`px-1 sm:px-3 py-1.5 sm:py-1 rounded-micro text-[10px] sm:text-xs font-bold transition-all text-center truncate ${viewMode === 'upcoming' ? 'bg-notion-blue text-white shadow-sm' : 'text-notion-warm-gray-500 hover:text-notion-black'}`}
+              onClick={() => setViewMode('upcoming')}
             >Upcoming</button>
-            <button 
-               className={`px-1 sm:px-3 py-1.5 sm:py-1 rounded-micro text-[10px] sm:text-xs font-bold transition-all text-center truncate ${viewMode === 'calendar' ? 'bg-notion-blue text-white shadow-sm' : 'text-notion-warm-gray-500 hover:text-notion-black'}`}
-               onClick={() => setViewMode('calendar')}
+            <button
+              className={`px-1 sm:px-3 py-1.5 sm:py-1 rounded-micro text-[10px] sm:text-xs font-bold transition-all text-center truncate ${viewMode === 'calendar' ? 'bg-notion-blue text-white shadow-sm' : 'text-notion-warm-gray-500 hover:text-notion-black'}`}
+              onClick={() => setViewMode('calendar')}
             >Calendar</button>
           </div>
           <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2">
@@ -484,7 +484,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
             </div>
           </div>
         </div>
-        
+
         {viewMode === 'upcoming' && (
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full md:w-auto">
             <div className="w-full sm:w-40">
@@ -506,7 +506,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
         {viewMode === 'calendar' && (
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full md:w-auto">
             <div className="flex items-center justify-between sm:justify-start gap-2 bg-white rounded-micro p-1 shadow-sm border border-notion-warm-gray-200 w-full sm:w-auto">
-              <button 
+              <button
                 onClick={() => setCalendarDate(subMonths(calendarDate, 1))}
                 className="px-3 sm:px-2 py-2 sm:py-1 text-notion-warm-gray-500 hover:text-notion-black hover:bg-notion-warm-white rounded transition"
               >
@@ -515,7 +515,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
               <div className="px-3 py-1 text-xs font-bold text-notion-black min-w-[120px] text-center flex-1 sm:flex-none">
                 {format(calendarDate, 'MMMM yyyy')}
               </div>
-              <button 
+              <button
                 onClick={() => setCalendarDate(addMonths(calendarDate, 1))}
                 className="px-3 sm:px-2 py-2 sm:py-1 text-notion-warm-gray-500 hover:text-notion-black hover:bg-notion-warm-white rounded transition"
               >
@@ -571,7 +571,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                   </td>
                 </tr>
               )}
-              
+
               {groupedTasks.map(({ site, tasks }) => (
                 <React.Fragment key={site?.id || 'unknown'}>
                   {/* Site Header Row */}
@@ -591,7 +591,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                       )}
                     </td>
                   </tr>
-                  
+
                   {/* Task Rows */}
                   {tasks.map(task => (
                     <tr key={task.id} className="border-b border-notion-warm-gray-200 hover:bg-notion-warm-white transition-colors">
@@ -610,13 +610,13 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                       <td className="px-3 py-1.5 border-r border-notion-warm-gray-200 text-center font-semibold bg-emerald-100 text-emerald-700 border-b border-white">
                         {Number(task.budgetHours || 0).toFixed(2)}
                       </td>
-                      
+
                       {/* Schedule Cells */}
                       {months.map(month => {
                         const schedule = getScheduleForMonth(task, month);
                         return (
-                          <td 
-                            key={month.toISOString()} 
+                          <td
+                            key={month.toISOString()}
                             onClick={() => {
                               if (schedule) {
                                 if (schedule.isAggregated) {
@@ -651,14 +651,13 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                                 setActivePopup({ task, schedule, monthDisplay: format(month, 'MMM yyyy'), monthDate: sMonthDate, scheduleDate: popupScheduleDate });
                               }
                             }}
-                            className={`border-r border-white border-b text-center cursor-pointer hover:opacity-80 transition-opacity ${
-                              schedule ? getStatusColor(schedule.status) : 'bg-transparent border-r-notion-warm-gray-200'
-                            }`}
+                            className={`border-r border-white border-b text-center cursor-pointer hover:opacity-80 transition-opacity ${schedule ? getStatusColor(schedule.status) : 'bg-transparent border-r-notion-warm-gray-200'
+                              }`}
                             title={schedule ? `${schedule.taskNameOverride || task.taskName}\nDate: ${schedule.exactDate || 'Default'}\nBudget: ${schedule.budgetHoursOverride !== undefined ? schedule.budgetHoursOverride : task.budgetHours} Hrs` : ''}
                           >
-                             <span className="text-[10px] font-bold">
-                               {schedule ? getStatusDisplay(schedule.status) : ''}
-                             </span>
+                            <span className="text-[10px] font-bold">
+                              {schedule ? getStatusDisplay(schedule.status) : ''}
+                            </span>
                           </td>
                         );
                       })}
@@ -675,9 +674,9 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
       {viewMode === 'upcoming' && (
         <div className="overflow-x-auto w-full custom-scrollbar p-1">
           {filteredUpcomingSchedules.length === 0 ? (
-             <div className="py-12 text-center text-notion-warm-gray-500 bg-white">
-               No upcoming scheduled tasks found.
-             </div>
+            <div className="py-12 text-center text-notion-warm-gray-500 bg-white">
+              No upcoming scheduled tasks found.
+            </div>
           ) : (
             <table className="w-full text-xs md:text-sm text-left whitespace-nowrap min-w-max border-collapse shadow-sm">
               <thead>
@@ -704,9 +703,9 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                           )}
                         </div>
                         {item.exactDate && item.exactDate !== 'Not Set' && (
-                           <span className="text-[10px] font-bold text-notion-warm-gray-400 uppercase tracking-widest">
-                             {item.exactDate} {item.endDate ? ` - ${item.endDate}` : ''}
-                           </span>
+                          <span className="text-[10px] font-bold text-notion-warm-gray-400 uppercase tracking-widest">
+                            {item.exactDate} {item.endDate ? ` - ${item.endDate}` : ''}
+                          </span>
                         )}
                       </div>
                     </td>
@@ -728,7 +727,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                       {((item.schedule.assignedToOverride !== undefined ? item.schedule.assignedToOverride : item.task.assignedTo) && (item.schedule.assignedToOverride !== undefined ? item.schedule.assignedToOverride : item.task.assignedTo).length > 0) ? (
                         <div className="flex items-center -space-x-1.5">
                           {(Array.isArray(item.schedule.assignedToOverride !== undefined ? item.schedule.assignedToOverride : item.task.assignedTo) ? (item.schedule.assignedToOverride !== undefined ? item.schedule.assignedToOverride : item.task.assignedTo) : [item.schedule.assignedToOverride !== undefined ? item.schedule.assignedToOverride : item.task.assignedTo]).map((assignee, idx) => {
-                            const colors = ['bg-blue-500','bg-emerald-500','bg-violet-500','bg-amber-500','bg-rose-500','bg-cyan-500','bg-indigo-500','bg-pink-500'];
+                            const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500', 'bg-rose-500', 'bg-cyan-500', 'bg-indigo-500', 'bg-pink-500'];
                             const letter = (assignee || '?')[0].toUpperCase();
                             return (
                               <div key={idx} className="relative group/avatar">
@@ -750,7 +749,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                     <td className="px-4 py-3 max-w-xs truncate text-notion-warm-gray-500" title={item.scope}>
                       {getDefaultScopeFileForMonth(item.task, item.monthDate) ? (
                         <a href={getDefaultScopeFileForMonth(item.task, item.monthDate).url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-notion-blue hover:underline text-xs font-bold">
-                           {getDefaultScopeFileForMonth(item.task, item.monthDate).name || 'View Document'}
+                          {getDefaultScopeFileForMonth(item.task, item.monthDate).name || 'View Document'}
                         </a>
                       ) : (
                         <span>{item.scope || 'No scope defined'}</span>
@@ -782,12 +781,12 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                             setPopupStatus(item.schedule.status);
                             setPopupHours(item.schedule.completedHours || '');
                             setPopupCompletionDate(item.schedule.completionDate || format(new Date(), 'yyyy-MM-dd'));
-                            setActivePopup({ 
-                              task: item.task, 
-                              schedule: item.schedule, 
-                              monthDisplay: item.monthDisplay, 
+                            setActivePopup({
+                              task: item.task,
+                              schedule: item.schedule,
+                              monthDisplay: item.monthDisplay,
                               monthDate: item.monthDate,
-                              scheduleDate: item.scheduleDate 
+                              scheduleDate: item.scheduleDate
                             });
                           }}
                           className="px-3 py-1.5 bg-white text-notion-blue text-xs font-bold border border-notion-warm-gray-200 rounded-micro hover:bg-notion-badge-blue-bg transition shadow-sm"
@@ -819,13 +818,13 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
               const isTodayDate = isToday(day);
               const dayKey = day.toISOString();
               const isExpanded = expandedDays.has(dayKey);
-              
+
               const visibleTasks = isExpanded ? dayTasks : dayTasks.slice(0, 3);
               const hiddenCount = dayTasks.length - 3;
 
               return (
-                <div 
-                  key={day.toString()} 
+                <div
+                  key={day.toString()}
                   className={`min-h-[120px] p-1 md:p-2 flex flex-col gap-1 transition-colors ${isCurrentMonth ? 'bg-white' : 'bg-notion-warm-white/50 opacity-60'}`}
                 >
                   <div className="flex justify-between items-start shrink-0">
@@ -835,33 +834,32 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                   </div>
                   <div className="flex flex-col gap-1 mt-1 overflow-y-auto custom-scrollbar flex-1">
                     {visibleTasks.map((item, idx) => (
-                      <div 
+                      <div
                         key={idx}
                         onClick={() => {
                           setPopupScopeOfWork(item.scope);
                           setPopupStatus(item.schedule.status);
                           setPopupHours(item.schedule.completedHours || '');
                           setPopupCompletionDate(item.schedule.completionDate || format(new Date(), 'yyyy-MM-dd'));
-                          setActivePopup({ 
-                            task: item.task, 
-                            schedule: item.schedule, 
-                            monthDisplay: item.monthDisplay, 
+                          setActivePopup({
+                            task: item.task,
+                            schedule: item.schedule,
+                            monthDisplay: item.monthDisplay,
                             monthDate: item.monthDate,
-                            scheduleDate: item.scheduleDate 
+                            scheduleDate: item.scheduleDate
                           });
                         }}
-                        className={`shrink-0 text-[9px] md:text-[10px] font-bold px-1.5 py-1.5 rounded cursor-pointer truncate shadow-sm transition hover:opacity-80 border-l-2 ${
-                          item.schedule.status === 'Completed' ? 'bg-amber-50 text-amber-900 border-amber-400' : 
-                          item.schedule.status === 'Scheduled' ? 'bg-blue-50 text-notion-blue border-notion-blue' :
-                          'bg-gray-100 text-gray-600 border-gray-400'
-                        }`}
+                        className={`shrink-0 text-[9px] md:text-[10px] font-bold px-1.5 py-1.5 rounded cursor-pointer truncate shadow-sm transition hover:opacity-80 border-l-2 ${item.schedule.status === 'Completed' ? 'bg-amber-50 text-amber-900 border-amber-400' :
+                            item.schedule.status === 'Scheduled' ? 'bg-blue-50 text-notion-blue border-notion-blue' :
+                              'bg-gray-100 text-gray-600 border-gray-400'
+                          }`}
                         title={`${item.schedule.taskNameOverride || item.task.taskName} - ${item.site?.siteName}`}
                       >
                         {item.schedule.taskNameOverride || item.task.taskName}
                       </div>
                     ))}
                     {hiddenCount > 0 && !isExpanded && (
-                      <button 
+                      <button
                         onClick={() => {
                           const newExpanded = new Set(expandedDays);
                           newExpanded.add(dayKey);
@@ -873,7 +871,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                       </button>
                     )}
                     {isExpanded && hiddenCount > 0 && (
-                      <button 
+                      <button
                         onClick={() => {
                           const newExpanded = new Set(expandedDays);
                           newExpanded.delete(dayKey);
@@ -917,14 +915,14 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                   Edit Instance
                 </button>
-                <button 
+                <button
                   onClick={() => setActivePopup(null)}
                   className="text-notion-warm-gray-500 hover:text-notion-black transition-colors"
                 >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
             </div>
             <div className="p-4 sm:p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1">
@@ -932,7 +930,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                 <p><span className="text-notion-warm-gray-500 font-medium">Task:</span> <span className="font-semibold text-notion-black">{activePopup.schedule.taskNameOverride || activePopup.task.taskName} ({activePopup.schedule.taskCodeOverride || activePopup.task.taskCode})</span></p>
                 <p><span className="text-notion-warm-gray-500 font-medium">Budget:</span> <span className="font-semibold text-notion-black">{Number(activePopup.schedule.budgetHoursOverride !== undefined ? activePopup.schedule.budgetHoursOverride : (activePopup.task.budgetHours || 0)).toFixed(2)} Hrs</span></p>
                 <p className="text-sm mb-1 text-notion-warm-gray-600">
-                  <span className="text-notion-warm-gray-500 font-medium">Period:</span> 
+                  <span className="text-notion-warm-gray-500 font-medium">Period:</span>
                   <span className="font-semibold text-notion-black">
                     {format(activePopup.scheduleDate || activePopup.monthDate, 'MMM yyyy')}
                   </span>
@@ -943,7 +941,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                   {((activePopup.schedule.assignedToOverride !== undefined ? activePopup.schedule.assignedToOverride : activePopup.task.assignedTo) && (activePopup.schedule.assignedToOverride !== undefined ? activePopup.schedule.assignedToOverride : activePopup.task.assignedTo).length > 0) ? (
                     <div className="flex items-center -space-x-1.5">
                       {(Array.isArray(activePopup.schedule.assignedToOverride !== undefined ? activePopup.schedule.assignedToOverride : activePopup.task.assignedTo) ? (activePopup.schedule.assignedToOverride !== undefined ? activePopup.schedule.assignedToOverride : activePopup.task.assignedTo) : [activePopup.schedule.assignedToOverride !== undefined ? activePopup.schedule.assignedToOverride : activePopup.task.assignedTo]).map((assignee, idx) => {
-                        const colors = ['bg-blue-500','bg-emerald-500','bg-violet-500','bg-amber-500','bg-rose-500','bg-cyan-500','bg-indigo-500','bg-pink-500'];
+                        const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500', 'bg-rose-500', 'bg-cyan-500', 'bg-indigo-500', 'bg-pink-500'];
                         const letter = (assignee || '?')[0].toUpperCase();
                         return (
                           <div key={idx} className="relative group/avatar">
@@ -968,10 +966,10 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                 <div className="flex justify-between items-center mb-2">
                   <label className="block text-sm font-medium text-notion-warm-gray-500">Scope of Work</label>
                   {getDefaultScopeFileForMonth(activePopup.task, activePopup.monthDate) && (
-                    <a 
-                      href={getDefaultScopeFileForMonth(activePopup.task, activePopup.monthDate).url} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
+                    <a
+                      href={getDefaultScopeFileForMonth(activePopup.task, activePopup.monthDate).url}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="text-xs font-bold text-notion-blue bg-notion-badge-blue-bg px-2 py-1 rounded-micro hover:bg-notion-blue hover:text-white transition-colors"
                     >
                       View Document
@@ -994,11 +992,10 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                       key={status}
                       type="button"
                       onClick={() => setPopupStatus(status)}
-                      className={`px-4 py-2 text-left rounded-md text-sm transition-all border ${
-                        popupStatus === status 
+                      className={`px-4 py-2 text-left rounded-md text-sm transition-all border ${popupStatus === status
                           ? 'border-notion-blue bg-blue-50 text-notion-blue font-semibold shadow-sm'
                           : 'border-notion-warm-gray-200 hover:bg-notion-warm-white hover:border-notion-warm-gray-300 text-notion-black'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${getStatusColor(status).split(' ')[0]}`}></div>
@@ -1065,7 +1062,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                 <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                 <h3 className="font-bold text-sm">Action Restricted</h3>
               </div>
-              <button 
+              <button
                 onClick={() => setShowAggregatedWarning(false)}
                 className="text-amber-700 hover:text-amber-900 transition-colors"
               >
@@ -1100,7 +1097,7 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                 <h3 className="font-bold text-notion-black text-base">Edit Instance Details</h3>
                 <p className="text-xs text-notion-warm-gray-500 mt-0.5">Changes apply only to this specific visit.</p>
               </div>
-              <button 
+              <button
                 onClick={() => setEditingScheduleOverride(null)}
                 className="text-notion-warm-gray-500 hover:text-notion-black transition-colors"
               >
@@ -1191,8 +1188,8 @@ const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOv
                 onClick={() => {
                   if (onUpdateScheduleOverrides) {
                     onUpdateScheduleOverrides(
-                      editingScheduleOverride.task.id, 
-                      editingScheduleOverride.schedule.id, 
+                      editingScheduleOverride.task.id,
+                      editingScheduleOverride.schedule.id,
                       {
                         taskNameOverride: editingScheduleOverride.taskNameOverride,
                         taskCodeOverride: editingScheduleOverride.taskCodeOverride,

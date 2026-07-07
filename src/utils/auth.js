@@ -78,15 +78,15 @@ export const loginUser = async (email, password) => {
 
   if (error) {
     recordFailedAttempt();
-    
+
     // Sanitize error to prevent backend leakage
     let safeMessage = 'Invalid login credentials.';
     if (error.message.includes('Email not confirmed')) {
-        safeMessage = 'Email not confirmed. Please check your inbox.';
+      safeMessage = 'Email not confirmed. Please check your inbox.';
     }
-    
-    return { 
-      success: false, 
+
+    return {
+      success: false,
       error: safeMessage,
       attemptsRemaining: Math.max(0, MAX_LOGIN_ATTEMPTS - loginAttempts)
     };
@@ -112,7 +112,7 @@ export const isAuthenticated = async () => {
 };
 
 export const setAuthenticated = (status) => {
-    // No-op. Session state is managed by Supabase Auth now.
+  // No-op. Session state is managed by Supabase Auth now.
 };
 
 export const resetPasswordForEmail = async (email) => {

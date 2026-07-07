@@ -12,14 +12,14 @@ const LeadManager = ({ leads, onSave }) => {
     const fakeLeads = [];
     const sources = ['Website', 'Referral', 'Social Media', 'Walk in'];
     const names = ['John Doe', 'Sarah Smith', 'Michael Johnson', 'Emily Davis', 'Chris Wilson', 'Anna Brown', 'James Taylor', 'Laura Martinez', 'David Anderson', 'Lisa Thomas'];
-    
+
     // Generate 200 leads across 2025 and 2026
     for (let i = 0; i < 200; i++) {
       const createdDate = new Date();
       createdDate.setFullYear(2026);
       createdDate.setMonth(Math.floor(Math.random() * 12)); // 0 (Jan) to 11 (Dec)
       createdDate.setDate(Math.floor(Math.random() * 28) + 1); // random day 1-28
-      
+
       const randConversion = Math.random();
       let conversion = null;
       let convertedDate = null;
@@ -39,7 +39,7 @@ const LeadManager = ({ leads, onSave }) => {
         if (status === 'application') {
           stage = ['payment', 'deposit', 'still thinking'][Math.floor(Math.random() * 3)];
         }
-        
+
         // Converted date logic: 60% chance same month, 40% chance later
         convertedDate = new Date(createdDate);
         if (Math.random() > 0.6) {
@@ -48,12 +48,12 @@ const LeadManager = ({ leads, onSave }) => {
 
         // Simulate Prior Month DNA
         if (Math.random() > 0.8 && convertedDate.getMonth() !== createdDate.getMonth()) {
-           historyLog.push({ id: crypto.randomUUID(), date: createdDate.toISOString(), action: 'Conversion Update', detail: `Changed to DNA` });
-           // They were DNA, now they are 'yes'
+          historyLog.push({ id: crypto.randomUUID(), date: createdDate.toISOString(), action: 'Conversion Update', detail: `Changed to DNA` });
+          // They were DNA, now they are 'yes'
         }
 
         historyLog.push({ id: crypto.randomUUID(), date: convertedDate.toISOString(), action: 'Conversion Update', detail: `Changed to yes` });
-        
+
         statusUpdatedAt = new Date(convertedDate);
         statusUpdatedAt.setDate(statusUpdatedAt.getDate() + 1);
         historyLog.push({ id: crypto.randomUUID(), date: statusUpdatedAt.toISOString(), action: 'Status Update', detail: `Moved to ${status}` });
@@ -76,7 +76,7 @@ const LeadManager = ({ leads, onSave }) => {
 
         // Simulate Prior Month DNA
         if (Math.random() > 0.8 && convertedDate.getMonth() !== createdDate.getMonth()) {
-           historyLog.push({ id: crypto.randomUUID(), date: createdDate.toISOString(), action: 'Conversion Update', detail: `Changed to DNA` });
+          historyLog.push({ id: crypto.randomUUID(), date: createdDate.toISOString(), action: 'Conversion Update', detail: `Changed to DNA` });
         }
 
         historyLog.push({ id: crypto.randomUUID(), date: convertedDate.toISOString(), action: 'Conversion Update', detail: `Changed to no` });
@@ -85,7 +85,7 @@ const LeadManager = ({ leads, onSave }) => {
         conversion = 'DNA';
         convertedDate = new Date(createdDate);
         historyLog.push({ id: crypto.randomUUID(), date: convertedDate.toISOString(), action: 'Conversion Update', detail: `Changed to DNA` });
-        
+
         // Make some DNA leads very old so they show as "Dropped" (inactive for 30+ days)
         if (Math.random() > 0.5) {
           updatedAt = new Date(createdDate);
@@ -97,7 +97,7 @@ const LeadManager = ({ leads, onSave }) => {
 
       fakeLeads.push({
         id: crypto.randomUUID(),
-        name: names[i % names.length] + ' ' + (i+1),
+        name: names[i % names.length] + ' ' + (i + 1),
         phone: '555-01' + Math.floor(Math.random() * 99).toString().padStart(2, '0'),
         email: `lead${i}@example.com`,
         notes: 'Sample lead automatically generated.',
@@ -129,7 +129,7 @@ const LeadManager = ({ leads, onSave }) => {
   const [email, setEmail] = useState('');
   const [notes, setNotes] = useState('');
   const [source, setSource] = useState('');
-  
+
   // Pipeline states
   const [conversion, setConversion] = useState('');
   const [status, setStatus] = useState('');
@@ -178,7 +178,7 @@ const LeadManager = ({ leads, onSave }) => {
     const newStage = (conversion === 'yes' && status === 'application') ? stage : null;
 
     let historyLog = pipelineLead.historyLog || [];
-    
+
     if (pipelineLead.conversion !== conversion) {
       historyLog = [...historyLog, { id: crypto.randomUUID(), date: now, action: 'Conversion Update', detail: `Changed to ${conversion || 'None'}` }];
     }
@@ -245,7 +245,7 @@ const LeadManager = ({ leads, onSave }) => {
               Update Pipeline
             </h2>
             <p className="text-base text-notion-warm-gray-500 mt-2 flex items-center gap-2">
-              Currently updating: 
+              Currently updating:
               <span className="inline-flex items-center px-3 py-1 rounded-full bg-notion-blue/10 text-notion-blue font-bold text-sm">
                 {pipelineLead.name || 'Unnamed Lead'}
               </span>
@@ -260,12 +260,12 @@ const LeadManager = ({ leads, onSave }) => {
         </div>
 
         <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-zinc-100 p-8 sm:p-10 flex flex-col relative overflow-hidden">
-          
+
           {/* Decorative background element */}
           <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-gradient-to-br from-notion-blue/5 to-purple-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
           <div className="relative z-10 flex flex-col space-y-10">
-            
+
             {/* STAGE 1: CONVERSION */}
             <div className="relative">
               <div className="flex items-center gap-4 mb-5">
@@ -275,10 +275,10 @@ const LeadManager = ({ leads, onSave }) => {
               {conversion === 'yes' && (
                 <div className="absolute left-4 top-8 bottom-[-40px] w-0.5 bg-zinc-200 z-0"></div>
               )}
-              
+
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 pl-12">
                 <button
-                  onClick={() => { setConversion('yes'); if(!status) setStatus('application'); }}
+                  onClick={() => { setConversion('yes'); if (!status) setStatus('application'); }}
                   className={`relative p-4 rounded-xl border-2 text-left transition-all group overflow-hidden ${conversion === 'yes' ? 'border-emerald-500 bg-emerald-50 shadow-sm' : 'border-zinc-200 hover:border-emerald-300 hover:bg-zinc-50'}`}
                 >
                   <div className="flex items-center justify-between mb-1">
@@ -292,7 +292,7 @@ const LeadManager = ({ leads, onSave }) => {
                   <div className={`font-bold text-sm ${conversion === 'yes' ? 'text-emerald-800' : 'text-notion-black'}`}>Quality Lead</div>
                   <div className={`text-xs mt-1 ${conversion === 'yes' ? 'text-emerald-600' : 'text-notion-warm-gray-400'}`}>They are interested</div>
                 </button>
-                
+
                 <button
                   onClick={() => setConversion('no')}
                   className={`relative p-4 rounded-xl border-2 text-left transition-all group overflow-hidden ${conversion === 'no' ? 'border-rose-500 bg-rose-50 shadow-sm' : 'border-zinc-200 hover:border-rose-300 hover:bg-zinc-50'}`}
@@ -308,7 +308,7 @@ const LeadManager = ({ leads, onSave }) => {
                   <div className={`font-bold text-sm ${conversion === 'no' ? 'text-rose-800' : 'text-notion-black'}`}>No</div>
                   <div className={`text-xs mt-1 ${conversion === 'no' ? 'text-rose-600' : 'text-notion-warm-gray-400'}`}>Not interested</div>
                 </button>
-                
+
                 <button
                   onClick={() => setConversion('DNA')}
                   className={`relative p-4 rounded-xl border-2 text-left transition-all group overflow-hidden ${conversion === 'DNA' ? 'border-amber-500 bg-amber-50 shadow-sm' : 'border-zinc-200 hover:border-amber-300 hover:bg-zinc-50'}`}
@@ -337,7 +337,7 @@ const LeadManager = ({ leads, onSave }) => {
                 {status === 'application' && (
                   <div className="absolute left-4 top-8 bottom-[-40px] w-0.5 bg-zinc-200 z-0"></div>
                 )}
-                
+
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 pl-12">
                   {[
                     { id: 'application', label: 'Application', desc: 'Moving forward', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> },
@@ -346,7 +346,7 @@ const LeadManager = ({ leads, onSave }) => {
                   ].map(s => (
                     <button
                       key={s.id}
-                      onClick={() => { setStatus(s.id); if(s.id !== 'application') setStage(''); else if(!stage) setStage('still thinking'); }}
+                      onClick={() => { setStatus(s.id); if (s.id !== 'application') setStage(''); else if (!stage) setStage('still thinking'); }}
                       className={`relative p-4 rounded-xl border-2 text-left transition-all ${status === s.id ? 'border-notion-blue bg-notion-blue/5 shadow-sm' : 'border-zinc-200 hover:border-notion-blue/40 hover:bg-zinc-50'}`}
                     >
                       <div className="flex items-center justify-between mb-1">
@@ -370,7 +370,7 @@ const LeadManager = ({ leads, onSave }) => {
                   <div className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-900 text-white font-bold text-sm shadow-sm z-10">3</div>
                   <h3 className="text-lg font-bold text-notion-black">Where are they in the application?</h3>
                 </div>
-                
+
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 pl-12">
                   {[
                     { id: 'payment', label: 'Payment', desc: 'Fully paid', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>, color: 'purple' },
@@ -399,7 +399,7 @@ const LeadManager = ({ leads, onSave }) => {
           </div>
 
           <div className="flex justify-end pt-8 mt-10 border-t border-zinc-100 z-10 relative">
-            <button 
+            <button
               onClick={handleSavePipeline}
               className="px-8 py-3.5 bg-notion-black text-white font-bold rounded-xl text-sm hover:bg-zinc-800 transition-all shadow-[0_4px_14px_0_rgb(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)] flex items-center gap-2"
             >
@@ -431,7 +431,7 @@ const LeadManager = ({ leads, onSave }) => {
                           <div className="text-xs text-notion-warm-gray-500 mt-0.5">{log.detail}</div>
                         </div>
                         <div className="text-[10px] font-semibold text-notion-warm-gray-400 text-right whitespace-nowrap ml-4 leading-tight">
-                          {logDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}<br/>
+                          {logDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}<br />
                           <span className="text-zinc-400">{logDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
                         </div>
                       </div>
@@ -451,7 +451,7 @@ const LeadManager = ({ leads, onSave }) => {
 
     const handleNext = () => {
       if (step === 1 && !source) return;
-      
+
       if (step < totalSteps) {
         setStep(step + 1);
       } else {
@@ -507,12 +507,12 @@ const LeadManager = ({ leads, onSave }) => {
                 </div>
                 <div className="max-w-md mx-auto">
                   <label className="block mb-2 text-xs font-semibold text-notion-warm-gray-500 uppercase tracking-wider">Lead Source</label>
-                  <input 
-                    type="text" 
-                    value={source} 
-                    onChange={e => setSource(e.target.value)} 
-                    className="w-full px-4 py-3 whisper-border rounded-xl focus:outline-none focus:ring-2 focus:ring-notion-blue/50 bg-zinc-50/50 text-base" 
-                    placeholder="e.g., Facebook Ad, Friend Referral, Website Form..." 
+                  <input
+                    type="text"
+                    value={source}
+                    onChange={e => setSource(e.target.value)}
+                    className="w-full px-4 py-3 whisper-border rounded-xl focus:outline-none focus:ring-2 focus:ring-notion-blue/50 bg-zinc-50/50 text-base"
+                    placeholder="e.g., Facebook Ad, Friend Referral, Website Form..."
                     autoFocus
                   />
                 </div>
@@ -526,7 +526,7 @@ const LeadManager = ({ leads, onSave }) => {
                   <h3 className="text-lg font-bold text-notion-black mb-2">Lead Information</h3>
                   <p className="text-sm text-notion-warm-gray-500">Enter the contact details and any notes.</p>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4 max-w-lg mx-auto">
                   <div className="col-span-2">
                     <label className="block mb-1 text-xs font-semibold text-notion-warm-gray-500 uppercase tracking-wider">Name</label>
@@ -550,14 +550,14 @@ const LeadManager = ({ leads, onSave }) => {
           </div>
 
           <div className="flex justify-between mt-8 pt-6 border-t border-zinc-100">
-            <button 
-              onClick={handleBack} 
+            <button
+              onClick={handleBack}
               disabled={step === 1}
               className={`px-6 py-2.5 font-semibold rounded-lg text-sm transition ${step === 1 ? 'opacity-0 cursor-default' : 'bg-notion-warm-white text-notion-black hover:bg-zinc-200'}`}
             >
               Back
             </button>
-            <button 
+            <button
               onClick={handleNext}
               disabled={
                 (step === 1 && !source)
@@ -601,7 +601,7 @@ const LeadManager = ({ leads, onSave }) => {
           Add New Lead
         </button>
       </div>
-      
+
       {activeView === 'list' ? (
         <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-zinc-100 overflow-hidden">
           <div className="overflow-x-auto">
@@ -633,7 +633,7 @@ const LeadManager = ({ leads, onSave }) => {
                         </div>
                       </div>
                     </td>
-                    
+
                     <td className="px-6 py-4">
                       {lead.source ? (
                         <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold bg-zinc-100 text-zinc-700 border border-zinc-200/50">
@@ -643,23 +643,23 @@ const LeadManager = ({ leads, onSave }) => {
                         <span className="text-zinc-300 text-xs">-</span>
                       )}
                     </td>
-                    
+
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border
-                        ${lead.conversion === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                        : lead.conversion === 'no' ? 'bg-rose-50 text-rose-700 border-rose-200' 
-                        : lead.conversion === 'DNA' ? 'bg-amber-50 text-amber-700 border-amber-200' 
-                        : 'bg-zinc-50 text-zinc-500 border-zinc-200'}`}
+                        ${lead.conversion === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : lead.conversion === 'no' ? 'bg-rose-50 text-rose-700 border-rose-200'
+                            : lead.conversion === 'DNA' ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-zinc-50 text-zinc-500 border-zinc-200'}`}
                       >
                         {lead.conversion === 'yes' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>}
                         {lead.conversion === 'no' && <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>}
                         {lead.conversion === 'DNA' && <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>}
                         {!lead.conversion && <span className="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>}
-                        
+
                         {lead.conversion === 'DNA' ? 'DNA' : lead.conversion === 'yes' ? 'Quality Lead' : lead.conversion === 'no' ? 'Not Interested' : 'Pending'}
                       </span>
                     </td>
-                    
+
                     <td className="px-6 py-4">
                       {lead.conversion === 'yes' ? (
                         <div className="flex flex-col gap-1.5">
@@ -673,10 +673,10 @@ const LeadManager = ({ leads, onSave }) => {
                             <div className="flex items-center gap-2">
                               <svg className="w-3 h-3 text-zinc-300 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider
-                                ${lead.stage === 'payment' ? 'bg-purple-100 text-purple-700' 
-                                : lead.stage === 'deposit' ? 'bg-indigo-100 text-indigo-700' 
-                                : lead.stage === 'still thinking' ? 'bg-orange-100 text-orange-700' 
-                                : 'bg-zinc-100 text-zinc-500'}`}
+                                ${lead.stage === 'payment' ? 'bg-purple-100 text-purple-700'
+                                  : lead.stage === 'deposit' ? 'bg-indigo-100 text-indigo-700'
+                                    : lead.stage === 'still thinking' ? 'bg-orange-100 text-orange-700'
+                                      : 'bg-zinc-100 text-zinc-500'}`}
                               >
                                 {lead.stage || 'Pending'}
                               </span>
@@ -687,26 +687,26 @@ const LeadManager = ({ leads, onSave }) => {
                         <span className="text-zinc-300 text-sm italic">N/A</span>
                       )}
                     </td>
-                    
+
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => handleOpenPipeline(lead)} 
+                        <button
+                          onClick={() => handleOpenPipeline(lead)}
                           className="px-4 py-1.5 text-xs font-bold bg-notion-blue text-white hover:bg-notion-blue-active rounded-lg transition-colors shadow-sm flex items-center gap-1.5"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                           Update
                         </button>
-                        <button 
-                          onClick={() => handleEdit(lead)} 
-                          className="p-2 text-zinc-400 hover:text-notion-blue hover:bg-notion-blue/10 rounded-lg transition-colors bg-zinc-50 border border-zinc-100" 
+                        <button
+                          onClick={() => handleEdit(lead)}
+                          className="p-2 text-zinc-400 hover:text-notion-blue hover:bg-notion-blue/10 rounded-lg transition-colors bg-zinc-50 border border-zinc-100"
                           title="Edit Info"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                         </button>
-                        <button 
-                          onClick={() => handleDelete(lead.id)} 
-                          className="p-2 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors bg-zinc-50 border border-zinc-100" 
+                        <button
+                          onClick={() => handleDelete(lead.id)}
+                          className="p-2 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors bg-zinc-50 border border-zinc-100"
                           title="Delete Lead"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -737,8 +737,8 @@ const LeadManager = ({ leads, onSave }) => {
           </div>
         </div>
       ) : (
-        <LeadAnalytics 
-          leads={leads} 
+        <LeadAnalytics
+          leads={leads}
           onLeadClick={(lead) => {
             setActiveView('list');
             setPipelineLead(lead);

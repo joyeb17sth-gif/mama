@@ -64,7 +64,7 @@ const ContractorForm = ({ contractor, onSave, onCancel }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     setValidationError('');
-    
+
     // Strict Input Validation
     const validationResult = validateData(ContractorSchema, formData);
     if (!validationResult.success) {
@@ -140,7 +140,7 @@ const ContractorForm = ({ contractor, onSave, onCancel }) => {
                 name="phone"
                 value={formData.phone.startsWith(phonePrefix) ? formData.phone.replace(phonePrefix, '').trim() : formData.phone}
                 onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, ''); 
+                  const val = e.target.value.replace(/\D/g, '');
                   setFormData({
                     ...formData,
                     phone: `${phonePrefix} ${val}`

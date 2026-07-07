@@ -13,7 +13,6 @@ const Layout = ({
 }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-    // Navigation Items Configuration
     const navItems = [
         {
             id: 'dashboard', label: 'Dashboard', icon: (
@@ -22,11 +21,6 @@ const Layout = ({
         },
         {
             id: 'lead-manager', label: 'Lead Manager', icon: (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-            )
-        },
-        {
-            id: 'contractors', label: 'Contractors', icon: (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
             )
         },
@@ -41,39 +35,8 @@ const Layout = ({
             )
         },
         {
-            id: 'allocation', label: 'Allocation', icon: (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
-            )
-        },
-
-        {
-            id: 'timesheets', label: 'Timesheets', icon: (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            )
-        },
-        {
-            id: 'training', label: 'Training Pay', icon: (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-            )
-        },
-        {
-            id: 'payments', label: 'Payment Summary', icon: (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            )
-        },
-        {
             id: 'profit-loss', label: 'Profit & Loss', icon: (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            )
-        },
-        {
-            id: 'holidays', label: 'Public Holidays', icon: (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-            )
-        },
-        {
-            id: 'settings', label: 'Global Rates', icon: (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
             )
         },
     ];
@@ -95,12 +58,8 @@ const Layout = ({
             return navItems.filter(item => ['task-matrix', 'sites', 'lead-manager'].includes(item.id));
         }
 
-        if (role === 'payslip_management') {
-            return navItems.filter(item => !['task-matrix', 'profit-loss', 'settings'].includes(item.id));
-        }
-
         // Default user
-        return navItems.filter(item => ['dashboard', 'timesheets'].includes(item.id));
+        return navItems.filter(item => ['dashboard'].includes(item.id));
     };
 
     const filteredNavItems = getFilteredNavItems();
@@ -136,7 +95,7 @@ const Layout = ({
                                 S
                             </div>
                             <h1 className="text-body-semibold tracking-tight text-notion-black">
-                                SitalPayslip
+                                Seetal Management
                             </h1>
                         </div>
                     </div>
@@ -255,14 +214,14 @@ const Layout = ({
                                 <span>Syncing...</span>
                             </div>
                         ) : (
-                            <div 
+                            <div
                                 onClick={onForceSync}
                                 title="Click to force sync from cloud"
                                 className="flex items-center gap-2 px-2.5 py-1 text-emerald-600 bg-emerald-50 rounded-pill text-[11px] font-semibold border border-emerald-100 group cursor-pointer hover:bg-emerald-100 active:scale-95 transition-all select-none"
                             >
                                 <span className="relative flex h-1.5 w-1.5 mr-0.5">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                                 </span>
                                 <span className="hidden sm:inline">Live Mode</span>
                             </div>

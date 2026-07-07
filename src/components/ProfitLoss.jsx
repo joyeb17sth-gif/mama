@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { saveProfitLoss, getProfitLoss } from '../utils/storage';
+import ProfitLossSearchEducation from './ProfitLossSearchEducation';
+import ProfitLossMedisafe from './ProfitLossMedisafe';
 
 // ─── Constants ───────────────────────────────────────────────────────────
-const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 6 }, (_, i) => CURRENT_YEAR - 3 + i);
 
@@ -107,18 +109,18 @@ const MiniBarChart = ({ data, width = 400, height = 260, isNetProfit = false }) 
           const x = 40 + i * barGroupWidth;
           const h1 = (Math.abs(d.value1 || 0) / maxVal) * chartHeight;
           const h2 = (Math.abs(d.value2 || 0) / maxVal) * chartHeight;
-          
+
           return (
-            <g key={i} 
-               onMouseEnter={() => setHoveredIndex(i)} 
-               onMouseLeave={() => setHoveredIndex(null)}
-               className="cursor-pointer transition-opacity"
-               opacity={hoveredIndex !== null && hoveredIndex !== i ? 0.4 : 1}>
+            <g key={i}
+              onMouseEnter={() => setHoveredIndex(i)}
+              onMouseLeave={() => setHoveredIndex(null)}
+              className="cursor-pointer transition-opacity"
+              opacity={hoveredIndex !== null && hoveredIndex !== i ? 0.4 : 1}>
               {hoveredIndex === i && (
                 <rect x={x - 2} y={10} width={barGroupWidth - 4} height={chartHeight} fill="#f3f4f6" rx="4" opacity="0.5" />
               )}
               {isNetProfit ? (
-                <rect x={x + (barGroupWidth - barWidth)/2 - 4} y={10 + chartHeight - h1} width={barWidth} height={h1} rx="2" fill={(d.value1 || 0) >= 0 ? '#1aae39' : '#ef4444'} opacity="0.85" />
+                <rect x={x + (barGroupWidth - barWidth) / 2 - 4} y={10 + chartHeight - h1} width={barWidth} height={h1} rx="2" fill={(d.value1 || 0) >= 0 ? '#1aae39' : '#ef4444'} opacity="0.85" />
               ) : (
                 <>
                   <rect x={x} y={10 + chartHeight - h1} width={barWidth} height={h1} rx="2" fill="#0075de" opacity="0.85" />
@@ -134,7 +136,7 @@ const MiniBarChart = ({ data, width = 400, height = 260, isNetProfit = false }) 
       </svg>
       {/* HTML Tooltip Overlay */}
       {hoveredIndex !== null && (
-        <div 
+        <div
           className="absolute z-50 bg-white border border-zinc-200 shadow-xl rounded-md p-3 text-xs pointer-events-none"
           style={{
             left: `${Math.min(100, Math.max(0, ((40 + hoveredIndex * barGroupWidth + barGroupWidth / 2) / width) * 100))}%`,
@@ -192,7 +194,7 @@ const GpGauge = ({ percent, label }) => {
 };
 
 // ─── Editable Cell ───────────────────────────────────────────────────────
-const EditableCell = ({ value, onChange, isPct = false, isEditable = true, className = '' }) => {
+const EditableCell = ({ value, onChange, isPct = false, className = '', isEditable = true }) => {
   const [editing, setEditing] = useState(false);
   const [inputVal, setInputVal] = useState('');
   const inputRef = useRef(null);
@@ -238,8 +240,8 @@ const EditableCell = ({ value, onChange, isPct = false, isEditable = true, class
   return (
     <div
       onClick={handleStartEdit}
-      className={`w-full h-full px-1.5 py-1 text-right text-xs rounded-sm select-none ${className} ${isEditable ? 'cursor-pointer hover:bg-notion-blue/5 transition-colors' : 'cursor-default'}`}
-      title={isEditable ? "Click to edit" : ""}
+      className={`w-full h-full px-1.5 py-1 text-right text-xs rounded-sm transition-colors select-none ${isEditable ? 'cursor-pointer hover:bg-notion-blue/5' : ''} ${className}`}
+      title={isEditable ? "Click to edit" : undefined}
     >
       {isPct ? (value ? fmtPct(value) : '-') : fmt(value)}
     </div>
@@ -321,8 +323,6 @@ const ProfitLoss = ({ syncVersion }) => {
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [allPeriods, setAllPeriods] = useState([]);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [backupPeriods, setBackupPeriods] = useState([]);
   const [showAddSite, setShowAddSite] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const [compareYear, setCompareYear] = useState(CURRENT_YEAR);
@@ -336,24 +336,58 @@ const ProfitLoss = ({ syncVersion }) => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
   });
+  const [isEditMode, setIsEditMode] = useState(false);
   const saveTimerRef = useRef(null);
 
-  // Load data from cache
+  // ─── Multi-Company State ──────────────────────────────────────────────
+  const [plData, setPlData] = useState(null); // Full { version, profiles, companies } wrapper
+  const [selectedCompany, setSelectedCompany] = useState('seetal_management');
+
+  // Company profiles from the wrapper
+  const companyProfiles = useMemo(() => plData?.profiles || [], [plData]);
+  const selectedProfile = useMemo(() => companyProfiles.find(p => p.id === selectedCompany), [companyProfiles, selectedCompany]);
+
+  // Load data from cache — now uses multi-company structure
   useEffect(() => {
-    const cached = getProfitLoss();
-    if (cached && Array.isArray(cached) && cached.length > 0) {
+    const cached = getProfitLoss(); // Returns migrated { version: 2, profiles, companies }
+    if (cached && cached.version === 2) {
+      setPlData(cached);
+      // Set Seetal Management periods for backward compat
+      const seetalPeriods = cached.companies?.seetal_management || [];
       // Automatically clean up any existing sample data
-      const hasSampleData = cached.some(p => p.id === '2025-09' || p.id === '2025-10');
+      const hasSampleData = seetalPeriods.some(p => p.id === '2025-09' || p.id === '2025-10');
       if (hasSampleData) {
-        const organicOnly = cached.filter(p => p.id !== '2025-09' && p.id !== '2025-10');
+        const organicOnly = seetalPeriods.filter(p => p.id !== '2025-09' && p.id !== '2025-10');
         setAllPeriods(organicOnly);
-        // Fire save asynchronously so it updates local and cloud
-        setTimeout(() => saveProfitLoss(organicOnly), 100);
+        // Update the wrapper too
+        const updatedData = { ...cached, companies: { ...cached.companies, seetal_management: organicOnly } };
+        setPlData(updatedData);
+        setTimeout(() => saveProfitLoss(updatedData), 100);
       } else {
-        setAllPeriods(cached);
+        setAllPeriods(seetalPeriods);
       }
     }
   }, [syncVersion]);
+
+  // When company changes, load that company's periods into allPeriods (for Seetal)
+  useEffect(() => {
+    if (plData && selectedCompany === 'seetal_management') {
+      setAllPeriods(plData.companies?.seetal_management || []);
+    }
+  }, [plData, selectedCompany]);
+
+  // Handler for sub-companies (Search Education / Medisafe) to save their data
+  const handleSubCompanySave = useCallback((companyId, updatedPeriods) => {
+    setPlData(prev => {
+      if (!prev) return prev;
+      const updated = {
+        ...prev,
+        companies: { ...prev.companies, [companyId]: updatedPeriods },
+      };
+      saveProfitLoss(updated);
+      return updated;
+    });
+  }, []);
 
   // Current period
   const periodId = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
@@ -393,11 +427,18 @@ const ProfitLoss = ({ syncVersion }) => {
     return allPeriods.find(p => p.id === comparePeriodId) || null;
   }, [allPeriods, comparePeriodId, compareMode, compareYear, compareMonth]);
 
-  // Debounced save
+  // Debounced save — wraps Seetal periods into the multi-company structure
   const saveData = useCallback((updatedPeriods) => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      saveProfitLoss(updatedPeriods);
+      setPlData(prev => {
+        const updated = {
+          ...(prev || { version: 2, profiles: [], companies: {} }),
+          companies: { ...(prev?.companies || {}), seetal_management: updatedPeriods },
+        };
+        saveProfitLoss(updated);
+        return updated;
+      });
     }, 500);
   }, []);
 
@@ -405,7 +446,7 @@ const ProfitLoss = ({ syncVersion }) => {
   const updatePeriod = useCallback((updater) => {
     setAllPeriods(prev => {
       let updatedPeriod;
-      
+
       if (typeof updater === 'function') {
         const found = prev.find(p => p.id === periodId) || createEmptyPeriod(selectedYear, selectedMonth);
         const p = JSON.parse(JSON.stringify(found));
@@ -441,10 +482,33 @@ const ProfitLoss = ({ syncVersion }) => {
       updatedPeriod.updatedAt = new Date().toISOString();
       const idx = prev.findIndex(p => p.id === updatedPeriod.id);
       const next = idx >= 0 ? prev.map(p => p.id === updatedPeriod.id ? updatedPeriod : p) : [...prev, updatedPeriod];
-      
+
       return next;
     });
-  }, [periodId, selectedYear, selectedMonth]);
+  }, [periodId, selectedYear, selectedMonth, saveData]);
+
+  const handleSaveData = () => {
+    setPlData(prev => {
+      const updated = {
+        ...(prev || { version: 2, profiles: [], companies: {} }),
+        companies: { ...(prev?.companies || {}), seetal_management: allPeriods },
+      };
+      saveProfitLoss(updated);
+      return updated;
+    });
+    setIsEditMode(false);
+  };
+
+  const handleCancelEdit = () => {
+    const cached = getProfitLoss();
+    if (cached && cached.version === 2) {
+      const seetalPeriods = cached.companies?.seetal_management || [];
+      const organicOnly = seetalPeriods.filter(p => p.id !== '2025-09' && p.id !== '2025-10');
+      setAllPeriods(organicOnly);
+      setPlData(cached);
+    }
+    setIsEditMode(false);
+  };
 
   // Update a specific site field
   const updateSiteField = useCallback((siteIndex, group, key, value) => {
@@ -699,30 +763,109 @@ const ProfitLoss = ({ syncVersion }) => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-display-secondary text-notion-black tracking-notion-display">Profit & Loss</h2>
-          <p className="text-caption text-notion-warm-gray-500 mt-0.5">SSG Management Services Pty Ltd</p>
+          <p className="text-caption text-notion-warm-gray-500 mt-0.5">{selectedProfile?.name || 'Select a company'}</p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* View Switcher */}
-          <div className="flex bg-notion-warm-white rounded-micro p-0.5 whisper-border">
-            {[
-              { id: 'table', label: 'Data Entry', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> },
-              { id: 'analytics', label: 'Analytics', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg> },
-              { id: 'range', label: 'Multi-Period', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" /></svg> },
-              { id: 'overhead', label: 'Overhead Settings', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
-            ].map(v => (
-              <button
-                key={v.id}
-                onClick={() => setView(v.id)}
-                className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-micro transition-all ${view === v.id ? 'bg-white text-notion-blue shadow-sm' : 'text-notion-warm-gray-500 hover:text-notion-black'}`}
-              >
-                <span>{v.icon}</span>{v.label}
+          {/* View Switcher — only for Seetal Management */}
+          {/* View Switcher — available for all companies */}
+          <>
+            <div className="flex bg-notion-warm-white rounded-micro p-0.5 whisper-border">
+              {[
+                { id: 'table', label: 'Data Entry', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> },
+                { id: 'analytics', label: 'Analytics', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg> },
+                { id: 'range', label: 'Multi-Period', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" /></svg> },
+                { id: 'overhead', label: 'Overhead Settings', icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
+              ]
+              .filter(v => selectedProfile?.type === 'site_based' ? true : v.id !== 'overhead')
+              .map(v => (
+                <button
+                  key={v.id}
+                  onClick={() => setView(v.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-micro transition-all ${view === v.id ? 'bg-white text-notion-blue shadow-sm' : 'text-notion-warm-gray-500 hover:text-notion-black'}`}
+                >
+                  <span>{v.icon}</span>{v.label}
+                </button>
+              ))}
+            </div>
+            <div className="h-5 w-px bg-notion-warm-gray-200 mx-1"></div>
+          </>
+
+          {!isEditMode ? (
+            <button onClick={() => setIsEditMode(true)} className="px-3 py-1.5 text-xs font-semibold text-white bg-notion-black hover:bg-zinc-800 rounded-micro transition-all shadow-sm">
+              Edit Data
+            </button>
+          ) : (
+            <>
+              <button onClick={handleCancelEdit} className="px-3 py-1.5 text-xs font-semibold text-notion-warm-gray-500 hover:text-notion-black transition-all">
+                Cancel
               </button>
-            ))}
-          </div>
+              <button onClick={handleSaveData} className="px-3 py-1.5 text-xs font-semibold text-white bg-notion-blue hover:bg-notion-blue-active rounded-micro transition-all shadow-sm">
+                Save Changes
+              </button>
+            </>
+          )}
 
         </div>
       </div>
+
+      {/* ─── Company Profile Selector ─────────────────────────────────── */}
+      <div className="flex gap-2 flex-wrap">
+        {companyProfiles.map(profile => {
+          const iconMap = {
+            building: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>,
+            graduation: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 14l9-5-9-5-9 5 9 5z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>,
+            medical: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>,
+          };
+          const isSelected = selectedCompany === profile.id;
+          return (
+            <button
+              key={profile.id}
+              onClick={() => { setSelectedCompany(profile.id); setIsEditMode(false); }}
+              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-standard text-sm font-semibold transition-all border-2 ${
+                isSelected
+                  ? 'shadow-md scale-[1.02]'
+                  : 'border-transparent bg-notion-warm-white text-notion-warm-gray-500 hover:bg-zinc-100 hover:text-notion-black'
+              }`}
+              style={isSelected ? { borderColor: profile.color, backgroundColor: `${profile.color}08`, color: profile.color } : {}}
+            >
+              <span className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+                style={{ backgroundColor: isSelected ? `${profile.color}18` : '#f5f5f4', color: isSelected ? profile.color : '#a39e98' }}
+              >
+                {iconMap[profile.icon] || iconMap.building}
+              </span>
+              <span>{profile.name}</span>
+              {isSelected && (
+                <span className="w-2 h-2 rounded-full ml-1 flex-shrink-0" style={{ backgroundColor: profile.color }}></span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ─── Company-Specific Content ─────────────────────────────────── */}
+      {selectedProfile?.type === 'income_expense' && (
+        <ProfitLossSearchEducation
+          companyPeriods={plData?.companies?.search_education || []}
+          onSave={(periods) => handleSubCompanySave('search_education', periods)}
+          isEditMode={isEditMode}
+          view={view}
+        />
+      )}
+
+      {selectedProfile?.type === 'cogs_based' && (
+        <ProfitLossMedisafe
+          companyPeriods={plData?.companies?.medisafe || []}
+          onSave={(periods) => handleSubCompanySave('medisafe', periods)}
+          isEditMode={isEditMode}
+          view={view}
+        />
+      )}
+
+      {/* ─── Seetal Management (site-based) — existing content below ──── */}
+      {selectedProfile?.type === 'site_based' && (
+      <>
+
 
       {/* ─── Period Selector ──────────────────────────────────────────── */}
       <div className="notion-card p-4">
@@ -744,24 +887,8 @@ const ProfitLoss = ({ syncVersion }) => {
 
           <div className="h-5 w-px bg-notion-warm-gray-200 mx-1"></div>
 
-          {!isEditMode ? (
-            <button onClick={() => { setBackupPeriods(JSON.parse(JSON.stringify(allPeriods))); setIsEditMode(true); }} className="px-3 py-1.5 text-xs font-semibold text-white bg-notion-blue hover:bg-notion-blue-active rounded-micro transition-all shadow-sm">
-              Edit Data
-            </button>
-          ) : (
-            <>
-              <button onClick={() => { setAllPeriods(backupPeriods); setBackupPeriods([]); setIsEditMode(false); }} className="px-3 py-1.5 text-xs font-semibold text-notion-warm-gray-500 hover:text-notion-black whisper-border rounded-micro transition-all">
-                Cancel
-              </button>
-              <button onClick={() => { saveProfitLoss(allPeriods); setBackupPeriods([]); setIsEditMode(false); }} className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-micro transition-all shadow-sm">
-                Save Changes
-              </button>
-            </>
-          )}
-
           {isEditMode && (
             <>
-              <div className="h-5 w-px bg-notion-warm-gray-200 mx-1"></div>
               <button onClick={handleCopyPrevious} className="px-3 py-1.5 text-xs font-semibold text-notion-warm-gray-500 hover:text-notion-blue whisper-border rounded-micro hover:bg-blue-50/50 transition-all flex items-center gap-1.5">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
                 Copy Previous Period
@@ -826,216 +953,216 @@ const ProfitLoss = ({ syncVersion }) => {
       {view === 'table' && (
         <div className="space-y-4">
           <div className="notion-card overflow-hidden">
-          {currentPeriod.sites.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-notion-warm-white flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-notion-warm-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            {currentPeriod.sites.length === 0 ? (
+              <div className="p-12 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-notion-warm-white flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-notion-warm-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                </div>
+                <h3 className="text-card-title text-notion-black mb-1">No sites configured for {MONTHS[selectedMonth]} {selectedYear}</h3>
+                <p className="text-caption text-notion-warm-gray-500 mb-4">Add site columns or copy from a previous period to get started.</p>
+                <div className="flex gap-2 justify-center flex-wrap">
+                  {isEditMode ? (
+                    <>
+                      <button onClick={() => setShowAddSite(true)} className="px-4 py-2 text-sm bg-notion-blue text-white rounded-micro hover:bg-notion-blue-active transition font-semibold shadow-sm">
+                        + Add Site
+                      </button>
+                      <button onClick={handleCopyPrevious} className="px-4 py-2 text-sm whisper-border text-notion-warm-gray-500 rounded-micro hover:bg-notion-warm-white transition font-semibold">
+                        Copy Previous Period
+                      </button>
+                    </>
+                  ) : (
+                    <p className="text-sm text-notion-warm-gray-500 font-semibold bg-notion-warm-white px-4 py-2 rounded-micro border whisper-border">
+                      Click "Edit Data" in the header to add sites
+                    </p>
+                  )}
+                </div>
               </div>
-              <h3 className="text-card-title text-notion-black mb-1">No sites configured for {MONTHS[selectedMonth]} {selectedYear}</h3>
-              <p className="text-caption text-notion-warm-gray-500 mb-4">Add site columns or copy from a previous period to get started.</p>
-              <div className="flex gap-2 justify-center flex-wrap">
-                {!isEditMode ? (
-                  <button onClick={() => { setBackupPeriods(JSON.parse(JSON.stringify(allPeriods))); setIsEditMode(true); }} className="px-4 py-2 text-sm bg-notion-blue text-white rounded-micro hover:bg-notion-blue-active transition font-semibold shadow-sm">
-                    Edit Data
-                  </button>
-                ) : (
-                  <>
-                    <button onClick={() => setShowAddSite(true)} className="px-4 py-2 text-sm bg-notion-blue text-white rounded-micro hover:bg-notion-blue-active transition font-semibold shadow-sm">
-                      + Add Site
-                    </button>
-                    <button onClick={handleCopyPrevious} className="px-4 py-2 text-sm whisper-border text-notion-warm-gray-500 rounded-micro hover:bg-notion-warm-white transition font-semibold">
-                      Copy Previous Period
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse min-w-[800px]" id="pnl-table">
-                <thead>
-                  <tr className="bg-gradient-to-r from-slate-50 to-zinc-50">
-                    <th className="text-left px-3 py-2.5 font-bold text-notion-warm-gray-500 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-gradient-to-r from-slate-50 to-zinc-50 z-10 min-w-[180px]">
-                      Description
-                    </th>
-                    {currentPeriod.sites.map((site, i) => (
-                      <th key={i} className="text-center px-2 py-2.5 font-bold text-notion-black text-[11px] border-b border-r border-zinc-100 min-w-[110px] relative group">
-                        <span>{site.name}</span>
-                        {isEditMode && (
-                          <button
-                            onClick={() => handleRemoveSite(i)}
-                            className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 text-[9px] leading-none opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                            title="Remove site"
-                          >×</button>
-                        )}
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse min-w-[800px]" id="pnl-table">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-slate-50 to-zinc-50">
+                      <th className="text-left px-3 py-2.5 font-bold text-notion-warm-gray-500 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-gradient-to-r from-slate-50 to-zinc-50 z-10 min-w-[180px]">
+                        Description
                       </th>
-                    ))}
-                    <th className="text-center px-2 py-2.5 font-bold text-notion-black text-[11px] border-b border-zinc-100 min-w-[100px] bg-emerald-50/50">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* ── Revenue ── */}
-                  <tr className="bg-blue-50/30">
-                    <td className="px-3 py-1.5 font-bold text-notion-blue text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-blue-50 z-10">Revenue</td>
-                    <td colSpan={currentPeriod.sites.length + 1} className="border-b border-zinc-100"></td>
-                  </tr>
-                  {REVENUE_ROWS.map(row => (
-                    <tr key={`rev-${row.key}`} className="hover:bg-blue-50/10 transition-colors">
-                      <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">{row.label}</td>
                       {currentPeriod.sites.map((site, i) => (
-                        <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-50">
-                          <EditableCell isEditable={isEditMode} value={site.revenue?.[row.key] || 0} onChange={v => updateSiteField(i, 'revenue', row.key, v)} />
-                        </td>
-                      ))}
-                      <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">{fmt(grandTotals.revenue[row.key])}</td>
-                    </tr>
-                  ))}
-                  {/* Total Revenue */}
-                  <tr className="bg-blue-50/50 font-bold">
-                    <td className="px-3 py-1.5 text-notion-blue border-r border-b border-zinc-100 sticky left-0 bg-blue-50 z-10">Total Revenue</td>
-                    {currentPeriod.sites.map((_, i) => (
-                      <td key={i} className="px-1.5 py-1.5 text-right text-notion-blue border-r border-b border-zinc-100">{fmt(siteTotals[i]?.totalRevenue || 0)}</td>
-                    ))}
-                    <td className="px-1.5 py-1.5 text-right text-notion-blue border-b border-zinc-100 bg-emerald-50/50">{fmt(grandTotals.totalRevenue)}</td>
-                  </tr>
-
-                  {/* Spacer */}
-                  <tr><td colSpan={currentPeriod.sites.length + 2} className="h-1 border-b border-zinc-100"></td></tr>
-
-                  {/* ── Direct Staff Cost ── */}
-                  <tr className="bg-rose-50/30">
-                    <td className="px-3 py-1.5 font-bold text-red-500 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-rose-50 z-10">Direct Staff Cost</td>
-                    <td colSpan={currentPeriod.sites.length + 1} className="border-b border-zinc-100"></td>
-                  </tr>
-                  {COST_ROWS.map(row => (
-                    <tr key={`cost-${row.key}`} className="hover:bg-rose-50/10 transition-colors">
-                      <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">{row.label}</td>
-                      {currentPeriod.sites.map((site, i) => (
-                        <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-50">
-                          <EditableCell isEditable={isEditMode} value={site.directCost?.[row.key] || 0} onChange={v => updateSiteField(i, 'directCost', row.key, v)} />
-                        </td>
-                      ))}
-                      <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">{fmt(grandTotals.directCost[row.key])}</td>
-                    </tr>
-                  ))}
-                  {/* Total Cost */}
-                  <tr className="bg-rose-50/50 font-bold">
-                    <td className="px-3 py-1.5 text-red-500 border-r border-b border-zinc-100 sticky left-0 bg-rose-50 z-10">Total Cost</td>
-                    {currentPeriod.sites.map((_, i) => (
-                      <td key={i} className="px-1.5 py-1.5 text-right text-red-500 border-r border-b border-zinc-100">{fmt(siteTotals[i]?.totalCost || 0)}</td>
-                    ))}
-                    <td className="px-1.5 py-1.5 text-right text-red-500 border-b border-zinc-100 bg-emerald-50/50">{fmt(grandTotals.totalCost)}</td>
-                  </tr>
-
-                  {/* Spacer */}
-                  <tr><td colSpan={currentPeriod.sites.length + 2} className="h-1 border-b border-zinc-100"></td></tr>
-
-                  {/* ── Gross Profit ── */}
-                  <tr className="bg-emerald-50/60 font-bold text-sm">
-                    <td className="px-3 py-2 text-emerald-700 border-r border-b border-zinc-100 sticky left-0 bg-emerald-50 z-10">Gross Profit</td>
-                    {currentPeriod.sites.map((_, i) => {
-                      const gp = siteTotals[i]?.grossProfit || 0;
-                      return (
-                        <td key={i} className={`px-1.5 py-2 text-right border-r border-b border-zinc-100 font-bold ${gp >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{fmt(gp)}</td>
-                      );
-                    })}
-                    <td className={`px-1.5 py-2 text-right border-b border-zinc-100 font-bold bg-emerald-50/80 ${grandTotals.grossProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{fmt(grandTotals.grossProfit)}</td>
-                  </tr>
-
-                  {/* GP Margin */}
-                  <tr className="bg-emerald-50/30">
-                    <td className="px-3 py-1 text-emerald-600 font-semibold border-r border-b border-zinc-100 sticky left-0 bg-emerald-50 z-10">GP Margin</td>
-                    {currentPeriod.sites.map((_, i) => {
-                      const gp = siteTotals[i]?.gpMargin || 0;
-                      return (
-                        <td key={i} className={`px-1.5 py-1 text-right border-r border-b border-zinc-100 font-semibold ${gp >= 25 ? 'text-emerald-600' : gp >= 12 ? 'text-amber-600' : 'text-red-600'}`}>{fmtPct(gp)}</td>
-                      );
-                    })}
-                    <td className={`px-1.5 py-1 text-right border-b border-zinc-100 font-semibold bg-emerald-50/50 ${grandTotals.gpMargin >= 25 ? 'text-emerald-600' : grandTotals.gpMargin >= 12 ? 'text-amber-600' : 'text-red-600'}`}>{fmtPct(grandTotals.gpMargin || 0)}</td>
-                  </tr>
-
-                  {/* Spacer */}
-                  <tr><td colSpan={currentPeriod.sites.length + 2} className="h-1 border-b border-zinc-100"></td></tr>
-
-                  {/* ── Vehicle Allowance Income ── */}
-                  <tr className="hover:bg-zinc-50/50 transition-colors">
-                    <td className="px-3 py-0.5 text-notion-warm-gray-500 font-semibold border-r border-b border-zinc-100 sticky left-0 bg-white z-10">Vehicle Allowance - Income</td>
-                    {currentPeriod.sites.map((site, i) => (
-                      <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-100">
-                        <EditableCell isEditable={isEditMode} value={site.vehicleAllowanceIncome || 0} onChange={v => updateSiteField(i, 'vehicleAllowanceIncome', null, v)} />
-                      </td>
-                    ))}
-                    <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-100 bg-emerald-50/30">{fmt(grandTotals.vehicleAllowanceIncome)}</td>
-                  </tr>
-
-                  {/* Spacer */}
-                  <tr><td colSpan={currentPeriod.sites.length + 2} className="h-1 border-b border-zinc-100"></td></tr>
-
-                  {/* ── Overhead ── */}
-                  <tr className="bg-amber-50/30">
-                    <td className="px-3 py-1.5 font-bold text-amber-700 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-amber-50 z-10">Overhead</td>
-                    <td colSpan={currentPeriod.sites.length + 1} className="border-b border-zinc-100"></td>
-                  </tr>
-                  
-                  {/* Dynamic Manager Allocation Rows */}
-                  {currentPeriod.managers?.map(mgr => (
-                    <tr key={`mgr-alloc-${mgr.id}`} className="hover:bg-amber-50/10 transition-colors">
-                      <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">
-                        <div className="flex items-center justify-between">
-                          <span>{mgr.name} Alloc %</span>
-                          <span className="text-[9px] text-notion-warm-gray-400 font-normal no-italic">of {fmt(mgr.totalSalary || 0)}</span>
-                        </div>
-                      </td>
-                      {currentPeriod.sites.map((site, i) => (
-                        <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-50">
-                          <EditableCell isEditable={isEditMode} value={site.managerAllocations?.[mgr.id] || 0} onChange={v => handleUpdateManagerAllocation(i, mgr.id, v)} isPct={true} />
-                        </td>
-                      ))}
-                      <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">
-                        {fmtPct(currentPeriod.sites.reduce((s, site) => s + (site.managerAllocations?.[mgr.id] || 0), 0))}
-                      </td>
-                    </tr>
-                  ))}
-
-                  {OVERHEAD_ROWS.map(row => (
-                    <tr key={`oh-${row.key}`} className="hover:bg-amber-50/10 transition-colors">
-                      <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">{row.label}</td>
-                      {currentPeriod.sites.map((site, i) => (
-                        <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-50">
-                          {row.key === 'managerSalary' ? (
-                            <div className="w-full h-full px-1.5 py-1 text-right text-xs text-notion-warm-gray-400 font-semibold cursor-not-allowed bg-zinc-50/50" title="Auto-calculated in Overhead Settings">{fmt(site.overhead?.managerSalary || 0)}</div>
-                          ) : (
-                            <EditableCell isEditable={isEditMode} value={site.overhead?.[row.key] || 0} onChange={v => updateSiteField(i, 'overhead', row.key, v)} isPct={row.isPct} />
+                        <th key={i} className="text-center px-2 py-2.5 font-bold text-notion-black text-[11px] border-b border-r border-zinc-100 min-w-[110px] relative group">
+                          <span>{site.name}</span>
+                          {isEditMode && (
+                            <button
+                              onClick={() => handleRemoveSite(i)}
+                              className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 text-[9px] leading-none opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                              title="Remove site"
+                            >×</button>
                           )}
+                        </th>
+                      ))}
+                      <th className="text-center px-2 py-2.5 font-bold text-notion-black text-[11px] border-b border-zinc-100 min-w-[100px] bg-emerald-50/50">
+                        Total
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* ── Revenue ── */}
+                    <tr className="bg-blue-50/30">
+                      <td className="px-3 py-1.5 font-bold text-notion-blue text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-blue-50 z-10">Revenue</td>
+                      <td colSpan={currentPeriod.sites.length + 1} className="border-b border-zinc-100"></td>
+                    </tr>
+                    {REVENUE_ROWS.map(row => (
+                      <tr key={`rev-${row.key}`} className="hover:bg-blue-50/10 transition-colors">
+                        <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">{row.label}</td>
+                        {currentPeriod.sites.map((site, i) => (
+                          <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-50">
+                            <EditableCell isEditable={isEditMode} value={site.revenue?.[row.key] || 0} onChange={v => updateSiteField(i, 'revenue', row.key, v)} />
+                          </td>
+                        ))}
+                        <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">{fmt(grandTotals.revenue[row.key])}</td>
+                      </tr>
+                    ))}
+                    {/* Total Revenue */}
+                    <tr className="bg-blue-50/50 font-bold">
+                      <td className="px-3 py-1.5 text-notion-blue border-r border-b border-zinc-100 sticky left-0 bg-blue-50 z-10">Total Revenue</td>
+                      {currentPeriod.sites.map((_, i) => (
+                        <td key={i} className="px-1.5 py-1.5 text-right text-notion-blue border-r border-b border-zinc-100">{fmt(siteTotals[i]?.totalRevenue || 0)}</td>
+                      ))}
+                      <td className="px-1.5 py-1.5 text-right text-notion-blue border-b border-zinc-100 bg-emerald-50/50">{fmt(grandTotals.totalRevenue)}</td>
+                    </tr>
+
+                    {/* Spacer */}
+                    <tr><td colSpan={currentPeriod.sites.length + 2} className="h-1 border-b border-zinc-100"></td></tr>
+
+                    {/* ── Direct Staff Cost ── */}
+                    <tr className="bg-rose-50/30">
+                      <td className="px-3 py-1.5 font-bold text-red-500 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-rose-50 z-10">Direct Staff Cost</td>
+                      <td colSpan={currentPeriod.sites.length + 1} className="border-b border-zinc-100"></td>
+                    </tr>
+                    {COST_ROWS.map(row => (
+                      <tr key={`cost-${row.key}`} className="hover:bg-rose-50/10 transition-colors">
+                        <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">{row.label}</td>
+                        {currentPeriod.sites.map((site, i) => (
+                          <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-50">
+                            <EditableCell isEditable={isEditMode} value={site.directCost?.[row.key] || 0} onChange={v => updateSiteField(i, 'directCost', row.key, v)} />
+                          </td>
+                        ))}
+                        <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">{fmt(grandTotals.directCost[row.key])}</td>
+                      </tr>
+                    ))}
+                    {/* Total Cost */}
+                    <tr className="bg-rose-50/50 font-bold">
+                      <td className="px-3 py-1.5 text-red-500 border-r border-b border-zinc-100 sticky left-0 bg-rose-50 z-10">Total Cost</td>
+                      {currentPeriod.sites.map((_, i) => (
+                        <td key={i} className="px-1.5 py-1.5 text-right text-red-500 border-r border-b border-zinc-100">{fmt(siteTotals[i]?.totalCost || 0)}</td>
+                      ))}
+                      <td className="px-1.5 py-1.5 text-right text-red-500 border-b border-zinc-100 bg-emerald-50/50">{fmt(grandTotals.totalCost)}</td>
+                    </tr>
+
+                    {/* Spacer */}
+                    <tr><td colSpan={currentPeriod.sites.length + 2} className="h-1 border-b border-zinc-100"></td></tr>
+
+                    {/* ── Gross Profit ── */}
+                    <tr className="bg-emerald-50/60 font-bold text-sm">
+                      <td className="px-3 py-2 text-emerald-700 border-r border-b border-zinc-100 sticky left-0 bg-emerald-50 z-10">Gross Profit</td>
+                      {currentPeriod.sites.map((_, i) => {
+                        const gp = siteTotals[i]?.grossProfit || 0;
+                        return (
+                          <td key={i} className={`px-1.5 py-2 text-right border-r border-b border-zinc-100 font-bold ${gp >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{fmt(gp)}</td>
+                        );
+                      })}
+                      <td className={`px-1.5 py-2 text-right border-b border-zinc-100 font-bold bg-emerald-50/80 ${grandTotals.grossProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{fmt(grandTotals.grossProfit)}</td>
+                    </tr>
+
+                    {/* GP Margin */}
+                    <tr className="bg-emerald-50/30">
+                      <td className="px-3 py-1 text-emerald-600 font-semibold border-r border-b border-zinc-100 sticky left-0 bg-emerald-50 z-10">GP Margin</td>
+                      {currentPeriod.sites.map((_, i) => {
+                        const gp = siteTotals[i]?.gpMargin || 0;
+                        return (
+                          <td key={i} className={`px-1.5 py-1 text-right border-r border-b border-zinc-100 font-semibold ${gp >= 25 ? 'text-emerald-600' : gp >= 12 ? 'text-amber-600' : 'text-red-600'}`}>{fmtPct(gp)}</td>
+                        );
+                      })}
+                      <td className={`px-1.5 py-1 text-right border-b border-zinc-100 font-semibold bg-emerald-50/50 ${grandTotals.gpMargin >= 25 ? 'text-emerald-600' : grandTotals.gpMargin >= 12 ? 'text-amber-600' : 'text-red-600'}`}>{fmtPct(grandTotals.gpMargin || 0)}</td>
+                    </tr>
+
+                    {/* Spacer */}
+                    <tr><td colSpan={currentPeriod.sites.length + 2} className="h-1 border-b border-zinc-100"></td></tr>
+
+                    {/* ── Vehicle Allowance Income ── */}
+                    <tr className="hover:bg-zinc-50/50 transition-colors">
+                      <td className="px-3 py-0.5 text-notion-warm-gray-500 font-semibold border-r border-b border-zinc-100 sticky left-0 bg-white z-10">Vehicle Allowance - Income</td>
+                      {currentPeriod.sites.map((site, i) => (
+                        <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-100">
+                          <EditableCell isEditable={isEditMode} value={site.vehicleAllowanceIncome || 0} onChange={v => updateSiteField(i, 'vehicleAllowanceIncome', null, v)} />
                         </td>
                       ))}
-                      <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">
-                        {row.isPct ? fmtPct(grandTotals.overhead[row.key] || 0) : fmt(grandTotals.overhead[row.key] || 0)}
-                      </td>
+                      <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-100 bg-emerald-50/30">{fmt(grandTotals.vehicleAllowanceIncome)}</td>
                     </tr>
-                  ))}
 
-                  {/* Spacer */}
-                  <tr><td colSpan={currentPeriod.sites.length + 2} className="h-2 border-b-2 border-zinc-200"></td></tr>
+                    {/* Spacer */}
+                    <tr><td colSpan={currentPeriod.sites.length + 2} className="h-1 border-b border-zinc-100"></td></tr>
 
-                  {/* ── Net Profit ── */}
-                  <tr className="bg-gradient-to-r from-emerald-50 to-teal-50 font-bold text-sm">
-                    <td className="px-3 py-2.5 text-emerald-800 border-r border-zinc-200 sticky left-0 bg-gradient-to-r from-emerald-50 to-teal-50 z-10 text-sm">Net Profit</td>
-                    {currentPeriod.sites.map((_, i) => {
-                      const np = siteTotals[i]?.netProfit || 0;
-                      return (
-                        <td key={i} className={`px-1.5 py-2.5 text-right border-r border-zinc-200 text-sm font-bold ${np >= 0 ? 'text-emerald-800' : 'text-red-600'}`}>{fmt(np)}</td>
-                      );
-                    })}
-                    <td className={`px-1.5 py-2.5 text-right text-sm font-bold bg-emerald-100/50 ${grandTotals.netProfit >= 0 ? 'text-emerald-800' : 'text-red-600'}`}>{fmt(grandTotals.netProfit)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                    {/* ── Overhead ── */}
+                    <tr className="bg-amber-50/30">
+                      <td className="px-3 py-1.5 font-bold text-amber-700 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-amber-50 z-10">Overhead</td>
+                      <td colSpan={currentPeriod.sites.length + 1} className="border-b border-zinc-100"></td>
+                    </tr>
+
+                    {/* Dynamic Manager Allocation Rows */}
+                    {currentPeriod.managers?.map(mgr => (
+                      <tr key={`mgr-alloc-${mgr.id}`} className="hover:bg-amber-50/10 transition-colors">
+                        <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">
+                          <div className="flex items-center justify-between">
+                            <span>{mgr.name} Alloc %</span>
+                            <span className="text-[9px] text-notion-warm-gray-400 font-normal no-italic">of {fmt(mgr.totalSalary || 0)}</span>
+                          </div>
+                        </td>
+                        {currentPeriod.sites.map((site, i) => (
+                          <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-50">
+                            <EditableCell isEditable={isEditMode} value={site.managerAllocations?.[mgr.id] || 0} onChange={v => handleUpdateManagerAllocation(i, mgr.id, v)} isPct={true} />
+                          </td>
+                        ))}
+                        <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">
+                          {fmtPct(currentPeriod.sites.reduce((s, site) => s + (site.managerAllocations?.[mgr.id] || 0), 0))}
+                        </td>
+                      </tr>
+                    ))}
+
+                    {OVERHEAD_ROWS.map(row => (
+                      <tr key={`oh-${row.key}`} className="hover:bg-amber-50/10 transition-colors">
+                        <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">{row.label}</td>
+                        {currentPeriod.sites.map((site, i) => (
+                          <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-50">
+                            {row.key === 'managerSalary' ? (
+                              <div className="w-full h-full px-1.5 py-1 text-right text-xs text-notion-warm-gray-400 font-semibold cursor-not-allowed bg-zinc-50/50" title="Auto-calculated in Overhead Settings">{fmt(site.overhead?.managerSalary || 0)}</div>
+                            ) : (
+                              <EditableCell isEditable={isEditMode} value={site.overhead?.[row.key] || 0} onChange={v => updateSiteField(i, 'overhead', row.key, v)} isPct={row.isPct} />
+                            )}
+                          </td>
+                        ))}
+                        <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">
+                          {row.isPct ? fmtPct(grandTotals.overhead[row.key] || 0) : fmt(grandTotals.overhead[row.key] || 0)}
+                        </td>
+                      </tr>
+                    ))}
+
+                    {/* Spacer */}
+                    <tr><td colSpan={currentPeriod.sites.length + 2} className="h-2 border-b-2 border-zinc-200"></td></tr>
+
+                    {/* ── Net Profit ── */}
+                    <tr className="bg-gradient-to-r from-emerald-50 to-teal-50 font-bold text-sm">
+                      <td className="px-3 py-2.5 text-emerald-800 border-r border-zinc-200 sticky left-0 bg-gradient-to-r from-emerald-50 to-teal-50 z-10 text-sm">Net Profit</td>
+                      {currentPeriod.sites.map((_, i) => {
+                        const np = siteTotals[i]?.netProfit || 0;
+                        return (
+                          <td key={i} className={`px-1.5 py-2.5 text-right border-r border-zinc-200 text-sm font-bold ${np >= 0 ? 'text-emerald-800' : 'text-red-600'}`}>{fmt(np)}</td>
+                        );
+                      })}
+                      <td className={`px-1.5 py-2.5 text-right text-sm font-bold bg-emerald-100/50 ${grandTotals.netProfit >= 0 ? 'text-emerald-800' : 'text-red-600'}`}>{fmt(grandTotals.netProfit)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -1069,7 +1196,7 @@ const ProfitLoss = ({ syncVersion }) => {
                       const delta = card.value - compVal;
                       return (
                         <p className={`text-[10px] font-semibold mt-0.5 ${delta >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                          {delta >= 0 ? '▲' : '▼'} {fmt(Math.abs(delta))} vs {MONTHS[compareMonth]?.slice(0,3)}
+                          {delta >= 0 ? '▲' : '▼'} {fmt(Math.abs(delta))} vs {MONTHS[compareMonth]?.slice(0, 3)}
                         </p>
                       );
                     })()}
@@ -1146,10 +1273,10 @@ const ProfitLoss = ({ syncVersion }) => {
                         .sort((a, b) => (b.computed?.netProfit || 0) - (a.computed?.netProfit || 0))
                         .map((item, rank) => {
                           const c = item.computed;
-                          const status = c.netProfit > 0 
-                            ? <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm" title="Profit"></span> 
-                            : c.netProfit === 0 
-                              ? <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm" title="Break Even"></span> 
+                          const status = c.netProfit > 0
+                            ? <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm" title="Profit"></span>
+                            : c.netProfit === 0
+                              ? <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm" title="Break Even"></span>
                               : <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm" title="Loss"></span>;
                           return (
                             <tr key={item.index} className="border-b border-zinc-50 hover:bg-zinc-50/50 transition-colors">
@@ -1457,7 +1584,7 @@ const ProfitLoss = ({ syncVersion }) => {
         allPeriods.forEach(p => p.sites?.forEach(s => historicalSites.add(s.name)));
         // Remove currently existing sites from the suggestions
         currentPeriod.sites.forEach(s => historicalSites.delete(s.name));
-        
+
         return (
           <AddSiteModal
             onAdd={handleAddSite}
@@ -1467,6 +1594,10 @@ const ProfitLoss = ({ syncVersion }) => {
           />
         );
       })()}
+
+      {/* Close Seetal Management (site_based) conditional */}
+      </>
+      )}
     </div>
   );
 };

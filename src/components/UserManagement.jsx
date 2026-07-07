@@ -13,7 +13,7 @@ const UserManagement = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
-    
+
     // User List state
     const [users, setUsers] = useState([]);
     const [loadingUsers, setLoadingUsers] = useState(true);
@@ -81,10 +81,10 @@ const UserManagement = () => {
 
         try {
             await registerUser(formData.email, formData.password);
-            
+
             // Wait a bit for trigger to create the profile entry
             await new Promise(resolve => setTimeout(resolve, 2000));
-            
+
             // Update role for the newly created user
             const { data: newUser } = await supabase.from('profiles').select('id').eq('email', formData.email).single();
             if (newUser) {
@@ -108,7 +108,7 @@ const UserManagement = () => {
     };
 
     const getRoleLabel = (role) => {
-        switch(role?.toLowerCase()) {
+        switch (role?.toLowerCase()) {
             case 'admin': return 'System Admin';
             case 'supervisor': return 'Supervisor';
             case 'manager': return 'Manager';
@@ -118,7 +118,7 @@ const UserManagement = () => {
     };
 
     const getRoleBadgeColor = (role) => {
-        switch(role?.toLowerCase()) {
+        switch (role?.toLowerCase()) {
             case 'admin': return 'bg-notion-badge-blue-bg text-notion-blue';
             case 'supervisor': return 'bg-notion-badge-green-bg text-emerald-700';
             case 'manager': return 'bg-notion-badge-purple-bg text-purple-700';
@@ -256,7 +256,7 @@ const UserManagement = () => {
                         <p className="text-caption text-notion-warm-gray-300 font-bold uppercase tracking-widest mt-1">Audit and modify administrative credentials.</p>
                     </div>
                 </div>
-                
+
                 <div className="p-0">
                     {loadingUsers ? (
                         <div className="p-12 text-center text-notion-warm-gray-100 font-bold text-badge uppercase tracking-widest">Synchronizing credentials...</div>
@@ -305,7 +305,7 @@ const UserManagement = () => {
                                                         Setup Access
                                                     </button>
                                                 ) : (
-                                                    <select 
+                                                    <select
                                                         value={entry.role || 'supervisor'}
                                                         onChange={(e) => handleRoleChange(entry.id, e.target.value)}
                                                         className="bg-white whisper-border text-badge font-bold rounded px-2 py-1 outline-none focus:border-notion-blue transition-all"

@@ -389,7 +389,7 @@ const SiteAllocation = () => {
                                         const isMainAllocated = contractorSites.some(cs => cs.siteId === mainSite.id);
                                         const subSites = sites.filter(s => s.isSubSite && s.parentSiteId === mainSite.id);
                                         const validSubSites = subSites.filter(sub => !contractorSites.some(cs => cs.siteId === sub.id));
-                                        
+
                                         if (!isMainAllocated || validSubSites.length > 0) {
                                           if (!isMainAllocated) {
                                             acc.push({ value: mainSite.id, label: mainSite.siteName, isParent: validSubSites.length > 0 });

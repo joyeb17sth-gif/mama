@@ -38,7 +38,7 @@
 }
 
 .notion-card {
-  @apply bg-white whisper-border rounded-comfortable shadow-notion-card;
+  @apply bg-white whisper-border rounded-xl shadow-notion-card;
 }
 
 .notion-pill {

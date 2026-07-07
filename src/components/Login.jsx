@@ -192,9 +192,9 @@ const Login = ({ onLogin }) => {
             disabled={loading || (isLoginMode && isLocked)}
             className={`w-full text-white py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition font-bold uppercase tracking-wider text-sm mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700`}
           >
-            {loading ? (isLoginMode ? 'Logging in...' : 'Creating Account...') : 
-             (isLoginMode && isLocked) ? `Locked (${lockoutSeconds}s)` : 
-             (isLoginMode ? 'Login' : 'Create Account')}
+            {loading ? (isLoginMode ? 'Logging in...' : 'Creating Account...') :
+              (isLoginMode && isLocked) ? `Locked (${lockoutSeconds}s)` :
+                (isLoginMode ? 'Login' : 'Create Account')}
           </button>
         </form>
 
