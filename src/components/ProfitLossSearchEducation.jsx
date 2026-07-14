@@ -62,6 +62,11 @@ const fmt = (v) => {
   return v < 0 ? `($${str})` : `$${str}`;
 };
 
+const fmtPctIncome = (val, total) => {
+  if (!total || total === 0 || !val) return '-';
+  return ((val / total) * 100).toFixed(1) + '%';
+};
+
 // ─── Editable Cell ───────────────────────────────────────────────────────
 const EditableCell = ({ value, onChange, className = '', isEditable = true }) => {
   const [editing, setEditing] = useState(false);
@@ -290,20 +295,6 @@ const ProfitLossSearchEducation = ({ companyPeriods, onSave, isEditMode, view = 
           <button onClick={goNextMonth} className="p-1.5 hover:bg-notion-warm-white rounded-micro transition text-notion-warm-gray-500 hover:text-notion-black">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
           </button>
-
-          {isEditMode && (
-            <>
-              <div className="h-5 w-px bg-notion-warm-gray-200 mx-1"></div>
-              <button onClick={handleCopyPrevious} className="px-3 py-1.5 text-xs font-semibold text-notion-warm-gray-500 hover:text-violet-600 whisper-border rounded-micro hover:bg-violet-50/50 transition-all flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
-                Copy Previous Period
-              </button>
-            </>
-          )}
-
-          <span className="ml-auto text-badge text-notion-warm-gray-300">
-            Last saved {currentPeriod.updatedAt ? new Date(currentPeriod.updatedAt).toLocaleTimeString() : 'never'}
-          </span>
         </div>
       </div>
 
@@ -312,73 +303,77 @@ const ProfitLossSearchEducation = ({ companyPeriods, onSave, isEditMode, view = 
       {/* P&L Table */}
       <div className="notion-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs border-collapse min-w-[500px]" id="search-education-pnl-table">
+          <table className="w-full text-xs border-collapse min-w-[500px]">
             <thead>
               <tr className="bg-gradient-to-r from-violet-50 to-purple-50">
-                <th className="text-left px-4 py-3 font-bold text-violet-600 text-[11px] uppercase tracking-widest border-b border-violet-100 min-w-[280px]">
+                <th className="text-left px-4 py-3 font-bold text-violet-600 text-[11px] uppercase tracking-widest border-b border-violet-100 w-[45%] min-w-[280px]">
                   Description
                 </th>
-                <th className="text-center px-4 py-3 font-bold text-notion-black text-[11px] uppercase tracking-widest border-b border-violet-100 min-w-[130px]">
+                <th className="text-right px-4 py-3 font-bold text-notion-black text-[11px] uppercase tracking-widest border-b border-violet-100 w-[150px] pr-8">
                   Total
                 </th>
+                <th className="border-b border-violet-100 w-full"></th>
               </tr>
             </thead>
             <tbody>
               {/* ── Income ── */}
-              <tr><td colSpan={2} className="h-1"></td></tr>
+              <tr><td colSpan={3} className="h-1"></td></tr>
               <tr className="bg-violet-50/30">
                 <td className="px-4 py-2 font-bold text-violet-700 text-[11px] uppercase tracking-widest border-b border-violet-100">Income</td>
                 <td className="border-b border-violet-100"></td>
+                <td className="border-b border-violet-100"></td>
               </tr>
-              {INCOME_ROWS.map(row => (
-                <tr key={`inc-${row.key}`} className="hover:bg-violet-50/10 transition-colors">
-                  <td className="px-4 py-0.5 text-notion-warm-gray-600 pl-8 border-b border-zinc-50">{row.label}</td>
-                  <td className="px-1 py-0.5 border-b border-zinc-50">
-                    <EditableCell isEditable={isEditMode} value={currentPeriod.income?.[row.key] || 0} onChange={v => updateField('income', row.key, v)} />
-                  </td>
-                </tr>
-              ))}
+              {INCOME_ROWS.map(row => {
+                const val = currentPeriod.income?.[row.key] || 0;
+                return (
+                  <tr key={`inc-${row.key}`} className="hover:bg-violet-50/10 transition-colors">
+                    <td className="px-4 py-0.5 text-notion-warm-gray-600 pl-8 border-b border-zinc-50">{row.label}</td>
+                    <td className="px-1 py-0.5 border-b border-zinc-50 pr-6">
+                      <EditableCell isEditable={isEditMode} value={val} onChange={v => updateField('income', row.key, v)} />
+                    </td>
+                    <td className="border-b border-zinc-50"></td>
+                  </tr>
+                );
+              })}
               {/* Total Income */}
               <tr className="bg-violet-50/50 font-bold">
                 <td className="px-4 py-2 text-violet-700 border-b border-violet-100"></td>
-                <td className="px-2 py-2 text-right text-sm text-violet-700 border-b border-violet-100 font-bold">{fmt(totalIncome)}</td>
+                <td className="px-2 py-2 text-right text-sm text-violet-700 border-b border-violet-100 font-bold pr-8">{fmt(totalIncome)}</td>
+                <td className="border-b border-violet-100"></td>
               </tr>
-
+ 
               {/* ── Expenses ── */}
-              <tr><td colSpan={2} className="h-2"></td></tr>
+              <tr><td colSpan={3} className="h-2"></td></tr>
               <tr className="bg-rose-50/30">
                 <td className="px-4 py-2 font-bold text-red-600 text-[11px] uppercase tracking-widest border-b border-red-100">Expenses</td>
                 <td className="border-b border-red-100"></td>
+                <td className="border-b border-red-100"></td>
               </tr>
-              {EXPENSE_ROWS.map(row => (
-                <tr key={`exp-${row.key}`} className="hover:bg-rose-50/10 transition-colors">
-                  <td className="px-4 py-0.5 text-notion-warm-gray-600 pl-8 border-b border-zinc-50">{row.label}</td>
-                  <td className="px-1 py-0.5 border-b border-zinc-50">
-                    <EditableCell isEditable={isEditMode} value={currentPeriod.expenses?.[row.key] || 0} onChange={v => updateField('expenses', row.key, v)} />
-                  </td>
-                </tr>
-              ))}
+              {EXPENSE_ROWS.map(row => {
+                const val = currentPeriod.expenses?.[row.key] || 0;
+                return (
+                  <tr key={`exp-${row.key}`} className="hover:bg-rose-50/10 transition-colors">
+                    <td className="px-4 py-0.5 text-notion-warm-gray-600 pl-8 border-b border-zinc-50">{row.label}</td>
+                    <td className="px-1 py-0.5 border-b border-zinc-50 pr-6">
+                      <EditableCell isEditable={isEditMode} value={val} onChange={v => updateField('expenses', row.key, v)} />
+                    </td>
+                    <td className="border-b border-zinc-50"></td>
+                  </tr>
+                );
+              })}
               {/* Total Expenses */}
               <tr className="bg-rose-50/50 font-bold">
-                <td className="px-4 py-2 text-red-600 border-b border-red-100"></td>
-                <td className="px-2 py-2 text-right text-sm text-red-600 border-b border-red-100 font-bold">{fmt(totalExpenses)}</td>
-              </tr>
-
-              {/* ── Net Profit & Loss ── */}
-              <tr><td colSpan={2} className="h-2 border-b-2 border-zinc-200"></td></tr>
-              <tr className={`font-bold text-sm ${netProfitLoss >= 0 ? 'bg-emerald-50/60' : 'bg-red-50/60'}`}>
-                <td className="px-4 py-2.5 font-bold border-b border-zinc-200">Net Profit & Loss</td>
-                <td className={`px-2 py-2.5 text-right text-sm font-bold border-b border-zinc-200 ${netProfitLoss >= 0 ? 'text-emerald-800' : 'text-red-600'}`}>
-                  {fmt(netProfitLoss)}
-                </td>
+                <td className="px-4 py-2 text-red-700 border-b border-red-100">Total Expenses</td>
+                <td className="px-2 py-2 text-right text-sm text-red-700 border-b border-red-100 font-bold pr-8">{fmt(totalExpenses)}</td>
+                <td className="border-b border-red-100"></td>
               </tr>
 
               {/* ── Add Back ── */}
-              <tr><td colSpan={2} className="h-3"></td></tr>
+              <tr><td colSpan={3} className="h-3"></td></tr>
               <tr className="bg-amber-50/30">
                 <td className="px-4 py-2 font-bold text-amber-700 text-[11px] uppercase tracking-widest border-b border-amber-100">
                   <div className="flex items-center justify-between">
-                    <span>Add Back,</span>
+                    <span>Add Back</span>
                     {isEditMode && (
                       <button
                         onClick={() => setShowAddBackModal(true)}
@@ -389,6 +384,7 @@ const ProfitLossSearchEducation = ({ companyPeriods, onSave, isEditMode, view = 
                     )}
                   </div>
                 </td>
+                <td className="border-b border-amber-100"></td>
                 <td className="border-b border-amber-100"></td>
               </tr>
               {(currentPeriod.addBacks || []).map(ab => (
@@ -409,25 +405,29 @@ const ProfitLossSearchEducation = ({ companyPeriods, onSave, isEditMode, view = 
                         <button
                           onClick={() => handleRemoveAddBack(ab.id)}
                           className="w-4 h-4 rounded-full text-red-300 hover:text-red-600 hover:bg-red-50 text-[9px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center flex-shrink-0"
-                        >×</button>
+                        >
+                          ✕
+                        </button>
                       )}
                     </div>
                   </td>
-                  <td className="px-1 py-0.5 border-b border-zinc-50">
+                  <td className="px-1 py-0.5 border-b border-zinc-50 pr-6">
                     <EditableCell isEditable={isEditMode} value={ab.value || 0} onChange={v => handleUpdateAddBack(ab.id, 'value', v)} />
                   </td>
+                  <td className="border-b border-zinc-50"></td>
                 </tr>
               ))}
 
               {/* ── Net Profit & Loss after Adjustment ── */}
-              <tr><td colSpan={2} className="h-2 border-b-2 border-zinc-200"></td></tr>
+              <tr><td colSpan={3} className="h-2 border-b-2 border-zinc-200"></td></tr>
               <tr className="font-bold text-sm" style={{ background: 'linear-gradient(90deg, #fef9c3 0%, #fef08a 50%, #fde68a 100%)' }}>
                 <td className="px-4 py-3 font-bold text-zinc-800 border-b border-amber-300">Net Profit & Loss after Adjustment</td>
-                <td className={`px-2 py-3 text-right text-sm font-bold border-b border-amber-300 ${netProfitLossAfterAdjustment >= 0 ? 'text-emerald-800' : 'text-red-600'}`}>
+                <td className={`px-2 py-3 text-right text-sm font-bold border-b border-amber-300 pr-8 ${netProfitLossAfterAdjustment >= 0 ? 'text-emerald-800' : 'text-red-600'}`}>
                   <span className="px-3 py-1 rounded" style={{ backgroundColor: '#ffff00' }}>
                     {fmt(netProfitLossAfterAdjustment)}
                   </span>
                 </td>
+                <td className="border-b border-amber-300"></td>
               </tr>
             </tbody>
           </table>

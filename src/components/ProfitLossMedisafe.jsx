@@ -52,6 +52,11 @@ const fmt = (v) => {
   return v < 0 ? `($${str})` : `$${str}`;
 };
 
+const fmtPctIncome = (val, total) => {
+  if (!total || total === 0 || !val) return '-';
+  return ((val / total) * 100).toFixed(1) + '%';
+};
+
 // ─── Editable Cell ───────────────────────────────────────────────────────
 const EditableCell = ({ value, onChange, className = '', isEditable = true }) => {
   const [editing, setEditing] = useState(false);
@@ -278,80 +283,96 @@ const ProfitLossMedisafe = ({ companyPeriods, onSave, isEditMode, view = 'table'
           <table className="w-full text-xs border-collapse min-w-[500px]" id="medisafe-pnl-table">
             <thead>
               <tr className="bg-gradient-to-r from-emerald-50 to-teal-50">
-                <th className="text-left px-4 py-3 font-bold text-emerald-700 text-[11px] uppercase tracking-widest border-b border-emerald-100 min-w-[280px]">
+                <th className="text-left px-4 py-3 font-bold text-emerald-700 text-[11px] uppercase tracking-widest border-b border-emerald-100 w-[45%] min-w-[280px]">
                   Description
                 </th>
-                <th className="text-center px-4 py-3 font-bold text-notion-black text-[11px] uppercase tracking-widest border-b border-emerald-100 min-w-[130px]">
+                <th className="text-right px-4 py-3 font-bold text-notion-black text-[11px] uppercase tracking-widest border-b border-emerald-100 w-[150px] pr-8">
                   Total
                 </th>
+                <th className="border-b border-emerald-100 w-full"></th>
               </tr>
             </thead>
             <tbody>
               {/* ── Income ── */}
-              <tr><td colSpan={2} className="h-1"></td></tr>
+              <tr><td colSpan={3} className="h-1"></td></tr>
               <tr className="bg-emerald-50/30">
                 <td className="px-4 py-2 font-bold text-emerald-700 text-[11px] uppercase tracking-widest border-b border-emerald-100">Income</td>
                 <td className="border-b border-emerald-100"></td>
+                <td className="border-b border-emerald-100"></td>
               </tr>
-              {INCOME_ROWS.map(row => (
-                <tr key={`inc-${row.key}`} className="hover:bg-emerald-50/10 transition-colors">
-                  <td className="px-4 py-0.5 text-notion-warm-gray-600 pl-8 border-b border-zinc-50">{row.label}</td>
-                  <td className="px-1 py-0.5 border-b border-zinc-50">
-                    <EditableCell isEditable={isEditMode} value={currentPeriod.income?.[row.key] || 0} onChange={v => updateField('income', row.key, v)} />
-                  </td>
-                </tr>
-              ))}
+              {INCOME_ROWS.map(row => {
+                const val = currentPeriod.income?.[row.key] || 0;
+                return (
+                  <tr key={`inc-${row.key}`} className="hover:bg-emerald-50/10 transition-colors">
+                    <td className="px-4 py-0.5 text-notion-warm-gray-600 pl-8 border-b border-zinc-50">{row.label}</td>
+                    <td className="px-1 py-0.5 border-b border-zinc-50 pr-6">
+                      <EditableCell isEditable={isEditMode} value={val} onChange={v => updateField('income', row.key, v)} />
+                    </td>
+                    <td className="border-b border-zinc-50"></td>
+                  </tr>
+                );
+              })}
               {/* Total Income */}
               <tr className="bg-emerald-50/40 font-bold">
                 <td className="px-4 py-1.5 text-emerald-700 border-b border-emerald-100"></td>
-                <td className="px-2 py-1.5 text-right text-xs text-emerald-700 border-b border-emerald-100 font-bold">{fmt(totalIncome)}</td>
+                <td className="px-2 py-1.5 text-right text-xs text-emerald-700 border-b border-emerald-100 font-bold pr-8">{fmt(totalIncome)}</td>
+                <td className="border-b border-emerald-100"></td>
               </tr>
 
               {/* ── Cost of Goods Sold ── */}
-              <tr><td colSpan={2} className="h-2"></td></tr>
+              <tr><td colSpan={3} className="h-2"></td></tr>
               <tr className="hover:bg-orange-50/10 transition-colors">
                 <td className="px-4 py-1.5 font-bold text-orange-700 text-[11px] uppercase tracking-widest border-b border-orange-100">Cost of Good Sold</td>
-                <td className="px-1 py-1 border-b border-orange-100">
+                <td className="px-1 py-1 border-b border-orange-100 pr-6">
                   <EditableCell isEditable={isEditMode} value={cogs} onChange={v => updateField('cogs', null, v)} />
                 </td>
+                <td className="border-b border-orange-100"></td>
               </tr>
 
               {/* ── Gross Profit ── */}
-              <tr><td colSpan={2} className="h-1 border-b border-zinc-100"></td></tr>
+              <tr><td colSpan={3} className="h-1 border-b border-zinc-100"></td></tr>
               <tr className={`font-bold text-sm ${grossProfit >= 0 ? 'bg-emerald-50/60' : 'bg-red-50/60'}`}>
                 <td className="px-4 py-2 font-bold border-b border-zinc-200">Gross Profit</td>
-                <td className={`px-2 py-2 text-right text-sm font-bold border-b border-zinc-200 ${grossProfit >= 0 ? 'text-emerald-800' : 'text-red-600'}`}>
+                <td className={`px-2 py-2 text-right text-sm font-bold border-b border-zinc-200 pr-8 ${grossProfit >= 0 ? 'text-emerald-800' : 'text-red-600'}`}>
                   {fmt(grossProfit)}
                 </td>
+                <td className="border-b border-zinc-200"></td>
               </tr>
 
               {/* ── Expenses ── */}
-              <tr><td colSpan={2} className="h-2"></td></tr>
+              <tr><td colSpan={3} className="h-2"></td></tr>
               <tr className="bg-rose-50/30">
                 <td className="px-4 py-2 font-bold text-red-600 text-[11px] uppercase tracking-widest border-b border-red-100">Expenses</td>
                 <td className="border-b border-red-100"></td>
+                <td className="border-b border-red-100"></td>
               </tr>
-              {EXPENSE_ROWS.map(row => (
-                <tr key={`exp-${row.key}`} className="hover:bg-rose-50/10 transition-colors">
-                  <td className="px-4 py-0.5 text-notion-warm-gray-600 pl-8 border-b border-zinc-50">{row.label}</td>
-                  <td className="px-1 py-0.5 border-b border-zinc-50">
-                    <EditableCell isEditable={isEditMode} value={currentPeriod.expenses?.[row.key] || 0} onChange={v => updateField('expenses', row.key, v)} />
-                  </td>
-                </tr>
-              ))}
+              {EXPENSE_ROWS.map(row => {
+                const val = currentPeriod.expenses?.[row.key] || 0;
+                return (
+                  <tr key={`exp-${row.key}`} className="hover:bg-rose-50/10 transition-colors">
+                    <td className="px-4 py-0.5 text-notion-warm-gray-600 pl-8 border-b border-zinc-50">{row.label}</td>
+                    <td className="px-1 py-0.5 border-b border-zinc-50 pr-6">
+                      <EditableCell isEditable={isEditMode} value={val} onChange={v => updateField('expenses', row.key, v)} />
+                    </td>
+                    <td className="border-b border-zinc-50"></td>
+                  </tr>
+                );
+              })}
               {/* Total Expenses */}
               <tr className="bg-rose-50/50 font-bold">
                 <td className="px-4 py-2 text-red-600 border-b border-red-100">Total Expenses</td>
-                <td className="px-2 py-2 text-right text-sm text-red-600 border-b border-red-100 font-bold">{fmt(totalExpenses)}</td>
+                <td className="px-2 py-2 text-right text-sm text-red-600 border-b border-red-100 font-bold pr-8">{fmt(totalExpenses)}</td>
+                <td className="border-b border-red-100"></td>
               </tr>
 
               {/* ── Net Profit ── */}
-              <tr><td colSpan={2} className="h-2 border-b-2 border-zinc-200"></td></tr>
+              <tr><td colSpan={3} className="h-2 border-b-2 border-zinc-200"></td></tr>
               <tr className={`font-bold text-sm ${netProfit >= 0 ? 'bg-gradient-to-r from-emerald-50 to-teal-50' : 'bg-gradient-to-r from-red-50 to-rose-50'}`}>
                 <td className="px-4 py-3 font-bold text-zinc-800 border-b border-zinc-200">Net Profit</td>
-                <td className={`px-2 py-3 text-right text-sm font-bold border-b border-zinc-200 ${netProfit >= 0 ? 'text-emerald-800' : 'text-red-600'}`}>
+                <td className={`px-2 py-3 text-right text-sm font-bold border-b border-zinc-200 pr-8 ${netProfit >= 0 ? 'text-emerald-800' : 'text-red-600'}`}>
                   {fmt(netProfit)}
                 </td>
+                <td className="border-b border-zinc-200"></td>
               </tr>
             </tbody>
           </table>
