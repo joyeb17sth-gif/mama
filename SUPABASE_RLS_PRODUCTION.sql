@@ -13,7 +13,7 @@
 -- ============================================================================
 
 -- ─── 1. Helper function: get current user's role (cached per query) ─────────
-CREATE OR REPLACE FUNCTION auth.user_role() RETURNS text AS $$
+CREATE OR REPLACE FUNCTION public.get_user_role() RETURNS text AS $$
   SELECT COALESCE(
     (SELECT role FROM public.profiles WHERE id = (select auth.uid())),
     'user'
@@ -21,7 +21,7 @@ CREATE OR REPLACE FUNCTION auth.user_role() RETURNS text AS $$
 $$ LANGUAGE sql STABLE;
 
 -- ─── 2. Helper function: get current user's email ──────────────────────────
-CREATE OR REPLACE FUNCTION auth.user_email() RETURNS text AS $$
+CREATE OR REPLACE FUNCTION public.get_user_email() RETURNS text AS $$
   SELECT COALESCE(
     (SELECT email FROM public.profiles WHERE id = (select auth.uid())),
     ''
@@ -55,12 +55,12 @@ WITH CHECK ((select auth.uid()) = id);
 -- Admins can update any profile (change roles)
 CREATE POLICY "Profiles: admin update any"
 ON public.profiles FOR UPDATE TO authenticated
-USING ((select auth.user_role()) = 'admin');
+USING ((select public.get_user_role()) = 'admin');
 
 -- Only the trigger creates profiles, but allow admin insert for manual operations
 CREATE POLICY "Profiles: admin insert"
 ON public.profiles FOR INSERT TO authenticated
-WITH CHECK ((select auth.user_role()) = 'admin');
+WITH CHECK ((select public.get_user_role()) = 'admin');
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -102,7 +102,7 @@ BEGIN
 
             -- WRITE: Admin, Manager, Supervisor, Payslip Management
             EXECUTE format(
-                'CREATE POLICY "Shared: write" ON public.%I FOR ALL TO authenticated USING ((select auth.user_role()) IN (''admin'', ''manager'', ''supervisor'', ''payslip_management'')) WITH CHECK ((select auth.user_role()) IN (''admin'', ''manager'', ''supervisor'', ''payslip_management''))',
+                'CREATE POLICY "Shared: write" ON public.%I FOR ALL TO authenticated USING ((select public.get_user_role()) IN (''admin'', ''manager'', ''supervisor'', ''payslip_management'')) WITH CHECK ((select public.get_user_role()) IN (''admin'', ''manager'', ''supervisor'', ''payslip_management''))',
                 t_name
             );
         END IF;
@@ -135,8 +135,8 @@ BEGIN
 
         CREATE POLICY "Timesheets: write"
         ON public.timesheets FOR ALL TO authenticated
-        USING ((select auth.user_role()) IN ('admin', 'manager', 'supervisor', 'payslip_management'))
-        WITH CHECK ((select auth.user_role()) IN ('admin', 'manager', 'supervisor', 'payslip_management'));
+        USING ((select public.get_user_role()) IN ('admin', 'manager', 'supervisor', 'payslip_management'))
+        WITH CHECK ((select public.get_user_role()) IN ('admin', 'manager', 'supervisor', 'payslip_management'));
     END IF;
 END $$;
 
@@ -166,8 +166,8 @@ BEGIN
 
         CREATE POLICY "PaymentSummaries: write"
         ON public.payment_summaries FOR ALL TO authenticated
-        USING ((select auth.user_role()) IN ('admin', 'manager', 'supervisor', 'payslip_management'))
-        WITH CHECK ((select auth.user_role()) IN ('admin', 'manager', 'supervisor', 'payslip_management'));
+        USING ((select public.get_user_role()) IN ('admin', 'manager', 'supervisor', 'payslip_management'))
+        WITH CHECK ((select public.get_user_role()) IN ('admin', 'manager', 'supervisor', 'payslip_management'));
     END IF;
 END $$;
 
@@ -198,27 +198,27 @@ BEGIN
         -- Admin/Manager/Supervisor: full access
         CREATE POLICY "Tasks: admin write"
         ON public.periodical_tasks FOR ALL TO authenticated
-        USING ((select auth.user_role()) IN ('admin', 'manager', 'supervisor'))
-        WITH CHECK ((select auth.user_role()) IN ('admin', 'manager', 'supervisor'));
+        USING ((select public.get_user_role()) IN ('admin', 'manager', 'supervisor'))
+        WITH CHECK ((select public.get_user_role()) IN ('admin', 'manager', 'supervisor'));
 
         -- Users: read tasks assigned to their email
         CREATE POLICY "Tasks: user read assigned"
         ON public.periodical_tasks FOR SELECT TO authenticated
         USING (
-            (select auth.user_role()) NOT IN ('admin', 'manager', 'supervisor')
-            AND assigned_to = (select auth.user_email())
+            (select public.get_user_role()) NOT IN ('admin', 'manager', 'supervisor')
+            AND assigned_to = (select public.get_user_email())
         );
 
         -- Users: update tasks assigned to their email
         CREATE POLICY "Tasks: user update assigned"
         ON public.periodical_tasks FOR UPDATE TO authenticated
         USING (
-            (select auth.user_role()) NOT IN ('admin', 'manager', 'supervisor')
-            AND assigned_to = (select auth.user_email())
+            (select public.get_user_role()) NOT IN ('admin', 'manager', 'supervisor')
+            AND assigned_to = (select public.get_user_email())
         )
         WITH CHECK (
-            (select auth.user_role()) NOT IN ('admin', 'manager', 'supervisor')
-            AND assigned_to = (select auth.user_email())
+            (select public.get_user_role()) NOT IN ('admin', 'manager', 'supervisor')
+            AND assigned_to = (select public.get_user_email())
         );
     END IF;
 END $$;
@@ -243,8 +243,8 @@ BEGIN
 
         CREATE POLICY "ProfitLoss: admin only"
         ON public.profit_loss FOR ALL TO authenticated
-        USING ((select auth.user_role()) = 'admin')
-        WITH CHECK ((select auth.user_role()) = 'admin');
+        USING ((select public.get_user_role()) = 'admin')
+        WITH CHECK ((select public.get_user_role()) = 'admin');
     END IF;
 END $$;
 
@@ -267,8 +267,8 @@ BEGIN
 
         CREATE POLICY "GlobalRates: admin only"
         ON public.global_rates FOR ALL TO authenticated
-        USING ((select auth.user_role()) = 'admin')
-        WITH CHECK ((select auth.user_role()) = 'admin');
+        USING ((select public.get_user_role()) = 'admin')
+        WITH CHECK ((select public.get_user_role()) = 'admin');
     END IF;
 END $$;
 
@@ -296,8 +296,8 @@ BEGIN
 
         CREATE POLICY "Holidays: admin write"
         ON public.public_holidays FOR ALL TO authenticated
-        USING ((select auth.user_role()) = 'admin')
-        WITH CHECK ((select auth.user_role()) = 'admin');
+        USING ((select public.get_user_role()) = 'admin')
+        WITH CHECK ((select public.get_user_role()) = 'admin');
     END IF;
 END $$;
 
@@ -320,8 +320,8 @@ BEGIN
 
         CREATE POLICY "Leads: role access"
         ON public.leads FOR ALL TO authenticated
-        USING ((select auth.user_role()) IN ('admin', 'manager', 'supervisor'))
-        WITH CHECK ((select auth.user_role()) IN ('admin', 'manager', 'supervisor'));
+        USING ((select public.get_user_role()) IN ('admin', 'manager', 'supervisor'))
+        WITH CHECK ((select public.get_user_role()) IN ('admin', 'manager', 'supervisor'));
     END IF;
 END $$;
 
@@ -344,7 +344,7 @@ BEGIN
 
         CREATE POLICY "AuditLogs: admin read"
         ON public.audit_logs FOR SELECT TO authenticated
-        USING ((select auth.user_role()) = 'admin');
+        USING ((select public.get_user_role()) = 'admin');
     END IF;
 END $$;
 
