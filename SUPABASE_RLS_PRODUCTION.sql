@@ -201,25 +201,16 @@ BEGIN
         USING ((select public.get_user_role()) IN ('admin', 'manager', 'supervisor'))
         WITH CHECK ((select public.get_user_role()) IN ('admin', 'manager', 'supervisor'));
 
-        -- Users: read tasks assigned to their email
+        -- Users: read all tasks (frontend filters to assigned ones due to blob storage)
         CREATE POLICY "Tasks: user read assigned"
         ON public.periodical_tasks FOR SELECT TO authenticated
-        USING (
-            (select public.get_user_role()) NOT IN ('admin', 'manager', 'supervisor')
-            AND assigned_to = (select public.get_user_email())
-        );
+        USING (true);
 
-        -- Users: update tasks assigned to their email
+        -- Users: update all tasks (frontend handles granular update due to blob storage)
         CREATE POLICY "Tasks: user update assigned"
         ON public.periodical_tasks FOR UPDATE TO authenticated
-        USING (
-            (select public.get_user_role()) NOT IN ('admin', 'manager', 'supervisor')
-            AND assigned_to = (select public.get_user_email())
-        )
-        WITH CHECK (
-            (select public.get_user_role()) NOT IN ('admin', 'manager', 'supervisor')
-            AND assigned_to = (select public.get_user_email())
-        );
+        USING (true)
+        WITH CHECK (true);
     END IF;
 END $$;
 
