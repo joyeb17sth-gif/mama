@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, parseISO } from 'date-fns';
 import { getDayType } from '../utils/dateUtils';
 import { getTimesheets, getContractors, getPaymentSummaries, savePaymentSummaries, getTrainingReleases, saveTimesheets, logAction, getPublicHolidays } from '../utils/storage';
@@ -30,7 +30,7 @@ const PaymentSummary = ({ syncVersion }) => {
   const [isZipping, setIsZipping] = useState(false);
 
   // Handle individual checkbox change
-  const handleSelectContractor = (contractorId) => {
+  const handleSelectContractor = useCallback((contractorId) => {
     setSelectedContractors(prev => {
       if (prev.includes(contractorId)) {
         return prev.filter(id => id !== contractorId);
@@ -38,17 +38,17 @@ const PaymentSummary = ({ syncVersion }) => {
         return [...prev, contractorId];
       }
     });
-  };
+  }, []);
 
   // Handle "Select All" checkbox change
-  const handleSelectAll = (e) => {
+  const handleSelectAll = useCallback((e) => {
     if (e.target.checked) {
       const allIds = summary.map(p => p.contractorId);
       setSelectedContractors(allIds);
     } else {
       setSelectedContractors([]);
     }
-  };
+  }, [summary]);
 
   const handleSendPayslips = async () => {
     if (selectedContractors.length === 0) {
@@ -235,11 +235,11 @@ const PaymentSummary = ({ syncVersion }) => {
     }
   };
 
-  const refreshData = () => {
+  const refreshData = useCallback(() => {
     setTimesheets(getTimesheets());
     setContractors(getContractors());
     setPublicHolidays(getPublicHolidays());
-  };
+  }, []);
 
   useEffect(() => {
     refreshData();

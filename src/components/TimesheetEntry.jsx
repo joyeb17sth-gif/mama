@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, Fragment, useMemo, useCallback } from 'react';
 import { generatePeriodDates, formatDateDisplay } from '../utils/dateUtils';
 import { checkBudgetStatus, calculateTimesheetPay } from '../utils/payrollCalculations';
 import { getTimesheets, saveSites, getSites, saveContractors, getContractors, logAction, getPublicHolidays, getGlobalRates } from '../utils/storage';
@@ -21,9 +21,9 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
   const [toastMsg, setToastMsg] = useState('');
   const [allSites, setAllSites] = useState(getSites());
   const [publicHolidays, setPublicHolidays] = useState([]);
-  const subSites = allSites.filter(s => s.isSubSite && s.parentSiteId === site.id);
+  const subSites = useMemo(() => allSites.filter(s => s.isSubSite && s.parentSiteId === site.id), [allSites, site.id]);
 
-  const getEffectiveRates = (contractorId, targetSiteId, entryRateCode = null) => {
+  const getEffectiveRates = useCallback((contractorId, targetSiteId, entryRateCode = null) => {
     const contractor = contractors.find(c => c.id === contractorId);
     const useSiteId = targetSiteId || site.id;
     const customRate = contractor?.customRates?.find(r => r.siteId === useSiteId);
@@ -75,7 +75,7 @@ const TimesheetEntry = ({ site: initialSite, periodStart, periodEnd, contractors
     }
 
     return { weekday: 0, saturday: 0, sunday: 0, publicHoliday: 0, isCustom: false };
-  };
+  }, [contractors, site.id, allSites]);
 
   useEffect(() => {
     if (entries.length > 0) {

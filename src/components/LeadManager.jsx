@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import LeadAnalytics from './LeadAnalytics';
 import { saveLeads } from '../utils/storage';
 import DOMPurify from 'dompurify';
@@ -135,7 +135,7 @@ const LeadManager = ({ leads, onSave }) => {
   const [status, setStatus] = useState('');
   const [stage, setStage] = useState('');
 
-  const handleEdit = (lead) => {
+  const handleEdit = useCallback((lead) => {
     setEditingLead(lead);
     setName(lead.name || '');
     setPhone(lead.phone || '');
@@ -147,9 +147,9 @@ const LeadManager = ({ leads, onSave }) => {
     setStage(lead.stage || '');
     setStep(1);
     setShowForm(true);
-  };
+  }, []);
 
-  const handleAdd = () => {
+  const handleAdd = useCallback(() => {
     setEditingLead(null);
     setName('');
     setPhone('');
@@ -161,15 +161,15 @@ const LeadManager = ({ leads, onSave }) => {
     setStage('');
     setStep(1);
     setShowForm(true);
-  };
+  }, []);
 
-  const handleOpenPipeline = (lead) => {
+  const handleOpenPipeline = useCallback((lead) => {
     setPipelineLead(lead);
     setConversion(lead.conversion || '');
     setStatus(lead.status || '');
     setStage(lead.stage || '');
     setShowPipelineModal(true);
-  };
+  }, []);
 
   const handleSavePipeline = () => {
     const now = new Date().toISOString();
@@ -229,12 +229,12 @@ const LeadManager = ({ leads, onSave }) => {
     setShowForm(false);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = useCallback((id) => {
     if (window.confirm('Are you sure you want to delete this lead?')) {
       const updatedLeads = leads.filter(l => l.id !== id);
       onSave(updatedLeads, 'DELETE');
     }
-  };
+  }, [leads, onSave]);
 
   if (showPipelineModal && pipelineLead) {
     return (
