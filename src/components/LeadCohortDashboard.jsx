@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { format, parseISO, isValid, startOfMonth, subMonths, isBefore, isAfter, isSameMonth } from 'date-fns';
+import { format, parseISO, isValid, startOfMonth, subMonths, isBefore, isAfter, isSameMonth } from '../utils/dateUtils';
 
 const LeadCohortDashboard = ({ leads }) => {
   const [targetMonthStr, setTargetMonthStr] = useState(format(new Date(), 'yyyy-MM'));
@@ -24,6 +24,7 @@ const LeadCohortDashboard = ({ leads }) => {
     // 4. Payment Status
     let paid = 0;
     let waitingPayment = 0;
+    let visa = 0;
 
     leads.forEach(lead => {
       // Determine creation date safely
@@ -102,6 +103,8 @@ const LeadCohortDashboard = ({ leads }) => {
       if (lead.conversion === 'yes' && lead.status === 'application') {
          if (lead.stage === 'payment') {
             paid++;
+         } else if (lead.stage === 'visa') {
+            visa++;
          } else if (lead.stage === 'deposit' || lead.stage === 'still thinking') {
             waitingPayment++;
          }
@@ -112,7 +115,7 @@ const LeadCohortDashboard = ({ leads }) => {
       sources: Object.entries(sources).map(([name, stats]) => ({ name, ...stats })).sort((a,b) => b.total - a.total),
       priorDna: { yes: priorDnaYes, no: priorDnaNo, chasing: priorDnaStillChasing, dropped: priorDnaDropped },
       application: { thisMonth: appThisMonth, pastMonth: appPastMonth },
-      payment: { paid, waiting: waitingPayment }
+      payment: { paid, waiting: waitingPayment, visa }
     };
   }, [leads, targetMonthStr]);
 
@@ -214,22 +217,24 @@ const LeadCohortDashboard = ({ leads }) => {
           {/* SECTION 4: Payment Status */}
           <div className="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
             <div className="bg-[#9fc5e8] px-4 py-3">
-              <h4 className="font-bold text-notion-black text-center">Payment Status</h4>
+              <h4 className="font-bold text-notion-black text-center">Payment & Visa Status</h4>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-center">
                 <thead>
                   <tr className="border-b border-zinc-200 bg-zinc-50">
-                    <th className="px-4 py-3 text-left w-1/3"></th>
+                    <th className="px-4 py-3 text-left w-1/4"></th>
                     <th className="px-2 py-3 font-semibold text-zinc-600">Paid</th>
                     <th className="px-2 py-3 font-semibold text-zinc-600">Waiting for Payment</th>
+                    <th className="px-2 py-3 font-semibold text-zinc-600">Visa Processing</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr className="hover:bg-zinc-50">
                     <td className="px-4 py-3 text-left text-zinc-600"></td>
-                    <td className="px-2 py-3">{analytics.payment.paid}</td>
+                    <td className="px-2 py-3 font-medium text-purple-700">{analytics.payment.paid}</td>
                     <td className="px-2 py-3">{analytics.payment.waiting}</td>
+                    <td className="px-2 py-3 font-medium text-blue-700">{analytics.payment.visa}</td>
                   </tr>
                 </tbody>
               </table>

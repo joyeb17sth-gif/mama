@@ -1,6 +1,5 @@
 import React, { useRef, useEffect, Fragment } from 'react';
-import { format, parseISO } from 'date-fns';
-import html2pdf from 'html2pdf.js';
+import { format, parseISO } from '../utils/dateUtils';
 import { getGlobalRates } from '../utils/storage';
 
 const Payslip = ({ payment, period, contractor, onBack }) => {
@@ -17,22 +16,7 @@ const Payslip = ({ payment, period, contractor, onBack }) => {
     }, [contractor.name, period]);
 
     const handleDownload = () => {
-        const element = payslipRef.current;
-        const opt = {
-            margin: [10, 10, 10, 10],
-            filename: `Payslip - ${contractor.name} - ${period}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: {
-                scale: 2,
-                useCORS: true,
-                letterRendering: true,
-                windowWidth: 1100
-            },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-        };
-
-        html2pdf().set(opt).from(element).save();
+        window.print();
     };
 
     const periodLabel = period; // Expecting the exact string from PaymentSummary
@@ -67,8 +51,8 @@ const Payslip = ({ payment, period, contractor, onBack }) => {
                         onClick={handleDownload}
                         className="px-6 py-3 bg-zinc-900 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-black transition-all flex items-center gap-2.5"
                     >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                        Download PDF
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                        Print PDF
                     </button>
                 </div>
             </div>

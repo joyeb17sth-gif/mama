@@ -1,10 +1,9 @@
 import { z } from 'zod';
-import DOMPurify from 'dompurify';
 
-// Helper to sanitize strings before validation to prevent stored XSS
+// Helper to sanitize strings before validation
 export const sanitize = (val) => {
     if (typeof val === 'string') {
-        return DOMPurify.sanitize(val.trim());
+        return val.trim();
     }
     return val;
 };

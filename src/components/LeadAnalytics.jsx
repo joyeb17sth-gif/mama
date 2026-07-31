@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { format, parseISO, isValid, startOfMonth, subMonths, endOfMonth } from 'date-fns';
+import { format, parseISO, isValid, startOfMonth, subMonths, endOfMonth } from '../utils/dateUtils';
 import LeadCohortDashboard from './LeadCohortDashboard';
+import YearlyAnalyticsChart from './YearlyAnalyticsChart';
 
 const LeadAnalytics = ({ leads, onLeadClick }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -149,10 +150,18 @@ const LeadAnalytics = ({ leads, onLeadClick }) => {
         >
           General Analytics
         </button>
+        <button
+          onClick={() => setActiveTab('yearly')}
+          className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'yearly' ? 'border-notion-blue text-notion-blue' : 'border-transparent text-notion-warm-gray-500 hover:text-notion-black hover:border-zinc-300'}`}
+        >
+          Comparison Matrix
+        </button>
       </div>
 
       {activeTab === 'dashboard' ? (
         <LeadCohortDashboard leads={leads} />
+      ) : activeTab === 'yearly' ? (
+        <YearlyAnalyticsChart leads={leads} />
       ) : (
         <div className="space-y-8 animate-in fade-in duration-500">
           {/* Date Range Picker Area */}

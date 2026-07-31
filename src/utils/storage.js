@@ -69,11 +69,16 @@ export const initStorage = async () => {
 };
 
 // Helper to save data to Supabase
-const saveToCloud = async (table, id, data) => {
+const saveToCloud = async (table, id, data, consultantId = null) => {
   const encrypted = encryptData(data);
+  const payload = { id, data: encrypted };
+  if (consultantId) {
+    payload.consultant_id = consultantId;
+  }
+  
   const { data: responseData, error } = await supabase
     .from(table)
-    .upsert({ id, data: encrypted })
+    .upsert(payload)
     .select('updated_at')
     .single();
 
@@ -264,13 +269,26 @@ export const getGlobalRates = () => ({ ...DEFAULT_GLOBAL_RATES, ...(memoryCache.
 
 const DEFAULT_PL_PROFILES = [
   { id: 'seetal_management', name: 'Seetal Management', type: 'site_based', color: '#0075de', icon: 'building' },
-  { id: 'search_education', name: 'Search Education', type: 'income_expense', color: '#7c3aed', icon: 'graduation' },
+  { id: 'search_education_australia', name: 'Search Education Australia', type: 'income_expense', color: '#7c3aed', icon: 'graduation' },
+  { id: 'search_education_chile', name: 'Search Education Chile', type: 'income_expense', color: '#7c3aed', icon: 'graduation' },
+  { id: 'search_education_nepal', name: 'Search Education Nepal', type: 'income_expense', color: '#7c3aed', icon: 'graduation' },
+  { id: 'astra', name: 'Astra', type: 'astra', color: '#f59e0b', icon: 'building' },
   { id: 'medisafe', name: 'Medisafe', type: 'cogs_based', color: '#059669', icon: 'medical' },
 ];
 
 export const migrateProfitLossData = (raw) => {
   // Already new format
   if (raw && raw.version === 2 && raw.profiles && raw.companies) {
+    if (raw.companies.search_education && !raw.companies.search_education_australia) {
+      raw.companies.search_education_australia = raw.companies.search_education;
+      delete raw.companies.search_education;
+    }
+    raw.profiles = [...DEFAULT_PL_PROFILES];
+    if (!raw.companies.search_education_australia) raw.companies.search_education_australia = [];
+    if (!raw.companies.search_education_chile) raw.companies.search_education_chile = [];
+    if (!raw.companies.search_education_nepal) raw.companies.search_education_nepal = [];
+    if (!raw.companies.astra) raw.companies.astra = [];
+    if (!raw.companies.medisafe) raw.companies.medisafe = [];
     return raw;
   }
   // Old format: an array of periods — migrate to Seetal Management
@@ -280,7 +298,10 @@ export const migrateProfitLossData = (raw) => {
       profiles: [...DEFAULT_PL_PROFILES],
       companies: {
         seetal_management: raw,
-        search_education: [],
+        search_education_australia: [],
+        search_education_chile: [],
+        search_education_nepal: [],
+        astra: [],
         medisafe: [],
       },
     };
@@ -291,7 +312,10 @@ export const migrateProfitLossData = (raw) => {
     profiles: [...DEFAULT_PL_PROFILES],
     companies: {
       seetal_management: [],
-      search_education: [],
+      search_education_australia: [],
+      search_education_chile: [],
+      search_education_nepal: [],
+      astra: [],
       medisafe: [],
     },
   };
@@ -313,9 +337,79 @@ export const getProfitLoss = () => {
 export const saveLeads = async (leads) => {
   memoryCache.leads = leads;
   await localforage.setItem('leads', encryptData(leads));
-  await saveToCloud('leads', 'main_list', leads);
+  
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const userId = session.user.id;
+    
+    // Check if user is Admin
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single();
+    const isAdmin = profile?.role === 'admin';
+    
+    if (isAdmin) {
+      // Group leads by consultantId (fallback to admin's ID if unassigned)
+      const grouped = leads.reduce((acc, lead) => {
+        const cid = lead.consultantId || userId;
+        if (!acc[cid]) acc[cid] = [];
+        acc[cid].push(lead);
+        return acc;
+      }, {});
+      
+      // Save each group to its respective row
+      for (const cid in grouped) {
+        await saveToCloud('leads', 'user_' + cid, grouped[cid], cid);
+      }
+    } else {
+      // Consultant: force all leads to belong to them and save to their row
+      const myLeads = leads.map(l => ({ ...l, consultantId: userId }));
+      await saveToCloud('leads', 'user_' + userId, myLeads, userId);
+    }
+  } catch (err) {
+    if (import.meta.env.DEV) console.error("Error saving leads to cloud:", err);
+    if (_onSaveError) _onSaveError('Failed to sync leads to cloud. Changes saved locally.');
+  }
 };
-export const getLeadsAsync = () => getSingleFromCloud('leads', 'main_list');
+
+export const getLeadsAsync = async () => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return null;
+    const userId = session.user.id;
+    
+    // Check if user is Admin
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single();
+    const isAdmin = profile?.role === 'admin';
+    
+    if (isAdmin) {
+      // Fetch all rows for Admin
+      const { data, error } = await supabase.from('leads').select('data, consultant_id');
+      if (error) return null;
+      
+      let allLeads = [];
+      data.forEach(row => {
+        const decrypted = decryptData(row.data);
+        if (Array.isArray(decrypted)) {
+          // Ensure consultantId is stamped on the objects if not already
+          const tagged = decrypted.map(l => ({ ...l, consultantId: l.consultantId || row.consultant_id }));
+          allLeads = [...allLeads, ...tagged];
+        }
+      });
+      return allLeads;
+    } else {
+      // Fetch single row for Consultant
+      const myLeads = await getSingleFromCloud('leads', 'user_' + userId);
+      if (myLeads && Array.isArray(myLeads)) {
+        return myLeads.map(l => ({ ...l, consultantId: userId }));
+      }
+      return myLeads;
+    }
+  } catch (err) {
+    if (import.meta.env.DEV) console.error("Error fetching leads from cloud:", err);
+    return null;
+  }
+};
+
 export const getLeads = () => memoryCache.leads;
 
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getPublicHolidays, savePublicHolidays, logAction } from '../utils/storage';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO } from '../utils/dateUtils';
 import Toast from './Toast';
 
 const PublicHolidayManager = () => {

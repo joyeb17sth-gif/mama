@@ -57,7 +57,7 @@ const UserManagement = () => {
 
     const handleRoleChange = async (userId, newRole) => {
         try {
-            const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId);
+            const { data, error } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId).select().single();
             if (error) throw error;
             clearProfilesCache();
             setSuccess(`Permissions updated successfully.`);
@@ -113,6 +113,7 @@ const UserManagement = () => {
             case 'supervisor': return 'Supervisor';
             case 'manager': return 'Manager';
             case 'payslip_management': return 'Payslip Management';
+            case 'leads_team': return 'Leads Team';
             default: return 'User';
         }
     };
@@ -123,6 +124,7 @@ const UserManagement = () => {
             case 'supervisor': return 'bg-notion-badge-green-bg text-emerald-700';
             case 'manager': return 'bg-notion-badge-purple-bg text-purple-700';
             case 'payslip_management': return 'bg-notion-badge-rose-bg text-rose-700';
+            case 'leads_team': return 'bg-orange-50 text-orange-700 border-orange-100';
             default: return 'bg-zinc-100 text-zinc-600';
         }
     };
@@ -203,10 +205,12 @@ const UserManagement = () => {
                                 onChange={handleChange}
                                 className="w-full px-5 py-4 bg-notion-warm-white whisper-border rounded-micro focus:shadow-notion-card outline-none font-bold text-notion-black transition-all"
                             >
+                                <option value="user">User</option>
                                 <option value="admin">System Admin</option>
                                 <option value="supervisor">Supervisor</option>
                                 <option value="manager">Manager</option>
                                 <option value="payslip_management">Payslip Management</option>
+                                <option value="leads_team">Leads Team</option>
                             </select>
                         </div>
 
@@ -310,10 +314,12 @@ const UserManagement = () => {
                                                         onChange={(e) => handleRoleChange(entry.id, e.target.value)}
                                                         className="bg-white whisper-border text-badge font-bold rounded px-2 py-1 outline-none focus:border-notion-blue transition-all"
                                                     >
+                                                        <option value="user">User</option>
                                                         <option value="admin">System Admin</option>
                                                         <option value="supervisor">Supervisor</option>
                                                         <option value="manager">Manager</option>
                                                         <option value="payslip_management">Payslip Management</option>
+                                                        <option value="leads_team">Leads Team</option>
                                                     </select>
                                                 )}
                                             </td>

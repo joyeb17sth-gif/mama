@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { format, addMonths, subMonths, parseISO, startOfYear, endOfYear, eachMonthOfInterval, addDays, addWeeks, startOfDay, isBefore, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isToday } from 'date-fns';
+import { format, addMonths, subMonths, parseISO, startOfYear, endOfYear, eachMonthOfInterval, addDays, addWeeks, startOfDay, isBefore, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isToday } from '../utils/dateUtils';
 import Dropdown from './Dropdown';
 
 const TaskMatrix = ({ sites, periodicalTasks, onToggleStatus, onUpdateScheduleOverrides, onManageTasks }) => {

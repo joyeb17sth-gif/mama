@@ -1,12 +1,36 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import LeadAnalytics from './LeadAnalytics';
-import { saveLeads } from '../utils/storage';
-import DOMPurify from 'dompurify';
+import { supabase } from '../utils/supabaseClient';
 
 const LeadManager = ({ leads, onSave }) => {
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
   const [activeView, setActiveView] = useState('list');
+
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [consultants, setConsultants] = useState([]);
+  const [selectedConsultantId, setSelectedConsultantId] = useState('all');
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+        if (profile?.role === 'admin') {
+          setIsAdmin(true);
+          const { data: allProfiles } = await supabase.from('profiles').select('id, email, role');
+          setConsultants(allProfiles || []);
+        }
+      }
+    };
+    initAuth();
+  }, []);
+
+  const displayedLeads = useMemo(() => {
+    if (!isAdmin) return leads;
+    if (selectedConsultantId === 'all') return leads;
+    return leads.filter(l => l.consultantId === selectedConsultantId);
+  }, [leads, isAdmin, selectedConsultantId]);
 
   const generateSampleData = async () => {
     const fakeLeads = [];
@@ -37,7 +61,7 @@ const LeadManager = ({ leads, onSave }) => {
         conversion = 'yes';
         status = ['application', 'still thinking', 'did not respond'][Math.floor(Math.random() * 3)];
         if (status === 'application') {
-          stage = ['payment', 'deposit', 'still thinking'][Math.floor(Math.random() * 3)];
+          stage = ['payment', 'deposit', 'visa', 'still thinking'][Math.floor(Math.random() * 4)];
         }
 
         // Converted date logic: 60% chance same month, 40% chance later
@@ -114,8 +138,7 @@ const LeadManager = ({ leads, onSave }) => {
       });
     }
 
-    await saveLeads(fakeLeads);
-    window.location.reload();
+    onSave(fakeLeads, 'REPLACE');
   };
 
   // Pipeline Modal states
@@ -374,6 +397,7 @@ const LeadManager = ({ leads, onSave }) => {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 pl-12">
                   {[
                     { id: 'payment', label: 'Payment', desc: 'Fully paid', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>, color: 'purple' },
+                    { id: 'visa', label: 'Visa', desc: 'Secured visa', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>, color: 'blue' },
                     { id: 'deposit', label: 'Deposit', desc: 'Partial payment', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, color: 'indigo' },
                     { id: 'still thinking', label: 'Still Thinking', desc: 'Pending decision', icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, color: 'orange' }
                   ].map(s => (
@@ -624,7 +648,12 @@ const LeadManager = ({ leads, onSave }) => {
                           {(lead.name || 'U').charAt(0).toUpperCase()}
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-bold text-notion-black text-base">{lead.name || 'Unnamed Lead'}</span>
+                          <span className="font-bold text-notion-black text-base flex items-center gap-2">
+                            {lead.name || 'Unnamed Lead'}
+                            <span className="text-[10px] font-semibold px-2 py-0.5 bg-zinc-100 text-zinc-500 rounded-md tracking-wider">
+                              {new Date(lead.createdAt || (lead.id && !isNaN(parseInt(lead.id)) ? parseInt(lead.id) : Date.now())).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                            </span>
+                          </span>
                           <div className="text-xs text-notion-warm-gray-500 flex items-center gap-2 mt-0.5">
                             {lead.phone && <span className="flex items-center gap-1"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>{lead.phone}</span>}
                             {lead.phone && lead.email && <span className="w-1 h-1 bg-zinc-300 rounded-full"></span>}

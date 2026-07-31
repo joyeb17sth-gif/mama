@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { format, addDays, parseISO, isAfter } from 'date-fns';
+import { format, addDays, parseISO, isAfter } from '../utils/dateUtils';
 import { getTimesheets, getContractors, getTrainingReleases, saveTrainingReleases, logAction } from '../utils/storage';
 import { encryptData, decryptData } from '../utils/encryptionUtils';
 import localforage from 'localforage';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { parseISO, differenceInDays, addDays, format } from 'date-fns';
+import { parseISO, differenceInDays, addDays, format } from './utils/dateUtils';
 import {
   initStorage, memoryCache,
   getSites, saveSites, getSitesAsync,
@@ -59,6 +59,10 @@ function App() {
     if (role === 'payslip_management') {
       // Payslip management can access most tabs except task matrix, user management, profit-loss, and settings
       return !['task-matrix', 'users', 'profit-loss', 'settings'].includes(tab);
+    }
+
+    if (role === 'leads_team') {
+      return ['lead-manager'].includes(tab);
     }
 
     // Default basic role
@@ -136,6 +140,9 @@ function App() {
           'periodicalTasks',
           'leads'
         );
+      } else if (role === 'leads_team') {
+        promises.push(getLeadsAsync());
+        promiseKeys.push('leads');
       } else {
         // Default users download nothing
       }
@@ -182,8 +189,10 @@ function App() {
       }
 
       if (cloudLeads !== undefined) {
-        hasChanges = true;
-        if (cloudLeads) {
+        // Only overwrite local state if cloud returned actual data.
+        // An empty array could mean cloud save failed — don't wipe local state.
+        if (Array.isArray(cloudLeads) && cloudLeads.length > 0) {
+          hasChanges = true;
           memoryCache.leads = cloudLeads;
           await localforage.setItem('leads', encryptData(cloudLeads));
           setLeads(cloudLeads);
@@ -490,7 +499,9 @@ function App() {
   // Lead Manager handler
   const handleSaveLeads = (leadData, actionType) => {
     let updatedLeads;
-    if (actionType === 'DELETE') {
+    if (actionType === 'REPLACE') {
+      updatedLeads = leadData; // Full replacement (e.g., sample data)
+    } else if (actionType === 'DELETE') {
       updatedLeads = leadData; // leadData contains the updated array
       logAction('DELETE_LEAD', { count: leads.length - updatedLeads.length });
     } else {

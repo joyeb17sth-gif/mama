@@ -58,6 +58,10 @@ const Layout = ({
             return navItems.filter(item => ['task-matrix', 'sites', 'lead-manager'].includes(item.id));
         }
 
+        if (role === 'leads_team') {
+            return navItems.filter(item => ['lead-manager'].includes(item.id));
+        }
+
         // Default user
         return navItems.filter(item => ['dashboard'].includes(item.id));
     };

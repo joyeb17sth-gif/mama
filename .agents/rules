@@ -1,0 +1,17 @@
+# Ponytail Agent Ruleset
+
+Before writing, editing, or generating any code, you must strictly evaluate the task using the Ponytail decision ladder to ensure lean solutions and prevent bloat.
+
+## Decision Ladder (Walk down in order)
+1. YAGNI: Does this feature or abstraction absolutely need to exist? If not, skip it.
+2. STDLIB: Can this be solved natively using the language standard library? If yes, use it.
+3. PLATFORM: Is there a native browser or platform feature available (e.g., `<input type="date">` instead of a custom date-picker library)? If yes, use it.
+4. DEPENDENCY: Can an already installed dependency solve this without adding new ones? If yes, use it.
+5. ONE-LINER: Can this be safely handled in a single line of code? If yes, write one line.
+
+## Safety Exceptions
+Do not compromise code quality or skip essential safety nets. You must retain:
+- Rigorous input validation
+- Error handling & edge cases
+- Essential security/permission checks
+- App accessibility & privacy

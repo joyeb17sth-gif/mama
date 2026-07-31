@@ -1,14 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO } from '../utils/dateUtils';
 import { getDayType } from '../utils/dateUtils';
 import { getTimesheets, getContractors, getPaymentSummaries, savePaymentSummaries, getTrainingReleases, saveTimesheets, logAction, getPublicHolidays } from '../utils/storage';
 import { consolidateContractorPay } from '../utils/payrollCalculations';
 import { exportPaymentSummaryToCSV } from '../utils/exportUtils';
 import Payslip from './Payslip';
-import html2pdf from 'html2pdf.js';
 import Toast from './Toast';
 import { supabase } from '../utils/supabaseClient';
-import JSZip from 'jszip';
 import Dropdown from './Dropdown';
 
 const PaymentSummary = ({ syncVersion }) => {
@@ -25,215 +23,10 @@ const PaymentSummary = ({ syncVersion }) => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [hasGenerated, setHasGenerated] = useState(false);
-  const [selectedContractors, setSelectedContractors] = useState([]);
-  const [isSending, setIsSending] = useState(false);
-  const [isZipping, setIsZipping] = useState(false);
 
-  // Handle individual checkbox change
-  const handleSelectContractor = useCallback((contractorId) => {
-    setSelectedContractors(prev => {
-      if (prev.includes(contractorId)) {
-        return prev.filter(id => id !== contractorId);
-      } else {
-        return [...prev, contractorId];
-      }
-    });
-  }, []);
 
-  // Handle "Select All" checkbox change
-  const handleSelectAll = useCallback((e) => {
-    if (e.target.checked) {
-      const allIds = summary.map(p => p.contractorId);
-      setSelectedContractors(allIds);
-    } else {
-      setSelectedContractors([]);
-    }
-  }, [summary]);
 
-  const handleSendPayslips = async () => {
-    if (selectedContractors.length === 0) {
-      alert('Please select at least one contractor to send payslips to.');
-      return;
-    }
 
-    if (!confirm(`Are you sure you want to send payslips to ${selectedContractors.length} contractors?`)) {
-      return;
-    }
-
-    setIsSending(true);
-    let successCount = 0;
-    let failCount = 0;
-
-    try {
-      const targets = summary.filter(p => selectedContractors.includes(p.contractorId));
-
-      for (const payment of targets) {
-        const contractor = contractors.find(c => c.id === payment.contractorId);
-
-        if (!contractor?.email) {
-          if (import.meta.env.DEV) console.warn(`Skipping ${payment.contractorName}: No email address.`);
-          failCount++;
-          continue;
-        }
-
-        // 1. TEMPORARILY SET AS SELECTED TO RENDER IT IN DOM (for PDF generation)
-        setSelectedPayslip(payment);
-
-        // Wait for React to render the component (one microtask)
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const payslipElement = document.querySelector('.payslip-wrapper');
-
-        if (!payslipElement) {
-          if (import.meta.env.DEV) console.error('Could not find payslip element in DOM');
-          setSelectedPayslip(null);
-          failCount++;
-          continue;
-        }
-
-        // 2. GENERATE PDF AS BASE64
-        const opt = {
-          margin: [10, 10, 10, 10],
-          filename: `Payslip - ${contractor.name} - ${selectedPeriod}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 3, useCORS: true, letterRendering: true },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: ['avoid-all'] }
-        };
-
-        const pdfBase64 = await html2pdf().set(opt).from(payslipElement).output('datauristring');
-        // Extract raw base64 from data URI
-        const base64Data = pdfBase64.split(',')[1];
-
-        // 3. CALL EDGE FUNCTION WITH ATTACHMENT
-        const { data, error } = await supabase.functions.invoke('send-payslip', {
-          body: {
-            to: contractor.email,
-            contractorName: payment.contractorName,
-            period: selectedPeriod,
-            totalNetPay: payment.totalNetPay,
-            siteBreakdown: payment.siteBreakdown,
-            pdfAttachment: base64Data // NEW FIELD
-          }
-        });
-
-        // 4. CLEAN UP
-        setSelectedPayslip(null);
-
-        if (error) {
-          if (import.meta.env.DEV) console.error(`Error sending to ${contractor.name}:`, error);
-          failCount++;
-        } else {
-          successCount++;
-        }
-      }
-
-      if (successCount > 0) {
-        setToastMessage(`Successfully sent ${successCount} payslip${successCount > 1 ? 's' : ''} with PDF attachments!${failCount > 0 ? ` (${failCount} failed)` : ''}`);
-        setShowToast(true);
-        setSelectedContractors([]);
-      } else if (failCount > 0) {
-        alert(`Failed to send ${failCount} payslips. Please check the console.`);
-      }
-    } catch (error) {
-      if (import.meta.env.DEV) console.error('Fatal error in sending payslips:', error);
-      alert('An error occurred while connecting to the email service.');
-      setSelectedPayslip(null);
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  const handleZippedExport = async () => {
-    if (selectedContractors.length === 0) {
-      alert('Please select at least one contractor to export.');
-      return;
-    }
-
-    setIsZipping(true);
-    try {
-      const zip = new JSZip();
-      let successCount = 0;
-
-      const targets = summary.filter(p => selectedContractors.includes(p.contractorId));
-
-      for (const payment of targets) {
-        const contractor = contractors.find(c => c.id === payment.contractorId);
-
-        // 1. Render in DOM temporarily
-        setSelectedPayslip(payment);
-
-        // Wait for React to render the component 
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const payslipElement = document.querySelector('.payslip-wrapper');
-
-        if (!payslipElement) {
-          if (import.meta.env.DEV) console.error('Could not find payslip element in DOM');
-          continue;
-        }
-
-        // 2. Generate PDF
-        const opt = {
-          margin: [10, 10, 10, 10],
-          filename: `Payslip - ${contractor.name} - ${selectedPeriod}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 3, useCORS: true, letterRendering: true },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: ['avoid-all'] }
-        };
-
-        const pdfBase64 = await html2pdf().set(opt).from(payslipElement).output('datauristring');
-        const base64Data = pdfBase64.split(',')[1];
-        
-        // Convert base64 to binary
-        const binaryString = window.atob(base64Data);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-
-        // Add file to ZIP
-        const fileName = `Payslip - ${contractor?.name || payment.contractorName}.pdf`;
-        zip.file(fileName, bytes.buffer);
-        successCount++;
-      }
-
-      // Cleanup view
-      setSelectedPayslip(null);
-
-      // 3. Generate Zip file and trigger download
-      if (successCount > 0) {
-        const zipBlob = await zip.generateAsync({ type: 'blob' });
-        
-        const zipUrl = URL.createObjectURL(zipBlob);
-        const a = document.createElement('a');
-        a.href = zipUrl;
-        const zipFileName = `Payslips_Bundle_${selectedPeriod.replace(/[^a-zA-Z0-9]/g, '_')}.zip`;
-        a.download = zipFileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(zipUrl);
-
-        logAction('EXPORT_ARCHIVE', `Downloaded Zipped PDF Payslips for ${successCount} contractors`);
-        
-        setToastMessage(`Successfully exported ${successCount} payslip PDFs inside a ZIP package.`);
-        setShowToast(true);
-        setSelectedContractors([]);
-      } else {
-         alert('Failed to generate any PDFs.');
-      }
-
-    } catch (error) {
-      if (import.meta.env.DEV) console.error('Error generating PDF bundle:', error);
-      alert('An error occurred while generating the PDF bundle.');
-      setSelectedPayslip(null);
-    } finally {
-      setIsZipping(false);
-    }
-  };
 
   const refreshData = useCallback(() => {
     setTimesheets(getTimesheets());
@@ -724,38 +517,6 @@ const PaymentSummary = ({ syncVersion }) => {
           {summary.length > 0 && (
             <div className="flex flex-wrap gap-3">
               <button
-                onClick={handleSendPayslips}
-                disabled={isSending || selectedContractors.length === 0}
-                className={`px-5 py-2 bg-notion-blue text-white rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-notion-blue-active transition-all flex items-center gap-2 group shadow-notion-card ${isSending || selectedContractors.length === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:-translate-y-0.5 active:translate-y-0'}`}
-              >
-                {isSending ? (
-                  <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                ) : (
-                  <svg className="w-3.5 h-3.5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                )}
-                {isSending ? 'Sending Dispatch...' : `Send Payslips (${selectedContractors.length})`}
-              </button>
-              <button
-                onClick={handleZippedExport}
-                disabled={isZipping || selectedContractors.length === 0}
-                className={`px-5 py-2 bg-notion-warm-white text-notion-black whisper-border rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-zinc-200 transition-all flex items-center gap-2 shadow-sm ${isZipping || selectedContractors.length === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:-translate-y-0.5 active:translate-y-0'}`}
-              >
-                {isZipping ? (
-                  <svg className="animate-spin h-3.5 w-3.5 text-notion-warm-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                ) : (
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                )}
-                {isZipping ? 'Bundling PDFs...' : `Export PDFs (${selectedContractors.length})`}
-              </button>
-              <button
                 onClick={handleExport}
                 className="px-5 py-2 bg-notion-black text-white rounded-micro font-bold text-badge uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2 shadow-notion-deep hover:-translate-y-0.5 active:translate-y-0"
               >
@@ -904,17 +665,9 @@ const PaymentSummary = ({ syncVersion }) => {
                 <tbody className="divide-y whisper-border">
                   {summary.map(payment => {
                     const contractor = contractors.find(c => c.id === payment.contractorId);
-                    const isSelected = selectedContractors.includes(payment.contractorId);
-                    return (
-                      <tr key={payment.contractorId} className={`transition-all group ${isSelected ? 'bg-notion-warm-white/50' : 'hover:bg-zinc-50/30'}`}>
-                        <td className="px-6 py-6 text-center">
-                          <input
-                            type="checkbox"
-                            className="w-4 h-4 rounded-micro border-notion-warm-gray-300 text-notion-blue focus:ring-0 transition-all cursor-pointer"
-                            checked={isSelected}
-                            onChange={() => handleSelectContractor(payment.contractorId)}
-                          />
-                        </td>
+                                        return (
+                      <tr key={payment.contractorId} className="transition-all group hover:bg-zinc-50/30">
+
                         <td className="px-6 py-6 whitespace-nowrap">
                           <div className="flex items-center gap-4">
                             <div className="w-10 h-10 rounded-micro bg-notion-black text-white flex items-center justify-center font-bold text-xs shadow-notion-card">

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { saveProfitLoss, getProfitLoss } from '../utils/storage';
 import ProfitLossSearchEducation from './ProfitLossSearchEducation';
 import ProfitLossMedisafe from './ProfitLossMedisafe';
+import ProfitLossAstra from './ProfitLossAstra';
 
 // ─── Constants ───────────────────────────────────────────────────────────
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -846,8 +847,17 @@ const ProfitLoss = ({ syncVersion }) => {
       {/* ─── Company-Specific Content ─────────────────────────────────── */}
       {selectedProfile?.type === 'income_expense' && (
         <ProfitLossSearchEducation
-          companyPeriods={plData?.companies?.search_education || []}
-          onSave={(periods) => handleSubCompanySave('search_education', periods)}
+          companyPeriods={plData?.companies?.[selectedCompany] || []}
+          onSave={(periods) => handleSubCompanySave(selectedCompany, periods)}
+          isEditMode={isEditMode}
+          view={view}
+        />
+      )}
+
+      {selectedProfile?.type === 'astra' && (
+        <ProfitLossAstra
+          companyPeriods={plData?.companies?.[selectedCompany] || []}
+          onSave={(periods) => handleSubCompanySave(selectedCompany, periods)}
           isEditMode={isEditMode}
           view={view}
         />

@@ -3,7 +3,7 @@ import Dropdown from './Dropdown';
 import { getSites, getContractors } from '../utils/storage';
 import { supabase } from '../utils/supabaseClient';
 import { SiteSchema, validateData } from '../utils/validation';
-import { format, addMonths, startOfYear, eachDayOfInterval, parseISO, isBefore } from 'date-fns';
+import { format, addMonths, startOfYear, eachDayOfInterval, parseISO, isBefore } from '../utils/dateUtils';
 
 const SiteForm = ({ site, periodicalTasks = [], onSave, onCancel, isAdmin = true, availableSites = [] }) => {
   const [allSites, setAllSites] = useState([]);

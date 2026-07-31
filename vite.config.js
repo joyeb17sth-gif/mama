@@ -17,8 +17,7 @@ export default defineConfig({
         manualChunks: {
           vendor: ['react', 'react-dom'],
           supabase: ['@supabase/supabase-js'],
-          utils: ['date-fns', 'crypto-js'],
-          pdf: ['jspdf', 'jspdf-autotable'],
+          utils: ['crypto-js', 'localforage'],
         },
       },
     },

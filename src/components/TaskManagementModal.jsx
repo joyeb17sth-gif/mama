@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Dropdown from './Dropdown';
 import { getContractors } from '../utils/storage';
 import { supabase } from '../utils/supabaseClient';
-import { format, addMonths, startOfYear, eachDayOfInterval, parseISO, isBefore } from 'date-fns';
+import { format, addMonths, startOfYear, eachDayOfInterval, parseISO, isBefore } from '../utils/dateUtils';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
