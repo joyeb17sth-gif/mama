@@ -12,7 +12,7 @@ const LeadManager = ({ leads, onSave }) => {
     try {
       const stored = localStorage.getItem('payscleep_counselors');
       const parsed = stored ? JSON.parse(stored) : [];
-      return parsed.map(c => typeof c === 'string' ? { id: crypto.randomUUID(), name: c, specialty: 'General' } : c);
+      return parsed.map(c => typeof c === 'string' ? { id: (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)), name: c, specialty: 'General' } : c);
     } catch (e) {
       return [];
     }
@@ -29,7 +29,7 @@ const LeadManager = ({ leads, onSave }) => {
   const handleAddCounselorInline = (e) => {
     e.preventDefault();
     if (newCounselorName.trim()) {
-      setCounselors(prev => [...prev, { id: crypto.randomUUID(), name: newCounselorName.trim(), specialty: newCounselorSpecialty.trim() || 'General' }]);
+      setCounselors(prev => [...prev, { id: (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)), name: newCounselorName.trim(), specialty: newCounselorSpecialty.trim() || 'General' }]);
       setNewCounselorName('');
       setNewCounselorSpecialty('');
     }
@@ -52,11 +52,11 @@ const LeadManager = ({ leads, onSave }) => {
     let activeCounselors = [...counselors];
     if (activeCounselors.length === 0) {
       activeCounselors = [
-        { id: crypto.randomUUID(), name: 'Alice', specialty: 'German Specialist' },
-        { id: crypto.randomUUID(), name: 'Bob', specialty: 'Australian Specialist' },
-        { id: crypto.randomUUID(), name: 'Charlie', specialty: 'General' },
-        { id: crypto.randomUUID(), name: 'Diana', specialty: 'UK Specialist' },
-        { id: crypto.randomUUID(), name: 'Eve', specialty: 'US Specialist' }
+          { id: (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)), name: 'Alice', specialty: 'German Specialist' },
+          { id: (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)), name: 'Bob', specialty: 'Australian Specialist' },
+          { id: (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)), name: 'Charlie', specialty: 'General' },
+        { id: (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)), name: 'Diana', specialty: 'UK Specialist' },
+        { id: (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)), name: 'Eve', specialty: 'US Specialist' }
       ];
       setCounselors(activeCounselors);
     }
@@ -144,7 +144,7 @@ const LeadManager = ({ leads, onSave }) => {
       }
 
       fakeLeads.push({
-        id: crypto.randomUUID(),
+        id: (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)),
         name: names[i % names.length] + ' ' + (i + 1),
         phone: '555-01' + Math.floor(Math.random() * 99).toString().padStart(2, '0'),
         email: `lead${i}@example.com`,
