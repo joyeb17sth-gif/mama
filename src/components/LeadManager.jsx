@@ -7,35 +7,59 @@ const LeadManager = ({ leads, onSave }) => {
   const [editingLead, setEditingLead] = useState(null);
   const [activeView, setActiveView] = useState('list');
 
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [consultants, setConsultants] = useState([]);
-  const [selectedConsultantId, setSelectedConsultantId] = useState('all');
+  const [isAdmin, setIsAdmin] = useState(true);
+  const [counselors, setCounselors] = useState(() => {
+    try {
+      const stored = localStorage.getItem('payscleep_counselors');
+      const parsed = stored ? JSON.parse(stored) : [];
+      return parsed.map(c => typeof c === 'string' ? { id: crypto.randomUUID(), name: c, specialty: 'General' } : c);
+    } catch (e) {
+      return [];
+    }
+  });
+  const [selectedCounselor, setSelectedCounselor] = useState('all');
+
+  const [newCounselorName, setNewCounselorName] = useState('');
+  const [newCounselorSpecialty, setNewCounselorSpecialty] = useState('');
 
   useEffect(() => {
-    const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-        if (profile?.role === 'admin') {
-          setIsAdmin(true);
-          const { data: allProfiles } = await supabase.from('profiles').select('id, email, role');
-          setConsultants(allProfiles || []);
-        }
-      }
-    };
-    initAuth();
-  }, []);
+    localStorage.setItem('payscleep_counselors', JSON.stringify(counselors));
+  }, [counselors]);
+
+  const handleAddCounselorInline = (e) => {
+    e.preventDefault();
+    if (newCounselorName.trim()) {
+      setCounselors(prev => [...prev, { id: crypto.randomUUID(), name: newCounselorName.trim(), specialty: newCounselorSpecialty.trim() || 'General' }]);
+      setNewCounselorName('');
+      setNewCounselorSpecialty('');
+    }
+  };
+
+  const handleDeleteCounselor = (id) => {
+    setCounselors(prev => prev.filter(c => c.id !== id));
+  };
 
   const displayedLeads = useMemo(() => {
-    if (!isAdmin) return leads;
-    if (selectedConsultantId === 'all') return leads;
-    return leads.filter(l => l.consultantId === selectedConsultantId);
-  }, [leads, isAdmin, selectedConsultantId]);
+    if (selectedCounselor === 'all') return leads;
+    return leads.filter(l => l.counselor === selectedCounselor);
+  }, [leads, selectedCounselor]);
 
   const generateSampleData = async () => {
     const fakeLeads = [];
     const sources = ['Website', 'Referral', 'Social Media', 'Walk in'];
     const names = ['John Doe', 'Sarah Smith', 'Michael Johnson', 'Emily Davis', 'Chris Wilson', 'Anna Brown', 'James Taylor', 'Laura Martinez', 'David Anderson', 'Lisa Thomas'];
+
+    let activeCounselors = [...counselors];
+    if (activeCounselors.length === 0) {
+      activeCounselors = [
+        { id: crypto.randomUUID(), name: 'Alice', specialty: 'German Specialist' },
+        { id: crypto.randomUUID(), name: 'Bob', specialty: 'Australian Specialist' },
+        { id: crypto.randomUUID(), name: 'Charlie', specialty: 'General' },
+        { id: crypto.randomUUID(), name: 'Diana', specialty: 'UK Specialist' },
+        { id: crypto.randomUUID(), name: 'Eve', specialty: 'US Specialist' }
+      ];
+      setCounselors(activeCounselors);
+    }
 
     // Generate 200 leads across 2025 and 2026
     for (let i = 0; i < 200; i++) {
@@ -134,7 +158,8 @@ const LeadManager = ({ leads, onSave }) => {
         statusUpdatedAt: statusUpdatedAt ? statusUpdatedAt.toISOString() : null,
         stageUpdatedAt: stageUpdatedAt ? stageUpdatedAt.toISOString() : null,
         historyLog,
-        updatedAt: updatedAt.toISOString()
+        updatedAt: updatedAt.toISOString(),
+        counselor: activeCounselors[i % activeCounselors.length].id
       });
     }
 
@@ -152,6 +177,7 @@ const LeadManager = ({ leads, onSave }) => {
   const [email, setEmail] = useState('');
   const [notes, setNotes] = useState('');
   const [source, setSource] = useState('');
+  const [counselor, setCounselor] = useState('');
 
   // Pipeline states
   const [conversion, setConversion] = useState('');
@@ -165,6 +191,7 @@ const LeadManager = ({ leads, onSave }) => {
     setEmail(lead.email || '');
     setNotes(lead.notes || '');
     setSource(lead.source || '');
+    setCounselor(lead.counselor || '');
     setConversion(lead.conversion || '');
     setStatus(lead.status || '');
     setStage(lead.stage || '');
@@ -179,6 +206,7 @@ const LeadManager = ({ leads, onSave }) => {
     setEmail('');
     setNotes('');
     setSource('');
+    setCounselor('');
     setConversion('');
     setStatus('');
     setStage('');
@@ -233,11 +261,12 @@ const LeadManager = ({ leads, onSave }) => {
     const now = new Date().toISOString();
     const leadData = {
       id: editingLead ? editingLead.id : crypto.randomUUID(),
-      name: DOMPurify.sanitize(name),
-      phone: DOMPurify.sanitize(phone),
-      email: DOMPurify.sanitize(email),
-      notes: DOMPurify.sanitize(notes),
-      source: DOMPurify.sanitize(source),
+      name: name,
+      phone: phone,
+      email: email,
+      notes: notes,
+      source: source,
+      counselor: counselor,
       conversion: editingLead ? editingLead.conversion : conversion,
       status: editingLead ? editingLead.status : status,
       stage: editingLead ? editingLead.stage : stage,
@@ -531,14 +560,17 @@ const LeadManager = ({ leads, onSave }) => {
                 </div>
                 <div className="max-w-md mx-auto">
                   <label className="block mb-2 text-xs font-semibold text-notion-warm-gray-500 uppercase tracking-wider">Lead Source</label>
-                  <input
-                    type="text"
+                  <select
                     value={source}
                     onChange={e => setSource(e.target.value)}
-                    className="w-full px-4 py-3 whisper-border rounded-xl focus:outline-none focus:ring-2 focus:ring-notion-blue/50 bg-zinc-50/50 text-base"
-                    placeholder="e.g., Facebook Ad, Friend Referral, Website Form..."
-                    autoFocus
-                  />
+                    className="w-full px-4 py-3 whisper-border rounded-xl focus:outline-none focus:ring-2 focus:ring-notion-blue/50 bg-zinc-50/50 text-base appearance-none cursor-pointer"
+                  >
+                    <option value="" disabled>Select a lead source</option>
+                    <option value="Website">Website</option>
+                    <option value="Referral">Referral</option>
+                    <option value="Social Media">Social Media</option>
+                    <option value="Walk in">Walk in</option>
+                  </select>
                 </div>
               </div>
             )}
@@ -563,6 +595,19 @@ const LeadManager = ({ leads, onSave }) => {
                   <div>
                     <label className="block mb-1 text-xs font-semibold text-notion-warm-gray-500 uppercase tracking-wider">Email</label>
                     <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full px-3 py-2.5 whisper-border rounded-lg focus:outline-none focus:ring-2 focus:ring-notion-blue/50 bg-zinc-50/50" placeholder="Email Address" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block mb-1 text-xs font-semibold text-notion-warm-gray-500 uppercase tracking-wider">Assigned Counselor</label>
+                    <select
+                      value={counselor}
+                      onChange={e => setCounselor(e.target.value)}
+                      className="w-full px-3 py-2.5 whisper-border rounded-lg focus:outline-none focus:ring-2 focus:ring-notion-blue/50 bg-zinc-50/50"
+                    >
+                      <option value="">-- Unassigned --</option>
+                      {counselors.map(c => (
+                        <option key={c.id} value={c.id}>{c.name} - {c.specialty}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="col-span-2">
                     <label className="block mb-1 text-xs font-semibold text-notion-warm-gray-500 uppercase tracking-wider">Notes</label>
@@ -612,6 +657,20 @@ const LeadManager = ({ leads, onSave }) => {
           <div className="flex flex-wrap items-center gap-4 mt-5 ml-0 sm:ml-14">
             <button onClick={() => setActiveView('list')} className={`px-4 py-2 rounded-xl font-bold text-sm transition-all shadow-sm ${activeView === 'list' ? 'bg-zinc-900 text-white' : 'bg-white border border-zinc-200 text-zinc-500 hover:bg-zinc-50'}`}>Lead Pipeline</button>
             <button onClick={() => setActiveView('analytics')} className={`px-4 py-2 rounded-xl font-bold text-sm transition-all shadow-sm ${activeView === 'analytics' ? 'bg-zinc-900 text-white' : 'bg-white border border-zinc-200 text-zinc-500 hover:bg-zinc-50'}`}>Analytics</button>
+            <button onClick={() => setActiveView('manage_counselors')} className={`px-4 py-2 rounded-xl font-bold text-sm transition-all shadow-sm ${activeView === 'manage_counselors' ? 'bg-zinc-900 text-white' : 'bg-white border border-zinc-200 text-zinc-500 hover:bg-zinc-50'}`}>👥 Manage Counselors</button>
+            {activeView === 'list' && (
+              <select
+                value={selectedCounselor}
+                onChange={(e) => setSelectedCounselor(e.target.value)}
+                className="px-4 py-2 rounded-xl text-sm font-semibold border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 shadow-sm focus:outline-none focus:ring-2 focus:ring-notion-blue/50"
+              >
+                <option value="all">All Counselors</option>
+                <option value="">Unassigned</option>
+                {counselors.map(c => (
+                  <option key={c.id} value={c.id}>{c.name} - {c.specialty}</option>
+                ))}
+              </select>
+            )}
             <button onClick={generateSampleData} className="px-4 py-2 rounded-xl font-bold text-sm transition-all shadow-sm bg-emerald-50 border border-emerald-200 text-emerald-600 hover:bg-emerald-100 flex items-center gap-2 ml-auto">
               ✨ Generate Sample Data
             </button>
@@ -628,7 +687,7 @@ const LeadManager = ({ leads, onSave }) => {
 
       {activeView === 'list' ? (
         <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-zinc-100 overflow-hidden">
-          <div className="overflow-x-auto">
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead>
                 <tr className="border-b border-zinc-100 bg-zinc-50/50">
@@ -640,7 +699,7 @@ const LeadManager = ({ leads, onSave }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-50">
-                {leads.map((lead) => (
+                {displayedLeads.map((lead) => (
                   <tr key={lead.id} className="hover:bg-zinc-50/80 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -659,6 +718,40 @@ const LeadManager = ({ leads, onSave }) => {
                             {lead.phone && lead.email && <span className="w-1 h-1 bg-zinc-300 rounded-full"></span>}
                             {lead.email && <span className="flex items-center gap-1"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>{lead.email}</span>}
                           </div>
+                          {lead.counselor ? (
+                            <div className="mt-1.5">
+                              <select
+                                value={lead.counselor}
+                                onChange={(e) => {
+                                  const updatedLeads = leads.map(l => l.id === lead.id ? { ...l, counselor: e.target.value } : l);
+                                  onSave(updatedLeads, 'REPLACE');
+                                }}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 text-purple-600 border border-purple-100 focus:outline-none cursor-pointer hover:bg-purple-100 transition-colors"
+                              >
+                                {counselors.map(c => (
+                                  <option key={c.id} value={c.id}>👥 {c.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          ) : (
+                            <div className="mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <select
+                                value=""
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    const updatedLeads = leads.map(l => l.id === lead.id ? { ...l, counselor: e.target.value } : l);
+                                    onSave(updatedLeads, 'REPLACE');
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-zinc-50 text-zinc-500 border border-zinc-200 focus:outline-none cursor-pointer hover:bg-zinc-100 transition-colors"
+                              >
+                                <option value="">Assign Counselor</option>
+                                {counselors.map(c => (
+                                  <option key={c.id} value={c.id}>👥 {c.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -674,19 +767,28 @@ const LeadManager = ({ leads, onSave }) => {
                     </td>
 
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border
-                        ${lead.conversion === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : lead.conversion === 'no' ? 'bg-rose-50 text-rose-700 border-rose-200'
-                            : lead.conversion === 'DNA' ? 'bg-amber-50 text-amber-700 border-amber-200'
-                              : 'bg-zinc-50 text-zinc-500 border-zinc-200'}`}
-                      >
-                        {lead.conversion === 'yes' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>}
-                        {lead.conversion === 'no' && <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>}
-                        {lead.conversion === 'DNA' && <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>}
-                        {!lead.conversion && <span className="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>}
+                      <div className="flex flex-col gap-1.5 items-start">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border
+                          ${lead.conversion === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : lead.conversion === 'no' ? 'bg-rose-50 text-rose-700 border-rose-200'
+                              : lead.conversion === 'DNA' ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-zinc-50 text-zinc-500 border-zinc-200'}`}
+                        >
+                          {lead.conversion === 'yes' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>}
+                          {lead.conversion === 'no' && <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>}
+                          {lead.conversion === 'DNA' && <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>}
+                          {!lead.conversion && <span className="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>}
 
-                        {lead.conversion === 'DNA' ? 'DNA' : lead.conversion === 'yes' ? 'Quality Lead' : lead.conversion === 'no' ? 'Not Interested' : 'Pending'}
-                      </span>
+                          {lead.conversion === 'DNA' ? 'DNA' : lead.conversion === 'yes' ? 'Quality Lead' : lead.conversion === 'no' ? 'Not Interested' : 'Pending'}
+                        </span>
+                        
+                        {lead.conversion === 'yes' && lead.convertedAt && new Date(lead.convertedAt).getMonth() !== new Date(lead.createdAt).getMonth() && (
+                          <div className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 flex items-center gap-1" title={`Originally a lead from ${new Date(lead.createdAt).toLocaleDateString(undefined, { month: 'short' })}`}>
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            Converted {new Date(lead.convertedAt).toLocaleDateString(undefined, { month: 'short' })}
+                          </div>
+                        )}
+                      </div>
                     </td>
 
                     <td className="px-6 py-4">
@@ -765,9 +867,49 @@ const LeadManager = ({ leads, onSave }) => {
             </table>
           </div>
         </div>
+      ) : activeView === 'manage_counselors' ? (
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-zinc-100 p-8">
+            <h3 className="text-xl font-bold text-notion-black mb-6 flex items-center gap-3">
+              <span className="p-2 bg-purple-50 text-purple-600 rounded-xl">👥</span>
+              Manage Counselors
+            </h3>
+            <form onSubmit={handleAddCounselorInline} className="space-y-4 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Name</label>
+                  <input type="text" value={newCounselorName} onChange={e => setNewCounselorName(e.target.value)} className="w-full px-4 py-3 border rounded-xl text-sm bg-zinc-50 focus:bg-white transition-colors" placeholder="e.g. Alice" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Specialty</label>
+                  <input type="text" value={newCounselorSpecialty} onChange={e => setNewCounselorSpecialty(e.target.value)} className="w-full px-4 py-3 border rounded-xl text-sm bg-zinc-50 focus:bg-white transition-colors" placeholder="e.g. German Specialist" />
+                </div>
+              </div>
+              <button type="submit" disabled={!newCounselorName.trim()} className="w-full py-3 bg-notion-black text-white rounded-xl text-sm font-bold disabled:opacity-50 transition-opacity">Add Counselor</button>
+            </form>
+            <div className="space-y-4">
+              <h4 className="text-sm font-bold text-zinc-400 uppercase tracking-wider">Current Counselors</h4>
+              {counselors.map(c => (
+                <div key={c.id} className="flex justify-between items-center p-4 bg-zinc-50 rounded-2xl border border-zinc-100 group hover:border-purple-200 transition-colors">
+                  <div>
+                    <div className="font-bold text-base text-notion-black">{c.name}</div>
+                    <div className="text-sm text-purple-600 font-semibold">{c.specialty}</div>
+                  </div>
+                  <button onClick={() => handleDeleteCounselor(c.id)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Remove Counselor">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                </div>
+              ))}
+              {counselors.length === 0 && (
+                <div className="text-center text-zinc-400 text-sm py-8">No counselors added yet.</div>
+              )}
+            </div>
+          </div>
+        </div>
       ) : (
         <LeadAnalytics
           leads={leads}
+          counselors={counselors}
           onLeadClick={(lead) => {
             setActiveView('list');
             setPipelineLead(lead);

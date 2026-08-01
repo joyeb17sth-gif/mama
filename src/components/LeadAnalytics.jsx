@@ -3,7 +3,7 @@ import { format, parseISO, isValid, startOfMonth, subMonths, endOfMonth } from '
 import LeadCohortDashboard from './LeadCohortDashboard';
 import YearlyAnalyticsChart from './YearlyAnalyticsChart';
 
-const LeadAnalytics = ({ leads, onLeadClick }) => {
+const LeadAnalytics = ({ leads, onLeadClick, counselors = [] }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [startMonth, setStartMonth] = useState('2026-01');
   const [endMonth, setEndMonth] = useState('2026-12');
@@ -156,12 +156,78 @@ const LeadAnalytics = ({ leads, onLeadClick }) => {
         >
           Comparison Matrix
         </button>
+        <button
+          onClick={() => setActiveTab('counselors')}
+          className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'counselors' ? 'border-notion-blue text-notion-blue' : 'border-transparent text-notion-warm-gray-500 hover:text-notion-black hover:border-zinc-300'}`}
+        >
+          Counselor Performance
+        </button>
       </div>
 
       {activeTab === 'dashboard' ? (
         <LeadCohortDashboard leads={leads} />
       ) : activeTab === 'yearly' ? (
         <YearlyAnalyticsChart leads={leads} />
+      ) : activeTab === 'counselors' ? (
+        <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-zinc-100 overflow-hidden p-8">
+          <h3 className="text-xl font-bold text-notion-black mb-6 flex items-center gap-2">
+            <span className="p-2 bg-purple-50 text-purple-600 rounded-xl">👥</span>
+            Counselor Performance
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead>
+                <tr className="border-b border-zinc-100 bg-zinc-50/50">
+                  <th className="px-6 py-5 font-bold text-notion-warm-gray-500 uppercase tracking-wider text-[11px]">Counselor</th>
+                  <th className="px-6 py-5 font-bold text-notion-warm-gray-500 uppercase tracking-wider text-[11px]">Total Leads</th>
+                  <th className="px-6 py-5 font-bold text-emerald-600 uppercase tracking-wider text-[11px]">Converted (Yes)</th>
+                  <th className="px-6 py-5 font-bold text-rose-600 uppercase tracking-wider text-[11px]">No</th>
+                  <th className="px-6 py-5 font-bold text-amber-600 uppercase tracking-wider text-[11px]">Did Not Answer</th>
+                  <th className="px-6 py-5 font-bold text-purple-600 uppercase tracking-wider text-[11px]">Application</th>
+                  <th className="px-6 py-5 font-bold text-indigo-600 uppercase tracking-wider text-[11px]">Paid</th>
+                  <th className="px-6 py-5 font-bold text-pink-600 uppercase tracking-wider text-[11px]">Visa</th>
+                  <th className="px-6 py-5 font-bold text-notion-blue uppercase tracking-wider text-[11px]">Conversion Rate</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-50">
+                {Object.entries(leads.reduce((acc, lead) => {
+                  if (lead.counselor) {
+                    const counselorObj = counselors.find(c => c.id === lead.counselor);
+                    if (counselorObj) {
+                      const cId = counselorObj.id;
+                      if (!acc[cId]) acc[cId] = { name: counselorObj.name, total: 0, yes: 0, no: 0, dna: 0, application: 0, paid: 0, visa: 0 };
+                      acc[cId].total++;
+                      if (lead.conversion === 'yes') acc[cId].yes++;
+                      else if (lead.conversion === 'no') acc[cId].no++;
+                      else if (lead.conversion === 'DNA') acc[cId].dna++;
+
+                      if (lead.conversion === 'yes' && lead.status === 'application') {
+                        acc[cId].application++;
+                        if (lead.stage === 'visa') acc[cId].visa++;
+                        if (lead.stage === 'payment') acc[cId].paid++;
+                      }
+                    }
+                  }
+                  return acc;
+                }, {})).sort((a, b) => b[1].total - a[1].total).map(([id, stats]) => (
+                  <tr key={id} className="hover:bg-zinc-50/80 transition-colors">
+                    <td className="px-6 py-4 font-bold text-notion-black">{stats.name}</td>
+                    <td className="px-6 py-4 font-medium text-notion-black">{stats.total}</td>
+                    <td className="px-6 py-4 font-semibold text-emerald-600">{stats.yes}</td>
+                    <td className="px-6 py-4 font-semibold text-rose-600">{stats.no}</td>
+                    <td className="px-6 py-4 font-semibold text-amber-600">{stats.dna}</td>
+                    <td className="px-6 py-4 font-semibold text-purple-600">{stats.application}</td>
+                    <td className="px-6 py-4 font-semibold text-indigo-600">{stats.paid}</td>
+                    <td className="px-6 py-4 font-semibold text-pink-600">{stats.visa}</td>
+                    <td className="px-6 py-4 font-bold text-notion-blue">
+                      {stats.total > 0 ? Math.round((stats.yes / stats.total) * 100) : 0}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
         <div className="space-y-8 animate-in fade-in duration-500">
           {/* Date Range Picker Area */}

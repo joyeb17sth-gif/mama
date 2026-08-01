@@ -34,23 +34,31 @@ const YearlyAnalyticsChart = ({ leads }) => {
     }));
 
     leads.forEach(lead => {
-      let d = new Date(lead.createdAt || parseInt(lead.id) || Date.now());
-      if (!isValid(d)) d = new Date();
+      let createdD = new Date(lead.createdAt || parseInt(lead.id) || Date.now());
+      if (!isValid(createdD)) createdD = new Date();
       
-      if (d.getFullYear().toString() === selectedYear) {
-        const monthIndex = d.getMonth();
-        const row = data[monthIndex];
+      // Track total generated leads by created date
+      if (createdD.getFullYear().toString() === selectedYear) {
+        const monthIndex = createdD.getMonth();
+        data[monthIndex].total++;
+      }
+
+      // Track conversions by converted date
+      let convertD = lead.convertedAt ? new Date(lead.convertedAt) : createdD;
+      if (!isValid(convertD)) convertD = createdD;
+
+      if (convertD.getFullYear().toString() === selectedYear) {
+        const cMonthIndex = convertD.getMonth();
+        const cRow = data[cMonthIndex];
         
-        row.total++;
-        
-        if (lead.conversion === 'yes') row.yes++;
-        if (lead.conversion === 'no') row.no++;
-        if (lead.conversion === 'DNA') row.dna++;
+        if (lead.conversion === 'yes') cRow.yes++;
+        if (lead.conversion === 'no') cRow.no++;
+        if (lead.conversion === 'DNA') cRow.dna++;
         
         if (lead.conversion === 'yes' && lead.status === 'application') {
-          row.application++;
-          if (lead.stage === 'visa') row.visa++;
-          if (lead.stage === 'payment') row.paid++;
+          cRow.application++;
+          if (lead.stage === 'visa') cRow.visa++;
+          if (lead.stage === 'payment') cRow.paid++;
         }
       }
     });
