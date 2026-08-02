@@ -1,0 +1,194 @@
+import React, { useState, useMemo } from 'react';
+
+const LeadMonthlyReport = ({ counselors, existingReports }) => {
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    return new Date().toISOString().slice(0, 7);
+  });
+  const [isLeadSourceExpanded, setIsLeadSourceExpanded] = useState(false);
+
+  // Compute grand totals for the footer row
+  const totals = useMemo(() => {
+    const t = {
+      sourceFacebook: 0,
+      sourceReferrals: 0,
+      sourceWebsite: 0,
+      sourceWalkIn: 0,
+      totalLeads: 0,
+      convYes: 0,
+      convNo: 0,
+      convDNA: 0,
+      appApplied: 0,
+      paymentDone: 0,
+      visaGranted: 0
+    };
+
+    counselors.forEach(c => {
+      const report = existingReports.find(r => r.month === selectedMonth && r.counselorId === c.id);
+      if (report) {
+        t.sourceFacebook += parseInt(report.sourceFacebook) || 0;
+        t.sourceReferrals += parseInt(report.sourceReferrals) || 0;
+        t.sourceWebsite += parseInt(report.sourceWebsite) || 0;
+        t.sourceWalkIn += parseInt(report.sourceWalkIn) || 0;
+        t.totalLeads += parseInt(report.totalLeads) || 0;
+        t.convYes += parseInt(report.convYes) || 0;
+        t.convNo += parseInt(report.convNo) || 0;
+        t.convDNA += parseInt(report.convDNA) || 0;
+        t.appApplied += parseInt(report.appApplied) || 0;
+        t.paymentDone += parseInt(report.paymentDone) || 0;
+        t.visaGranted += parseInt(report.visaGranted) || 0;
+      }
+    });
+
+    return t;
+  }, [counselors, existingReports, selectedMonth]);
+
+  const thClass = "px-4 py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider border-b border-r border-zinc-200 bg-zinc-50/50";
+  const tdClass = "px-4 py-3 text-sm font-semibold text-notion-black border-b border-r border-zinc-100";
+  const footerTdClass = "px-4 py-3 text-sm font-extrabold text-notion-blue border-b border-r border-zinc-200 bg-notion-blue/5";
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h3 className="text-2xl font-bold text-notion-black mb-1">Monthly Reports</h3>
+          <p className="text-sm text-zinc-500">View detailed performance tables per month.</p>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <label className="text-sm font-bold text-zinc-500">Select Month:</label>
+          <input 
+            type="month" 
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="px-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-bold shadow-sm focus:border-notion-blue outline-none cursor-pointer"
+          />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[800px]">
+          <thead>
+            <tr>
+              <th rowSpan={2} className={`${thClass} min-w-[150px] align-bottom`}>
+                Counselor
+              </th>
+              <th 
+                colSpan={isLeadSourceExpanded ? 5 : 1} 
+                className={`${thClass} text-center border-l-2 border-l-zinc-300 relative group cursor-pointer hover:bg-zinc-100 transition-colors`}
+                onClick={() => setIsLeadSourceExpanded(!isLeadSourceExpanded)}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <span>Lead Source</span>
+                  <div className={`p-1 rounded-md bg-white border border-zinc-200 shadow-sm transition-transform ${isLeadSourceExpanded ? 'rotate-180' : ''}`}>
+                    <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
+                  </div>
+                </div>
+              </th>
+              <th colSpan={3} className={`${thClass} text-center border-l-2 border-l-zinc-300`}>
+                Conversions
+              </th>
+              <th rowSpan={2} className={`${thClass} border-l-2 border-l-zinc-300 align-bottom`}>
+                Application
+              </th>
+              <th rowSpan={2} className={`${thClass} align-bottom`}>
+                Payment
+              </th>
+              <th rowSpan={2} className={`${thClass} align-bottom`}>
+                Visa
+              </th>
+            </tr>
+            <tr>
+              {isLeadSourceExpanded && (
+                <>
+                  <th className={`${thClass} border-l-2 border-l-zinc-300 bg-zinc-50`}>Facebook</th>
+                  <th className={`${thClass} bg-zinc-50`}>Referral</th>
+                  <th className={`${thClass} bg-zinc-50`}>Website</th>
+                  <th className={`${thClass} bg-zinc-50`}>Walk-in</th>
+                </>
+              )}
+              <th className={`${thClass} ${!isLeadSourceExpanded ? 'border-l-2 border-l-zinc-300' : ''} bg-zinc-100/80`}>Total</th>
+              
+              <th className={`${thClass} border-l-2 border-l-zinc-300 bg-zinc-50`}>Yes</th>
+              <th className={`${thClass} bg-zinc-50`}>No</th>
+              <th className={`${thClass} bg-zinc-50`}>DNA</th>
+            </tr>
+          </thead>
+          <tbody>
+            {counselors.length === 0 ? (
+              <tr>
+                <td colSpan={15} className="px-4 py-8 text-center text-sm font-semibold text-zinc-400 border-b border-zinc-100">
+                  No counselors available. Please add them in Settings.
+                </td>
+              </tr>
+            ) : (
+              counselors.map(c => {
+                const report = existingReports.find(r => r.month === selectedMonth && r.counselorId === c.id) || {};
+                
+                return (
+                  <tr key={c.id} className="hover:bg-notion-blue/5 transition-colors group">
+                    <td className={`${tdClass} font-bold text-notion-blue`}>
+                      {c.name}
+                    </td>
+                    
+                    {isLeadSourceExpanded && (
+                      <>
+                        <td className={`${tdClass} border-l-2 border-l-zinc-200 text-zinc-600`}>{report.sourceFacebook || ''}</td>
+                        <td className={`${tdClass} text-zinc-600`}>{report.sourceReferrals || ''}</td>
+                        <td className={`${tdClass} text-zinc-600`}>{report.sourceWebsite || ''}</td>
+                        <td className={`${tdClass} text-zinc-600`}>{report.sourceWalkIn || ''}</td>
+                      </>
+                    )}
+                    
+                    <td className={`${tdClass} font-extrabold ${!isLeadSourceExpanded ? 'border-l-2 border-l-zinc-200' : ''} bg-zinc-50/50 group-hover:bg-transparent`}>
+                      {report.totalLeads || ''}
+                    </td>
+
+                    <td className={`${tdClass} border-l-2 border-l-zinc-200 text-emerald-600`}>{report.convYes || ''}</td>
+                    <td className={`${tdClass} text-rose-600`}>{report.convNo || ''}</td>
+                    <td className={`${tdClass} text-zinc-400`}>{report.convDNA || ''}</td>
+
+                    <td className={`${tdClass} border-l-2 border-l-zinc-200`}>{report.appApplied || ''}</td>
+                    <td className={`${tdClass} text-emerald-600`}>{report.paymentDone || ''}</td>
+                    <td className={`${tdClass} text-notion-blue`}>{report.visaGranted || ''}</td>
+                  </tr>
+                );
+              })
+            )}
+            
+            {/* Grand Totals Footer */}
+            {counselors.length > 0 && (
+              <tr>
+                <td className={`${footerTdClass} text-notion-black text-right pr-6 uppercase tracking-wider text-xs`}>
+                  Grand Total
+                </td>
+                
+                {isLeadSourceExpanded && (
+                  <>
+                    <td className={`${footerTdClass} border-l-2 border-l-zinc-300`}>{totals.sourceFacebook}</td>
+                    <td className={footerTdClass}>{totals.sourceReferrals}</td>
+                    <td className={footerTdClass}>{totals.sourceWebsite}</td>
+                    <td className={footerTdClass}>{totals.sourceWalkIn}</td>
+                  </>
+                )}
+                
+                <td className={`${footerTdClass} ${!isLeadSourceExpanded ? 'border-l-2 border-l-zinc-300' : ''}`}>
+                  {totals.totalLeads}
+                </td>
+
+                <td className={`${footerTdClass} border-l-2 border-l-zinc-300`}>{totals.convYes}</td>
+                <td className={footerTdClass}>{totals.convNo}</td>
+                <td className={footerTdClass}>{totals.convDNA}</td>
+
+                <td className={`${footerTdClass} border-l-2 border-l-zinc-300`}>{totals.appApplied}</td>
+                <td className={footerTdClass}>{totals.paymentDone}</td>
+                <td className={footerTdClass}>{totals.visaGranted}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+export default LeadMonthlyReport;
