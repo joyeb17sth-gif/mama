@@ -6,6 +6,8 @@ import {
   getPeriodicalTasks, savePeriodicalTasks, getPeriodicalTasksAsync,
   getProfitLossAsync, migrateProfitLossData,
   getLeads, saveLeads, getLeadsAsync,
+  saveLeadReports, getLeadReportsAsync, getLeadReports,
+  saveLeadCounselors, getLeadCounselorsAsync, getLeadCounselors,
   logAction,
   clearSyncTimestamps, setOnSaveError
 } from './utils/storage';
@@ -82,6 +84,8 @@ function App() {
 
   // Leads
   const [leads, setLeads] = useState([]);
+  const [leadReports, setLeadReports] = useState([]);
+  const [leadCounselors, setLeadCounselors] = useState([]);
 
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -110,7 +114,7 @@ function App() {
     try {
       const role = userProfileData.role?.toLowerCase() || 'user';
 
-      let cloudSites, cloudPeriodicalTasks, cloudProfitLoss, cloudLeads;
+      let cloudSites, cloudPeriodicalTasks, cloudProfitLoss, cloudLeads, cloudLeadReports, cloudLeadCounselors;
 
       const promises = [];
       const promiseKeys = [];
@@ -121,28 +125,44 @@ function App() {
           getSitesAsync(),
           getPeriodicalTasksAsync(),
           getProfitLossAsync(),
-          getLeadsAsync()
+          getLeadsAsync(),
+          getLeadReportsAsync(),
+          getLeadCounselorsAsync()
         );
         promiseKeys.push(
           'sites',
           'periodicalTasks',
           'profitLoss',
-          'leads'
+          'leads',
+          'leadReports',
+          'leadCounselors'
         );
       } else if (role === 'supervisor' || role === 'manager') {
         promises.push(
           getSitesAsync(),
           getPeriodicalTasksAsync(),
-          getLeadsAsync()
+          getLeadsAsync(),
+          getLeadReportsAsync(),
+          getLeadCounselorsAsync()
         );
         promiseKeys.push(
           'sites',
           'periodicalTasks',
-          'leads'
+          'leads',
+          'leadReports',
+          'leadCounselors'
         );
       } else if (role === 'leads_team') {
-        promises.push(getLeadsAsync());
-        promiseKeys.push('leads');
+        promises.push(
+          getLeadsAsync(),
+          getLeadReportsAsync(),
+          getLeadCounselorsAsync()
+        );
+        promiseKeys.push(
+          'leads',
+          'leadReports',
+          'leadCounselors'
+        );
       } else {
         // Default users download nothing
       }
@@ -156,6 +176,8 @@ function App() {
           else if (key === 'periodicalTasks') cloudPeriodicalTasks = val;
           else if (key === 'profitLoss') cloudProfitLoss = val;
           else if (key === 'leads') cloudLeads = val;
+          else if (key === 'leadReports') cloudLeadReports = val;
+          else if (key === 'leadCounselors') cloudLeadCounselors = val;
         });
       }
 
@@ -196,6 +218,24 @@ function App() {
           memoryCache.leads = cloudLeads;
           await localforage.setItem('leads', encryptData(cloudLeads));
           setLeads(cloudLeads);
+        }
+      }
+
+      if (cloudLeadReports !== undefined) {
+        hasChanges = true;
+        if (cloudLeadReports) {
+          memoryCache.payscleep_lead_reports_v2 = cloudLeadReports;
+          await localforage.setItem('payscleep_lead_reports_v2', encryptData(cloudLeadReports));
+          setLeadReports(cloudLeadReports);
+        }
+      }
+
+      if (cloudLeadCounselors !== undefined) {
+        hasChanges = true;
+        if (cloudLeadCounselors) {
+          memoryCache.payscleep_lead_counselors_v3 = cloudLeadCounselors;
+          await localforage.setItem('payscleep_lead_counselors_v3', encryptData(cloudLeadCounselors));
+          setLeadCounselors(cloudLeadCounselors);
         }
       }
 
@@ -519,6 +559,18 @@ function App() {
     showToastMessage('Leads saved successfully', 'success');
   };
 
+  const handleSetLeadReports = (action) => {
+    const newVal = typeof action === 'function' ? action(leadReports) : action;
+    setLeadReports(newVal);
+    saveLeadReports(newVal);
+  };
+
+  const handleSetLeadCounselors = (action) => {
+    const newVal = typeof action === 'function' ? action(leadCounselors) : action;
+    setLeadCounselors(newVal);
+    saveLeadCounselors(newVal);
+  };
+
   // Timesheet handler
   const handleSaveTimesheet = (timesheet) => {
     const allTimesheets = getTimesheets();
@@ -593,6 +645,10 @@ function App() {
     setActiveTab(tab);
     if (tab === 'sites') {
       setSites(getSites());
+    }
+    if (tab === 'lead-manager') {
+      setLeadReports(getLeadReports());
+      setLeadCounselors(getLeadCounselors());
     }
   };
 
@@ -819,7 +875,14 @@ function App() {
 
         {/* Lead Manager Tab */}
         {activeTab === 'lead-manager' && hasPermission('lead-manager') && (
-          <LeadManager leads={leads} onSave={handleSaveLeads} />
+          <LeadManager 
+            leads={leads} 
+            onSave={handleSaveLeads} 
+            leadReports={leadReports}
+            setLeadReports={handleSetLeadReports}
+            counselors={leadCounselors}
+            setCounselors={handleSetLeadCounselors}
+          />
         )}
 
         {/* Profit & Loss Tab */}

@@ -69,22 +69,22 @@ const LeadMonthlyReport = ({ counselors, existingReports }) => {
         <table className="w-full text-left border-collapse min-w-[800px]">
           <thead>
             <tr>
-              <th rowSpan={2} className={`${thClass} min-w-[150px] align-bottom`}>
+              <th rowSpan={2} className={`${thClass} min-w-[150px] align-bottom !bg-blue-50 !text-blue-700`}>
                 Counselor
               </th>
               <th 
                 colSpan={isLeadSourceExpanded ? 5 : 1} 
-                className={`${thClass} text-center border-l-2 border-l-zinc-300 relative group cursor-pointer hover:bg-zinc-100 transition-colors`}
+                className={`${thClass} text-center border-l-2 border-l-zinc-300 relative group cursor-pointer hover:bg-orange-100 transition-colors !bg-orange-50 !text-orange-700`}
                 onClick={() => setIsLeadSourceExpanded(!isLeadSourceExpanded)}
               >
                 <div className="flex items-center justify-center gap-2">
                   <span>Lead Source</span>
-                  <div className={`p-1 rounded-md bg-white border border-zinc-200 shadow-sm transition-transform ${isLeadSourceExpanded ? 'rotate-180' : ''}`}>
-                    <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
+                  <div className={`p-1 rounded-md bg-orange-100 border border-orange-200 shadow-sm transition-transform ${isLeadSourceExpanded ? 'rotate-180' : ''}`}>
+                    <svg className="w-3 h-3 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
                   </div>
                 </div>
               </th>
-              <th colSpan={3} className={`${thClass} text-center border-l-2 border-l-zinc-300`}>
+              <th colSpan={3} className={`${thClass} text-center border-l-2 border-l-zinc-300 !bg-emerald-50 !text-emerald-700`}>
                 Conversions
               </th>
               <th rowSpan={2} className={`${thClass} border-l-2 border-l-zinc-300 align-bottom`}>
@@ -100,17 +100,17 @@ const LeadMonthlyReport = ({ counselors, existingReports }) => {
             <tr>
               {isLeadSourceExpanded && (
                 <>
-                  <th className={`${thClass} border-l-2 border-l-zinc-300 bg-zinc-50`}>Facebook</th>
-                  <th className={`${thClass} bg-zinc-50`}>Referral</th>
-                  <th className={`${thClass} bg-zinc-50`}>Website</th>
-                  <th className={`${thClass} bg-zinc-50`}>Walk-in</th>
+                  <th className={`${thClass} border-l-2 border-l-zinc-300 !bg-orange-50 !text-orange-700`}>Facebook</th>
+                  <th className={`${thClass} !bg-orange-50 !text-orange-700`}>Referral</th>
+                  <th className={`${thClass} !bg-orange-50 !text-orange-700`}>Website</th>
+                  <th className={`${thClass} !bg-orange-50 !text-orange-700`}>Walk-in</th>
                 </>
               )}
-              <th className={`${thClass} ${!isLeadSourceExpanded ? 'border-l-2 border-l-zinc-300' : ''} bg-zinc-100/80`}>Total</th>
+              <th className={`${thClass} ${!isLeadSourceExpanded ? 'border-l-2 border-l-zinc-300' : ''} !bg-orange-50 !text-orange-700`}>Total</th>
               
-              <th className={`${thClass} border-l-2 border-l-zinc-300 bg-zinc-50`}>Yes</th>
-              <th className={`${thClass} bg-zinc-50`}>No</th>
-              <th className={`${thClass} bg-zinc-50`}>DNA</th>
+              <th className={`${thClass} border-l-2 border-l-zinc-300 !bg-emerald-50 !text-emerald-700`}>Yes</th>
+              <th className={`${thClass} !bg-emerald-50 !text-emerald-700`}>No</th>
+              <th className={`${thClass} !bg-emerald-50 !text-emerald-700`}>DNA</th>
             </tr>
           </thead>
           <tbody>

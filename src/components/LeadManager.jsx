@@ -4,22 +4,11 @@ import LeadSettings from './LeadSettings';
 import LeadMonthlyReport from './LeadMonthlyReport';
 import LeadCumulativeData from './LeadCumulativeData';
 
-const LeadManager = ({ leads, onSave }) => {
+const LeadManager = ({ leads, onSave, leadReports = [], setLeadReports, counselors = [], setCounselors }) => {
   const [activeTab, setActiveTab] = useState('input');
-  const [leadReports, setLeadReports] = useState(() => {
-    try {
-      const stored = localStorage.getItem('payscleep_lead_reports_v2');
-      return stored ? JSON.parse(stored) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem('payscleep_lead_reports_v2', JSON.stringify(leadReports));
-  }, [leadReports]);
 
   const handleSaveReport = (report) => {
+    if (!setLeadReports) return;
     setLeadReports(prev => {
       const existingIdx = prev.findIndex(r => r.month === report.month);
       if (existingIdx >= 0) {
@@ -30,19 +19,6 @@ const LeadManager = ({ leads, onSave }) => {
       return [...prev, report];
     });
   };
-
-  const [counselors, setCounselors] = useState(() => {
-    try {
-      const stored = localStorage.getItem('payscleep_lead_counselors_v3');
-      return stored ? JSON.parse(stored) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem('payscleep_lead_counselors_v3', JSON.stringify(counselors));
-  }, [counselors]);
 
   return (
     <div className="p-6 w-full">

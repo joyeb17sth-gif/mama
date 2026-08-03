@@ -23,7 +23,9 @@ export const memoryCache = {
   globalRates: { ...DEFAULT_GLOBAL_RATES },
   profitLoss: null,
   profiles: null,
-  leads: []
+  leads: [],
+  payscleep_lead_reports_v2: [],
+  payscleep_lead_counselors_v3: []
 };
 
 export const syncMetadata = {};
@@ -412,6 +414,23 @@ export const getLeadsAsync = async () => {
 
 export const getLeads = () => memoryCache.leads;
 
+// --- LEAD REPORTS (Global) ---
+export const saveLeadReports = async (reports) => {
+  memoryCache.payscleep_lead_reports_v2 = reports;
+  await localforage.setItem('payscleep_lead_reports_v2', encryptData(reports));
+  await saveToCloud('leads', 'payscleep_lead_reports_v2', reports);
+};
+export const getLeadReportsAsync = () => getSingleFromCloud('leads', 'payscleep_lead_reports_v2');
+export const getLeadReports = () => memoryCache.payscleep_lead_reports_v2 || [];
+
+// --- LEAD COUNSELORS (Global) ---
+export const saveLeadCounselors = async (counselors) => {
+  memoryCache.payscleep_lead_counselors_v3 = counselors;
+  await localforage.setItem('payscleep_lead_counselors_v3', encryptData(counselors));
+  await saveToCloud('leads', 'payscleep_lead_counselors_v3', counselors);
+};
+export const getLeadCounselorsAsync = () => getSingleFromCloud('leads', 'payscleep_lead_counselors_v3');
+export const getLeadCounselors = () => memoryCache.payscleep_lead_counselors_v3 || [];
 
 
 // --- ACTIONS LOGGING ---

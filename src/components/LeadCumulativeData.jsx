@@ -94,7 +94,7 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
           <thead>
             {/* Stage Grouping Headers */}
             <tr>
-              <th rowSpan={3} className={`${thClass} min-w-[150px] align-bottom text-left bg-white !border-r-zinc-300`}>
+              <th rowSpan={3} className={`${thClass} min-w-[150px] align-bottom text-left !bg-blue-50 !text-blue-700 !border-r-zinc-300`}>
                 Counselor
               </th>
               
@@ -102,7 +102,7 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                 Lead Stage
               </th>
               
-              <th colSpan={3} className={`${groupThClass} bg-amber-50 text-amber-700 !border-r-zinc-300`}>
+              <th colSpan={3} className={`${groupThClass} bg-emerald-50 text-emerald-700 !border-r-zinc-300`}>
                 Application State
               </th>
               
@@ -115,42 +115,42 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
             <tr>
               <th 
                 colSpan={isLeadSourceExpanded ? 5 : 1} 
-                className={`${thClass} border-l-2 border-l-zinc-300 relative group cursor-pointer hover:bg-zinc-100 transition-colors align-middle`}
+                className={`${thClass} border-l-2 border-l-zinc-300 relative group cursor-pointer hover:bg-orange-100 transition-colors align-middle !bg-orange-50 !text-orange-700`}
                 onClick={() => setIsLeadSourceExpanded(!isLeadSourceExpanded)}
               >
                 <div className="flex items-center justify-center gap-2">
                   <span>Lead</span>
-                  <div className={`p-1 rounded-md bg-white border border-zinc-200 shadow-sm transition-transform ${isLeadSourceExpanded ? 'rotate-180' : ''}`}>
-                    <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
+                  <div className={`p-1 rounded-md bg-orange-100 border border-orange-200 shadow-sm transition-transform ${isLeadSourceExpanded ? 'rotate-180' : ''}`}>
+                    <svg className="w-3 h-3 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
                   </div>
                 </div>
               </th>
               
-              <th rowSpan={2} className={`${thClass} border-l-2 border-l-zinc-300 bg-blue-50/30 align-bottom`}>Yes</th>
-              <th rowSpan={2} className={`${thClass} bg-blue-50/30 align-bottom`}>No</th>
-              <th rowSpan={2} className={`${thClass} bg-blue-50/30 align-bottom !border-r-zinc-300`}>DNA</th>
+              <th rowSpan={2} className={`${thClass} border-l-2 border-l-zinc-300 align-bottom !bg-orange-50 !text-orange-700`}>Yes</th>
+              <th rowSpan={2} className={`${thClass} align-bottom !bg-orange-50 !text-orange-700`}>No</th>
+              <th rowSpan={2} className={`${thClass} align-bottom !border-r-zinc-300 !bg-orange-50 !text-orange-700`}>DNA</th>
 
-              <th rowSpan={2} className={`${thClass} bg-blue-50/30 align-bottom`}>Application</th>
-              <th rowSpan={2} className={`${thClass} bg-blue-50/30 align-bottom min-w-[110px]`}>Wait on<br/>Payment</th>
-              <th rowSpan={2} className={`${thClass} bg-blue-50/30 align-bottom !border-r-zinc-300 min-w-[120px]`}>Dropout from<br/>Application</th>
+              <th rowSpan={2} className={`${thClass} align-bottom !bg-emerald-50 !text-emerald-700`}>Application</th>
+              <th rowSpan={2} className={`${thClass} align-bottom min-w-[110px] !bg-emerald-50 !text-emerald-700`}>Wait on<br/>Payment</th>
+              <th rowSpan={2} className={`${thClass} align-bottom !border-r-zinc-300 min-w-[120px] !bg-emerald-50 !text-emerald-700`}>Dropout from<br/>Application</th>
 
-              <th rowSpan={2} className={`${thClass} bg-blue-50/30 align-bottom`}>Visa Lodge</th>
-              <th rowSpan={2} className={`${thClass} bg-blue-50/30 align-bottom`}>In Process</th>
-              <th rowSpan={2} className={`${thClass} bg-blue-50/30 align-bottom`}>Granted</th>
-              <th rowSpan={2} className={`${thClass} bg-blue-50/30 align-bottom`}>Refusal</th>
+              <th rowSpan={2} className={`${thClass} align-bottom !bg-indigo-50 !text-indigo-700`}>Visa Lodge</th>
+              <th rowSpan={2} className={`${thClass} align-bottom !bg-indigo-50 !text-indigo-700`}>In Process</th>
+              <th rowSpan={2} className={`${thClass} align-bottom !bg-indigo-50 !text-indigo-700`}>Granted</th>
+              <th rowSpan={2} className={`${thClass} align-bottom !bg-indigo-50 !text-indigo-700`}>Refusal</th>
             </tr>
             
             {/* Expansion Headers for Lead */}
             <tr>
               {isLeadSourceExpanded && (
                 <>
-                  <th className={`${thClass} border-l-2 border-l-zinc-300 bg-zinc-50`}>Facebook</th>
-                  <th className={`${thClass} bg-zinc-50`}>Referral</th>
-                  <th className={`${thClass} bg-zinc-50`}>Website</th>
-                  <th className={`${thClass} bg-zinc-50 min-w-[90px]`}>Walk-in</th>
+                  <th className={`${thClass} border-l-2 border-l-zinc-300 !bg-orange-50 !text-orange-700`}>Facebook</th>
+                  <th className={`${thClass} !bg-orange-50 !text-orange-700`}>Referral</th>
+                  <th className={`${thClass} !bg-orange-50 !text-orange-700`}>Website</th>
+                  <th className={`${thClass} min-w-[90px] !bg-orange-50 !text-orange-700`}>Walk-in</th>
                 </>
               )}
-              <th className={`${thClass} ${!isLeadSourceExpanded ? 'border-l-2 border-l-zinc-300' : ''} bg-zinc-100/80`}>Total</th>
+              <th className={`${thClass} ${!isLeadSourceExpanded ? 'border-l-2 border-l-zinc-300' : ''} !bg-orange-50 !text-orange-700`}>Total</th>
             </tr>
           </thead>
           <tbody>
