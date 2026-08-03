@@ -227,6 +227,10 @@ function App() {
           memoryCache.payscleep_lead_reports_v2 = cloudLeadReports;
           await localforage.setItem('payscleep_lead_reports_v2', encryptData(cloudLeadReports));
           setLeadReports(cloudLeadReports);
+        } else if (memoryCache.payscleep_lead_reports_v2?.length > 0) {
+          // Cloud is empty but local has migrated legacy data, so push local to cloud!
+          saveLeadReports(memoryCache.payscleep_lead_reports_v2);
+          setLeadReports(memoryCache.payscleep_lead_reports_v2);
         }
       }
 
@@ -236,6 +240,10 @@ function App() {
           memoryCache.payscleep_lead_counselors_v3 = cloudLeadCounselors;
           await localforage.setItem('payscleep_lead_counselors_v3', encryptData(cloudLeadCounselors));
           setLeadCounselors(cloudLeadCounselors);
+        } else if (memoryCache.payscleep_lead_counselors_v3?.length > 0) {
+          // Cloud is empty but local has migrated legacy data, so push local to cloud!
+          saveLeadCounselors(memoryCache.payscleep_lead_counselors_v3);
+          setLeadCounselors(memoryCache.payscleep_lead_counselors_v3);
         }
       }
 
