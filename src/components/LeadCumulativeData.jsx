@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 
 const LeadCumulativeData = ({ counselors, existingReports }) => {
   const [isLeadSourceExpanded, setIsLeadSourceExpanded] = useState(false);
+  const [filterBranch, setFilterBranch] = useState('All');
 
   // Compute cumulative data per counselor
   const counselorData = useMemo(() => {
@@ -84,9 +85,25 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
 
   return (
     <div>
-      <div className="mb-8">
-        <h3 className="text-2xl font-bold text-notion-black mb-1">Cumulative Data</h3>
-        <p className="text-sm text-zinc-500">View all-time aggregate totals for each counselor across all stages.</p>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h3 className="text-2xl font-bold text-notion-black mb-1">Cumulative Data</h3>
+          <p className="text-sm text-zinc-500">View all-time aggregate totals for each counselor across all stages.</p>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <label className="text-sm font-bold text-zinc-500">Branch:</label>
+          <select
+            value={filterBranch}
+            onChange={e => setFilterBranch(e.target.value)}
+            className="px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm font-bold text-notion-black focus:ring-2 focus:ring-notion-blue/20 outline-none transition-all shadow-sm"
+          >
+            <option value="All">All Branches</option>
+            <option value="Search Australia">Search Australia</option>
+            <option value="Search Chili">Search Chili</option>
+            <option value="Search Nepal">Search Nepal</option>
+          </select>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden overflow-x-auto">
@@ -161,7 +178,9 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                 </td>
               </tr>
             ) : (
-              ['Search Australia', 'Search Chili', 'Search Nepal'].map(branch => {
+              ['Search Australia', 'Search Chili', 'Search Nepal']
+                .filter(b => filterBranch === 'All' || b === filterBranch)
+                .map(branch => {
                 const branchData = counselorData.filter(d => (d.counselor.branch || 'Search Nepal') === branch);
                 if (branchData.length === 0) return null;
 
@@ -211,9 +230,9 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
             )}
             
             {/* Grand Totals Footer */}
-            {counselorData.length > 0 && (
+            {counselorData.length > 0 && filterBranch === 'All' && (
               <tr>
-                <td className={`${footerTdClass} text-right pr-6 uppercase tracking-wider text-xs !border-r-zinc-300`}>
+                <td className={`${footerTdClass} text-left uppercase tracking-wider !border-r-zinc-300`}>
                   Grand Total
                 </td>
                 

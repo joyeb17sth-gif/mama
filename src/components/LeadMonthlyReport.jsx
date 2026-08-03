@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
 
 const LeadMonthlyReport = ({ counselors, existingReports }) => {
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    return new Date().toISOString().slice(0, 7);
-  });
+  const [selectedMonth, setSelectedMonth] = useState(
+    `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+  );
   const [isLeadSourceExpanded, setIsLeadSourceExpanded] = useState(false);
+  const [filterBranch, setFilterBranch] = useState('All');
 
   // Compute grand totals for the footer row
   const totals = useMemo(() => {
@@ -43,8 +44,8 @@ const LeadMonthlyReport = ({ counselors, existingReports }) => {
   }, [counselors, existingReports, selectedMonth]);
 
   const thClass = "px-4 py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider border-b border-r border-zinc-200 bg-zinc-50/50";
-  const tdClass = "px-4 py-3 text-sm font-semibold text-notion-black border-b border-r border-zinc-100";
-  const footerTdClass = "px-4 py-3 text-sm font-extrabold text-notion-blue border-b border-r border-zinc-200 bg-notion-blue/5";
+  const tdClass = "px-4 py-3 text-sm font-semibold text-center text-notion-black border-b border-r border-zinc-100";
+  const footerTdClass = "px-4 py-3 text-sm font-extrabold text-center text-notion-blue border-b border-r border-zinc-200 bg-notion-blue/5";
 
   return (
     <div>
@@ -55,12 +56,24 @@ const LeadMonthlyReport = ({ counselors, existingReports }) => {
         </div>
         
         <div className="flex items-center gap-4">
-          <label className="text-sm font-bold text-zinc-500">Select Month:</label>
+          <label className="text-sm font-bold text-zinc-500">Branch:</label>
+          <select
+            value={filterBranch}
+            onChange={e => setFilterBranch(e.target.value)}
+            className="px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm font-bold text-notion-black focus:ring-2 focus:ring-notion-blue/20 outline-none transition-all shadow-sm"
+          >
+            <option value="All">All Branches</option>
+            <option value="Search Australia">Search Australia</option>
+            <option value="Search Chili">Search Chili</option>
+            <option value="Search Nepal">Search Nepal</option>
+          </select>
+
+          <label className="text-sm font-bold text-zinc-500 ml-4">Select Month:</label>
           <input 
             type="month" 
             value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm font-bold shadow-sm focus:border-notion-blue outline-none cursor-pointer"
+            onChange={e => setSelectedMonth(e.target.value)}
+            className="px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm font-bold text-notion-black focus:ring-2 focus:ring-notion-blue/20 outline-none transition-all shadow-sm"
           />
         </div>
       </div>
@@ -121,14 +134,16 @@ const LeadMonthlyReport = ({ counselors, existingReports }) => {
                 </td>
               </tr>
             ) : (
-              ['Search Australia', 'Search Chili', 'Search Nepal'].map(branch => {
+              ['Search Australia', 'Search Chili', 'Search Nepal']
+                .filter(b => filterBranch === 'All' || b === filterBranch)
+                .map(branch => {
                 const branchCounselors = counselors.filter(c => (c.branch || 'Search Nepal') === branch);
                 if (branchCounselors.length === 0) return null;
 
                 return (
                   <React.Fragment key={branch}>
                     <tr>
-                      <td colSpan={isLeadSourceExpanded ? 19 : 15} className="px-4 py-2 bg-zinc-100 text-xs font-extrabold text-zinc-600 uppercase tracking-wider text-left border-b border-zinc-200">
+                      <td colSpan={isLeadSourceExpanded ? 12 : 8} className="px-4 py-2 bg-zinc-100 text-xs font-extrabold text-zinc-600 uppercase tracking-wider text-left border-b border-zinc-200">
                         {branch}
                       </td>
                     </tr>
@@ -137,7 +152,7 @@ const LeadMonthlyReport = ({ counselors, existingReports }) => {
                       
                       return (
                         <tr key={c.id} className="hover:bg-notion-blue/5 transition-colors group">
-                          <td className={`${tdClass} font-bold text-notion-blue`}>
+                          <td className={`${tdClass} text-left font-bold text-notion-blue`}>
                             {c.name}
                           </td>
                           
@@ -170,9 +185,9 @@ const LeadMonthlyReport = ({ counselors, existingReports }) => {
             )}
             
             {/* Grand Totals Footer */}
-            {counselors.length > 0 && (
+            {counselors.length > 0 && filterBranch === 'All' && (
               <tr>
-                <td className={`${footerTdClass} text-notion-black text-right pr-6 uppercase tracking-wider text-xs`}>
+                <td className={`${footerTdClass} text-left uppercase tracking-wider`}>
                   Grand Total
                 </td>
                 
