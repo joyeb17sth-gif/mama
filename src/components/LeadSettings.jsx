@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 
 const LeadSettings = ({ counselors, setCounselors, setLeadReports }) => {
-  const [newCounselor, setNewCounselor] = useState({ name: '', specialty: '' });
+  const [newCounselor, setNewCounselor] = useState({ name: '', specialty: '', branch: 'Search Nepal' });
   const [editingId, setEditingId] = useState(null);
-  const [editData, setEditData] = useState({ name: '', specialty: '' });
+  const [editData, setEditData] = useState({ name: '', specialty: '', branch: 'Search Nepal' });
 
   const handleAdd = (e) => {
     e.preventDefault();
@@ -11,21 +11,22 @@ const LeadSettings = ({ counselors, setCounselors, setLeadReports }) => {
       setCounselors(prev => [...prev, {
         id: crypto.randomUUID(),
         name: newCounselor.name.trim(),
-        specialty: newCounselor.specialty.trim() || 'General'
+        specialty: newCounselor.specialty.trim() || 'General',
+        branch: newCounselor.branch || 'Search Nepal'
       }]);
-      setNewCounselor({ name: '', specialty: '' });
+      setNewCounselor({ name: '', specialty: '', branch: 'Search Nepal' });
     }
   };
 
   const handleStartEdit = (c) => {
     setEditingId(c.id);
-    setEditData({ name: c.name, specialty: c.specialty });
+    setEditData({ name: c.name, specialty: c.specialty, branch: c.branch || 'Search Nepal' });
   };
 
   const handleSaveEdit = () => {
     if (editData.name.trim()) {
       setCounselors(prev => prev.map(c => 
-        c.id === editingId ? { ...c, name: editData.name.trim(), specialty: editData.specialty.trim() } : c
+        c.id === editingId ? { ...c, name: editData.name.trim(), specialty: editData.specialty.trim(), branch: editData.branch } : c
       ));
       setEditingId(null);
     }
@@ -184,6 +185,18 @@ const LeadSettings = ({ counselors, setCounselors, setLeadReports }) => {
               placeholder="e.g. Australian Visas"
             />
           </div>
+          <div className="flex-1 w-full">
+            <label className="block text-xs font-bold text-zinc-500 mb-1.5 ml-1">Branch</label>
+            <select
+              value={newCounselor.branch}
+              onChange={e => setNewCounselor(prev => ({...prev, branch: e.target.value}))}
+              className={inputClasses}
+            >
+              <option value="Search Nepal">Search Nepal</option>
+              <option value="Search Australia">Search Australia</option>
+              <option value="Search Chili">Search Chili</option>
+            </select>
+          </div>
           <button 
             type="submit"
             className="w-full sm:w-auto px-6 py-2.5 bg-notion-blue text-white rounded-lg text-sm font-bold shadow-md hover:bg-blue-700 transition-all"
@@ -215,7 +228,17 @@ const LeadSettings = ({ counselors, setCounselors, setLeadReports }) => {
                     value={editData.specialty} 
                     onChange={e => setEditData(prev => ({...prev, specialty: e.target.value}))}
                     className="flex-1 px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded focus:border-notion-blue outline-none"
+                    placeholder="Specialty"
                   />
+                  <select
+                    value={editData.branch}
+                    onChange={e => setEditData(prev => ({...prev, branch: e.target.value}))}
+                    className="flex-1 px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded focus:border-notion-blue outline-none"
+                  >
+                    <option value="Search Nepal">Search Nepal</option>
+                    <option value="Search Australia">Search Australia</option>
+                    <option value="Search Chili">Search Chili</option>
+                  </select>
                   <div className="flex gap-2">
                     <button onClick={handleSaveEdit} className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded font-bold text-xs hover:bg-emerald-200">Save</button>
                     <button onClick={() => setEditingId(null)} className="px-3 py-1.5 bg-zinc-100 text-zinc-600 rounded font-bold text-xs hover:bg-zinc-200">Cancel</button>
@@ -229,7 +252,9 @@ const LeadSettings = ({ counselors, setCounselors, setLeadReports }) => {
                     </div>
                     <div>
                       <h4 className="font-bold text-notion-black">{c.name}</h4>
-                      <p className="text-xs text-zinc-500">{c.specialty}</p>
+                      <p className="text-xs text-zinc-500">
+                        {c.specialty} <span className="mx-1">&bull;</span> <span className="font-semibold text-zinc-600">{c.branch || 'Search Nepal'}</span>
+                      </p>
                     </div>
                   </div>
                   <div className="flex gap-2">

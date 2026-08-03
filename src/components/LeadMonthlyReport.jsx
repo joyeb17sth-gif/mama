@@ -116,41 +116,55 @@ const LeadMonthlyReport = ({ counselors, existingReports }) => {
           <tbody>
             {counselors.length === 0 ? (
               <tr>
-                <td colSpan={15} className="px-4 py-8 text-center text-sm font-semibold text-zinc-400 border-b border-zinc-100">
+                <td colSpan={isLeadSourceExpanded ? 19 : 15} className="px-4 py-8 text-center text-sm font-semibold text-zinc-400 border-b border-zinc-100">
                   No counselors available. Please add them in Settings.
                 </td>
               </tr>
             ) : (
-              counselors.map(c => {
-                const report = existingReports.find(r => r.month === selectedMonth && r.counselorId === c.id) || {};
-                
+              ['Search Australia', 'Search Chili', 'Search Nepal'].map(branch => {
+                const branchCounselors = counselors.filter(c => (c.branch || 'Search Nepal') === branch);
+                if (branchCounselors.length === 0) return null;
+
                 return (
-                  <tr key={c.id} className="hover:bg-notion-blue/5 transition-colors group">
-                    <td className={`${tdClass} font-bold text-notion-blue`}>
-                      {c.name}
-                    </td>
-                    
-                    {isLeadSourceExpanded && (
-                      <>
-                        <td className={`${tdClass} border-l-2 border-l-zinc-200 text-zinc-600`}>{report.sourceFacebook || ''}</td>
-                        <td className={`${tdClass} text-zinc-600`}>{report.sourceReferrals || ''}</td>
-                        <td className={`${tdClass} text-zinc-600`}>{report.sourceWebsite || ''}</td>
-                        <td className={`${tdClass} text-zinc-600`}>{report.sourceWalkIn || ''}</td>
-                      </>
-                    )}
-                    
-                    <td className={`${tdClass} font-extrabold ${!isLeadSourceExpanded ? 'border-l-2 border-l-zinc-200' : ''} bg-zinc-50/50 group-hover:bg-transparent`}>
-                      {report.totalLeads || ''}
-                    </td>
-
-                    <td className={`${tdClass} border-l-2 border-l-zinc-200 text-emerald-600`}>{report.convYes || ''}</td>
-                    <td className={`${tdClass} text-rose-600`}>{report.convNo || ''}</td>
-                    <td className={`${tdClass} text-zinc-400`}>{report.convDNA || ''}</td>
-
-                    <td className={`${tdClass} border-l-2 border-l-zinc-200`}>{report.appApplied || ''}</td>
-                    <td className={`${tdClass} text-emerald-600`}>{report.paymentDone || ''}</td>
-                    <td className={`${tdClass} text-notion-blue`}>{report.visaGranted || ''}</td>
-                  </tr>
+                  <React.Fragment key={branch}>
+                    <tr>
+                      <td colSpan={isLeadSourceExpanded ? 19 : 15} className="px-4 py-2 bg-zinc-100 text-xs font-extrabold text-zinc-600 uppercase tracking-wider text-left border-b border-zinc-200">
+                        {branch}
+                      </td>
+                    </tr>
+                    {branchCounselors.map(c => {
+                      const report = existingReports.find(r => r.month === selectedMonth && r.counselorId === c.id) || {};
+                      
+                      return (
+                        <tr key={c.id} className="hover:bg-notion-blue/5 transition-colors group">
+                          <td className={`${tdClass} font-bold text-notion-blue`}>
+                            {c.name}
+                          </td>
+                          
+                          {isLeadSourceExpanded && (
+                            <>
+                              <td className={`${tdClass} border-l-2 border-l-zinc-200 text-zinc-600`}>{report.sourceFacebook || ''}</td>
+                              <td className={`${tdClass} text-zinc-600`}>{report.sourceReferrals || ''}</td>
+                              <td className={`${tdClass} text-zinc-600`}>{report.sourceWebsite || ''}</td>
+                              <td className={`${tdClass} text-zinc-600`}>{report.sourceWalkIn || ''}</td>
+                            </>
+                          )}
+                          
+                          <td className={`${tdClass} font-extrabold ${!isLeadSourceExpanded ? 'border-l-2 border-l-zinc-200' : ''} bg-zinc-50/50 group-hover:bg-transparent`}>
+                            {report.totalLeads || ''}
+                          </td>
+                          
+                          <td className={`${tdClass} border-l-2 border-l-zinc-200 text-emerald-600`}>{report.convYes || ''}</td>
+                          <td className={`${tdClass} text-rose-600`}>{report.convNo || ''}</td>
+                          <td className={`${tdClass} text-zinc-400`}>{report.convDNA || ''}</td>
+                          
+                          <td className={`${tdClass} border-l-2 border-l-zinc-200`}>{report.appApplied || ''}</td>
+                          <td className={`${tdClass} text-emerald-600`}>{report.paymentDone || ''}</td>
+                          <td className={`${tdClass} text-notion-blue`}>{report.visaGranted || ''}</td>
+                        </tr>
+                      );
+                    })}
+                  </React.Fragment>
                 );
               })
             )}

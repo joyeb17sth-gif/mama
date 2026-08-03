@@ -161,39 +161,53 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                 </td>
               </tr>
             ) : (
-              counselorData.map((d) => (
-                <tr key={d.counselor.id} className="hover:bg-notion-blue/5 transition-colors group">
-                  <td className={`${tdClass} text-left font-bold text-notion-blue !border-r-zinc-300`}>
-                    {d.counselor.name}
-                  </td>
-                  
-                  {isLeadSourceExpanded && (
-                    <>
-                      <td className={`${tdClass} border-l-2 border-l-zinc-200 text-zinc-600`}>{d.sums.sourceFacebook || ''}</td>
-                      <td className={`${tdClass} text-zinc-600`}>{d.sums.sourceReferrals || ''}</td>
-                      <td className={`${tdClass} text-zinc-600`}>{d.sums.sourceWebsite || ''}</td>
-                      <td className={`${tdClass} text-zinc-600`}>{d.sums.sourceWalkIn || ''}</td>
-                    </>
-                  )}
-                  
-                  <td className={`${tdClass} font-extrabold ${!isLeadSourceExpanded ? 'border-l-2 border-l-zinc-200' : ''} bg-zinc-50/50 group-hover:bg-transparent`}>
-                    {d.sums.totalLeads || ''}
-                  </td>
+              ['Search Australia', 'Search Chili', 'Search Nepal'].map(branch => {
+                const branchData = counselorData.filter(d => (d.counselor.branch || 'Search Nepal') === branch);
+                if (branchData.length === 0) return null;
 
-                  <td className={`${tdClass} border-l-2 border-l-zinc-200 text-emerald-600 bg-blue-50/10`}>{d.sums.convYes || ''}</td>
-                  <td className={`${tdClass} text-rose-600 bg-blue-50/10`}>{d.sums.convNo || ''}</td>
-                  <td className={`${tdClass} text-zinc-400 bg-blue-50/10 !border-r-zinc-300`}>{d.sums.convDNA || ''}</td>
+                return (
+                  <React.Fragment key={branch}>
+                    <tr>
+                      <td colSpan={isLeadSourceExpanded ? 16 : 12} className="px-4 py-2 bg-zinc-100 text-xs font-extrabold text-zinc-600 uppercase tracking-wider text-left border-b border-zinc-200">
+                        {branch}
+                      </td>
+                    </tr>
+                    {branchData.map(d => (
+                      <tr key={d.counselor.id} className="hover:bg-notion-blue/5 transition-colors group">
+                        <td className={`${tdClass} text-left font-bold text-notion-blue !border-r-zinc-300`}>
+                          {d.counselor.name}
+                        </td>
+                        
+                        {isLeadSourceExpanded && (
+                          <>
+                            <td className={`${tdClass} border-l-2 border-l-zinc-200 text-zinc-600`}>{d.sums.sourceFacebook || ''}</td>
+                            <td className={`${tdClass} text-zinc-600`}>{d.sums.sourceReferrals || ''}</td>
+                            <td className={`${tdClass} text-zinc-600`}>{d.sums.sourceWebsite || ''}</td>
+                            <td className={`${tdClass} text-zinc-600`}>{d.sums.sourceWalkIn || ''}</td>
+                          </>
+                        )}
+                        
+                        <td className={`${tdClass} font-extrabold ${!isLeadSourceExpanded ? 'border-l-2 border-l-zinc-200' : ''} bg-zinc-50/50 group-hover:bg-transparent`}>
+                          {d.sums.totalLeads || ''}
+                        </td>
 
-                  <td className={`${tdClass} bg-blue-50/10`}>{d.sums.appApplied || ''}</td>
-                  <td className={`${tdClass} text-amber-600 bg-blue-50/10`}>{d.sums.appWaitingPayment || ''}</td>
-                  <td className={`${tdClass} text-rose-600 bg-blue-50/10 !border-r-zinc-300`}>{d.sums.appDroppedOut || ''}</td>
+                        <td className={`${tdClass} border-l-2 border-l-zinc-200 text-emerald-600 bg-blue-50/10`}>{d.sums.convYes || ''}</td>
+                        <td className={`${tdClass} text-rose-600 bg-blue-50/10`}>{d.sums.convNo || ''}</td>
+                        <td className={`${tdClass} text-zinc-400 bg-blue-50/10 !border-r-zinc-300`}>{d.sums.convDNA || ''}</td>
 
-                  <td className={`${tdClass} text-zinc-600 bg-blue-50/10`}>{d.sums.visaLodging || ''}</td>
-                  <td className={`${tdClass} text-indigo-600 bg-blue-50/10`}>{d.sums.visaInProgress || ''}</td>
-                  <td className={`${tdClass} text-emerald-600 bg-blue-50/10 font-bold`}>{d.sums.visaGranted || ''}</td>
-                  <td className={`${tdClass} text-rose-600 bg-blue-50/10`}>{d.sums.visaRefusal || ''}</td>
-                </tr>
-              ))
+                        <td className={`${tdClass} bg-blue-50/10`}>{d.sums.appApplied || ''}</td>
+                        <td className={`${tdClass} text-amber-600 bg-blue-50/10`}>{d.sums.appWaitingPayment || ''}</td>
+                        <td className={`${tdClass} text-rose-600 bg-blue-50/10 !border-r-zinc-300`}>{d.sums.appDroppedOut || ''}</td>
+
+                        <td className={`${tdClass} text-zinc-600 bg-blue-50/10`}>{d.sums.visaLodging || ''}</td>
+                        <td className={`${tdClass} text-indigo-600 bg-blue-50/10`}>{d.sums.visaInProgress || ''}</td>
+                        <td className={`${tdClass} text-emerald-600 bg-blue-50/10 font-bold`}>{d.sums.visaGranted || ''}</td>
+                        <td className={`${tdClass} text-rose-600 bg-blue-50/10`}>{d.sums.visaRefusal || ''}</td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+              })
             )}
             
             {/* Grand Totals Footer */}
