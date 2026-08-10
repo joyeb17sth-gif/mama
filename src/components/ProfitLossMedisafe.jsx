@@ -38,6 +38,8 @@ const createEmptyPeriod = (year, month) => ({
   period: `${MONTHS[month]} ${year}`,
   year,
   month,
+  incomeRows: [...INCOME_ROWS],
+  expenseRows: [...EXPENSE_ROWS],
   income: {},
   cogs: 0,
   expenses: {},
@@ -119,6 +121,7 @@ const ProfitLossMedisafe = ({ companyPeriods, onSave, isEditMode, view = 'table'
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [allPeriods, setAllPeriods] = useState(companyPeriods || []);
+  const [showAddItemModal, setShowAddItemModal] = useState({ show: false, type: null });
 
   useEffect(() => {
     setAllPeriods(companyPeriods || []);
@@ -128,20 +131,26 @@ const ProfitLossMedisafe = ({ companyPeriods, onSave, isEditMode, view = 'table'
   const periodId = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
   const currentPeriod = useMemo(() => {
     const found = allPeriods.find(p => p.id === periodId);
-    if (found) return JSON.parse(JSON.stringify(found));
-    return createEmptyPeriod(selectedYear, selectedMonth);
+    let p;
+    if (found) p = JSON.parse(JSON.stringify(found));
+    else p = createEmptyPeriod(selectedYear, selectedMonth);
+    
+    if (!p.incomeRows) p.incomeRows = [...INCOME_ROWS];
+    if (!p.expenseRows) p.expenseRows = [...EXPENSE_ROWS];
+    
+    return p;
   }, [allPeriods, periodId, selectedYear, selectedMonth]);
 
   // Computed totals
   const totalIncome = useMemo(() => {
-    return INCOME_ROWS.reduce((sum, row) => sum + (currentPeriod.income?.[row.key] || 0), 0);
+    return (currentPeriod.incomeRows || []).reduce((sum, row) => sum + (currentPeriod.income?.[row.key] || 0), 0);
   }, [currentPeriod]);
 
   const cogs = currentPeriod.cogs || 0;
   const grossProfit = totalIncome - cogs;
 
   const totalExpenses = useMemo(() => {
-    return EXPENSE_ROWS.reduce((sum, row) => sum + (currentPeriod.expenses?.[row.key] || 0), 0);
+    return (currentPeriod.expenseRows || []).reduce((sum, row) => sum + (currentPeriod.expenses?.[row.key] || 0), 0);
   }, [currentPeriod]);
 
   const netProfit = grossProfit - totalExpenses;
@@ -159,6 +168,40 @@ const ProfitLossMedisafe = ({ companyPeriods, onSave, isEditMode, view = 'table'
       return next;
     });
   }, [periodId, selectedYear, selectedMonth, onSave]);
+
+  // Dynamic Row Handlers
+  const handleUpdateRowLabel = useCallback((type, key, label) => {
+    updatePeriod((p) => {
+      const rowsKey = type === 'income' ? 'incomeRows' : 'expenseRows';
+      const row = p[rowsKey].find(r => r.key === key);
+      if (row) row.label = label;
+      return p;
+    });
+  }, [updatePeriod]);
+
+  const handleAddRow = useCallback((label) => {
+    updatePeriod((p) => {
+      const type = showAddItemModal.type;
+      const rowsKey = type === 'income' ? 'incomeRows' : 'expenseRows';
+      const dataKey = type === 'income' ? 'income' : 'expenses';
+      if (!p[rowsKey]) p[rowsKey] = type === 'income' ? [...INCOME_ROWS] : [...EXPENSE_ROWS];
+      const newKey = `${type}-${crypto.randomUUID()}`;
+      p[rowsKey].push({ key: newKey, label });
+      if (!p[dataKey]) p[dataKey] = {};
+      p[dataKey][newKey] = 0;
+      return p;
+    });
+    setShowAddItemModal({ show: false, type: null });
+  }, [updatePeriod, showAddItemModal]);
+
+  const handleRemoveRow = useCallback((type, key) => {
+    if (!window.confirm('Remove this item?')) return;
+    updatePeriod((p) => {
+      const rowsKey = type === 'income' ? 'incomeRows' : 'expenseRows';
+      p[rowsKey] = p[rowsKey].filter(r => r.key !== key);
+      return p;
+    });
+  }, [updatePeriod]);
 
   // Update fields
   const updateField = useCallback((group, key, value) => {
@@ -214,9 +257,11 @@ const ProfitLossMedisafe = ({ companyPeriods, onSave, isEditMode, view = 'table'
     const sorted = [...allPeriods].sort((a, b) => a.id.localeCompare(b.id));
     const recent = sorted.slice(-6);
     return recent.map(p => {
-      const sales = INCOME_ROWS.reduce((sum, row) => sum + (p.income?.[row.key] || 0), 0);
+      const iRows = p.incomeRows || INCOME_ROWS;
+      const eRows = p.expenseRows || EXPENSE_ROWS;
+      const sales = iRows.reduce((sum, row) => sum + (p.income?.[row.key] || 0), 0);
       const cogs = p.cogs || 0;
-      const exp = EXPENSE_ROWS.reduce((sum, row) => sum + (p.expenses?.[row.key] || 0), 0);
+      const exp = eRows.reduce((sum, row) => sum + (p.expenses?.[row.key] || 0), 0);
       return {
         name: p.period,
         Sales: sales,
@@ -231,11 +276,11 @@ const ProfitLossMedisafe = ({ companyPeriods, onSave, isEditMode, view = 'table'
   const EXPENSE_COLORS = ['#f43f5e', '#fb7185', '#e11d48', '#be123c', '#fda4af', '#f43f5e'];
   
   const salesPieData = useMemo(() => {
-    return INCOME_ROWS.map(r => ({ name: r.label, value: currentPeriod.income?.[r.key] || 0 })).filter(d => d.value > 0);
+    return (currentPeriod.incomeRows || []).map(r => ({ name: r.label, value: currentPeriod.income?.[r.key] || 0 })).filter(d => d.value > 0);
   }, [currentPeriod]);
 
   const expensePieData = useMemo(() => {
-    return EXPENSE_ROWS.map(r => ({ name: r.label, value: currentPeriod.expenses?.[r.key] || 0 })).filter(d => d.value > 0);
+    return (currentPeriod.expenseRows || []).map(r => ({ name: r.label, value: currentPeriod.expenses?.[r.key] || 0 })).filter(d => d.value > 0);
   }, [currentPeriod]);
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -296,15 +341,48 @@ const ProfitLossMedisafe = ({ companyPeriods, onSave, isEditMode, view = 'table'
               {/* ── Income ── */}
               <tr><td colSpan={3} className="h-1"></td></tr>
               <tr className="bg-emerald-50/30">
-                <td className="px-4 py-2 font-bold text-emerald-700 text-[11px] uppercase tracking-widest border-b border-emerald-100">Income</td>
+                <td className="px-4 py-2 font-bold text-emerald-700 text-[11px] uppercase tracking-widest border-b border-emerald-100">
+                  <div className="flex items-center justify-between">
+                    <span>Income</span>
+                    {isEditMode && (
+                      <button
+                        onClick={() => setShowAddItemModal({ show: true, type: 'income' })}
+                        className="px-2 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-white/50 rounded transition-colors"
+                      >
+                        + Add Item
+                      </button>
+                    )}
+                  </div>
+                </td>
                 <td className="border-b border-emerald-100"></td>
                 <td className="border-b border-emerald-100"></td>
               </tr>
-              {INCOME_ROWS.map(row => {
+              {(currentPeriod.incomeRows || []).map(row => {
                 const val = currentPeriod.income?.[row.key] || 0;
                 return (
-                  <tr key={`inc-${row.key}`} className="hover:bg-emerald-50/10 transition-colors">
-                    <td className="px-4 py-0.5 text-notion-warm-gray-600 pl-8 border-b border-zinc-50">{row.label}</td>
+                  <tr key={`inc-${row.key}`} className="hover:bg-emerald-50/10 transition-colors group">
+                    <td className="px-4 py-0.5 text-notion-warm-gray-600 pl-8 border-b border-zinc-50">
+                      <div className="flex items-center gap-2">
+                        {isEditMode ? (
+                          <input
+                            type="text"
+                            value={row.label}
+                            onChange={e => handleUpdateRowLabel('income', row.key, e.target.value)}
+                            className="flex-1 px-1 py-0.5 text-xs bg-transparent border-b border-dashed border-zinc-200 focus:border-emerald-400 focus:outline-none"
+                          />
+                        ) : (
+                          <span>{row.label}</span>
+                        )}
+                        {isEditMode && (
+                          <button
+                            onClick={() => handleRemoveRow('income', row.key)}
+                            className="w-4 h-4 rounded-full text-red-300 hover:text-red-600 hover:bg-red-50 text-[9px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center flex-shrink-0"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-1 py-0.5 border-b border-zinc-50 pr-6">
                       <EditableCell isEditable={isEditMode} value={val} onChange={v => updateField('income', row.key, v)} />
                     </td>
@@ -342,15 +420,48 @@ const ProfitLossMedisafe = ({ companyPeriods, onSave, isEditMode, view = 'table'
               {/* ── Expenses ── */}
               <tr><td colSpan={3} className="h-2"></td></tr>
               <tr className="bg-rose-50/30">
-                <td className="px-4 py-2 font-bold text-red-600 text-[11px] uppercase tracking-widest border-b border-red-100">Expenses</td>
+                <td className="px-4 py-2 font-bold text-red-600 text-[11px] uppercase tracking-widest border-b border-red-100">
+                  <div className="flex items-center justify-between">
+                    <span>Expenses</span>
+                    {isEditMode && (
+                      <button
+                        onClick={() => setShowAddItemModal({ show: true, type: 'expenses' })}
+                        className="px-2 py-0.5 text-[10px] font-semibold text-red-600 hover:bg-white/50 rounded transition-colors"
+                      >
+                        + Add Item
+                      </button>
+                    )}
+                  </div>
+                </td>
                 <td className="border-b border-red-100"></td>
                 <td className="border-b border-red-100"></td>
               </tr>
-              {EXPENSE_ROWS.map(row => {
+              {(currentPeriod.expenseRows || []).map(row => {
                 const val = currentPeriod.expenses?.[row.key] || 0;
                 return (
-                  <tr key={`exp-${row.key}`} className="hover:bg-rose-50/10 transition-colors">
-                    <td className="px-4 py-0.5 text-notion-warm-gray-600 pl-8 border-b border-zinc-50">{row.label}</td>
+                  <tr key={`exp-${row.key}`} className="hover:bg-rose-50/10 transition-colors group">
+                    <td className="px-4 py-0.5 text-notion-warm-gray-600 pl-8 border-b border-zinc-50">
+                      <div className="flex items-center gap-2">
+                        {isEditMode ? (
+                          <input
+                            type="text"
+                            value={row.label}
+                            onChange={e => handleUpdateRowLabel('expenses', row.key, e.target.value)}
+                            className="flex-1 px-1 py-0.5 text-xs bg-transparent border-b border-dashed border-zinc-200 focus:border-red-400 focus:outline-none"
+                          />
+                        ) : (
+                          <span>{row.label}</span>
+                        )}
+                        {isEditMode && (
+                          <button
+                            onClick={() => handleRemoveRow('expenses', row.key)}
+                            className="w-4 h-4 rounded-full text-red-300 hover:text-red-600 hover:bg-red-50 text-[9px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center flex-shrink-0"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-1 py-0.5 border-b border-zinc-50 pr-6">
                       <EditableCell isEditable={isEditMode} value={val} onChange={v => updateField('expenses', row.key, v)} />
                     </td>
@@ -487,7 +598,7 @@ const ProfitLossMedisafe = ({ companyPeriods, onSave, isEditMode, view = 'table'
                   <td className="px-4 py-2 font-bold text-emerald-700 text-[11px] uppercase tracking-widest border-b border-emerald-100 sticky left-0 z-10 bg-emerald-50/90">Sales Revenue</td>
                   {trendData.map(p => <td key={p.name} className="border-b border-emerald-100"></td>)}
                 </tr>
-                {INCOME_ROWS.map(row => (
+                {(currentPeriod.incomeRows || []).map(row => (
                   <tr key={`rinc-${row.key}`} className="hover:bg-emerald-50/10">
                     <td className="px-4 py-1 text-notion-warm-gray-600 pl-8 border-b border-zinc-50 sticky left-0 z-10 bg-white">{row.label}</td>
                     {trendData.map(p => {
@@ -521,7 +632,7 @@ const ProfitLossMedisafe = ({ companyPeriods, onSave, isEditMode, view = 'table'
                   <td className="px-4 py-2 font-bold text-red-600 text-[11px] uppercase tracking-widest border-b border-red-100 sticky left-0 z-10 bg-rose-50/90">Operating Expenses</td>
                   {trendData.map(p => <td key={p.name} className="border-b border-red-100"></td>)}
                 </tr>
-                {EXPENSE_ROWS.map(row => (
+                {(currentPeriod.expenseRows || []).map(row => (
                   <tr key={`rexp-${row.key}`} className="hover:bg-rose-50/10">
                     <td className="px-4 py-1 text-notion-warm-gray-600 pl-8 border-b border-zinc-50 sticky left-0 z-10 bg-white">{row.label}</td>
                     {trendData.map(p => {
@@ -545,6 +656,49 @@ const ProfitLossMedisafe = ({ companyPeriods, onSave, isEditMode, view = 'table'
           </div>
         </div>
       )}
+      {showAddItemModal.show && (
+        <AddItemModal 
+          onAdd={handleAddRow} 
+          onClose={() => setShowAddItemModal({ show: false, type: null })}
+          title={`Add ${showAddItemModal.type === 'income' ? 'Income' : 'Expense'} Item`}
+        />
+      )}
+    </div>
+  );
+};
+
+// ─── Add Item Modal ─────────────────────────────────────────────────
+const AddItemModal = ({ onAdd, onClose, title = "Add Item" }) => {
+  const [label, setLabel] = useState('');
+  const inputRef = useRef(null);
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    onAdd(trimmed);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="bg-white rounded-standard shadow-notion-deep p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+        <h3 className="text-card-title text-notion-black mb-4">{title}</h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            ref={inputRef}
+            type="text"
+            value={label}
+            onChange={e => setLabel(e.target.value)}
+            placeholder="e.g., New Category"
+            className="w-full px-3 py-2 whisper-border rounded-micro text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          />
+          <div className="flex gap-2 justify-end pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-1.5 text-sm text-notion-warm-gray-500 hover:text-notion-black transition">Cancel</button>
+            <button type="submit" className="px-4 py-1.5 text-sm bg-emerald-600 text-white rounded-micro hover:bg-emerald-700 transition font-semibold">Add Item</button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

@@ -44,6 +44,9 @@ const createEmptyPeriod = (year, month) => ({
   period: `${MONTHS[month]} ${year}`,
   year,
   month,
+  revenueRows: [...REVENUE_ROWS],
+  costRows: [...COST_ROWS],
+  overheadRows: [...OVERHEAD_ROWS],
   sites: [],
   managers: [],
   overheadTotals: { chemicalTotal: 0, motorVehicleTotal: 0 },
@@ -67,12 +70,16 @@ const recalculateManagerSalaries = (period) => {
 };
 
 // ─── Helper: compute derived values for a site ───────────────────────────
-const computeSite = (site) => {
-  const totalRevenue = (site.revenue?.regular || 0) + (site.revenue?.extraWork || 0) + (site.revenue?.supervisorAllowance || 0) + (site.revenue?.other || 0);
-  const totalCost = (site.directCost?.regular || 0) + (site.directCost?.extraWork || 0) + (site.directCost?.motorVehicle || 0) + (site.directCost?.other || 0);
+const computeSite = (site, periodRows) => {
+  const revRows = periodRows?.revenueRows || REVENUE_ROWS;
+  const costRows = periodRows?.costRows || COST_ROWS;
+  const ohRows = periodRows?.overheadRows || OVERHEAD_ROWS;
+
+  const totalRevenue = revRows.reduce((sum, r) => sum + (site.revenue?.[r.key] || 0), 0);
+  const totalCost = costRows.reduce((sum, r) => sum + (site.directCost?.[r.key] || 0), 0);
   const grossProfit = totalRevenue - totalCost;
   const gpMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
-  const totalOverhead = (site.overhead?.managerSalary || 0) + (site.overhead?.chemical || 0) + (site.overhead?.motorVehicle || 0) + (site.overhead?.other || 0);
+  const totalOverhead = ohRows.reduce((sum, r) => sum + (site.overhead?.[r.key] || 0), 0);
   const netProfit = grossProfit + (site.vehicleAllowanceIncome || 0) - totalOverhead;
   return { totalRevenue, totalCost, grossProfit, gpMargin, totalOverhead, netProfit };
 };
@@ -325,6 +332,7 @@ const ProfitLoss = ({ syncVersion }) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [allPeriods, setAllPeriods] = useState([]);
   const [showAddSite, setShowAddSite] = useState(false);
+  const [showAddItemModal, setShowAddItemModal] = useState({ show: false, type: null });
   const [compareMode, setCompareMode] = useState(false);
   const [compareYear, setCompareYear] = useState(CURRENT_YEAR);
   const [compareMonth, setCompareMonth] = useState(new Date().getMonth() > 0 ? new Date().getMonth() - 1 : 11);
@@ -395,6 +403,10 @@ const ProfitLoss = ({ syncVersion }) => {
   const currentPeriod = useMemo(() => {
     const found = allPeriods.find(p => p.id === periodId) || createEmptyPeriod(selectedYear, selectedMonth);
     const p = JSON.parse(JSON.stringify(found));
+
+    if (!p.revenueRows) p.revenueRows = [...REVENUE_ROWS];
+    if (!p.costRows) p.costRows = [...COST_ROWS];
+    if (!p.overheadRows) p.overheadRows = [...OVERHEAD_ROWS];
 
     // Migration: managers array
     if (!p.managers) {
@@ -487,6 +499,43 @@ const ProfitLoss = ({ syncVersion }) => {
       return next;
     });
   }, [periodId, selectedYear, selectedMonth, saveData]);
+
+  // ─── Dynamic Row Handlers ────────────────────────────────────────────────
+  const handleUpdateRowLabel = useCallback((type, key, label) => {
+    updatePeriod((p) => {
+      const rowsKey = type === 'revenue' ? 'revenueRows' : type === 'cost' ? 'costRows' : 'overheadRows';
+      const row = p[rowsKey].find(r => r.key === key);
+      if (row) row.label = label;
+      return p;
+    });
+  }, [updatePeriod]);
+
+  const handleAddRow = useCallback((label) => {
+    updatePeriod((p) => {
+      const type = showAddItemModal.type;
+      const rowsKey = type === 'revenue' ? 'revenueRows' : type === 'cost' ? 'costRows' : 'overheadRows';
+      if (!p[rowsKey]) p[rowsKey] = type === 'revenue' ? [...REVENUE_ROWS] : type === 'cost' ? [...COST_ROWS] : [...OVERHEAD_ROWS];
+      const newKey = `${type}-${crypto.randomUUID()}`;
+      p[rowsKey].push({ key: newKey, label });
+      
+      p.sites.forEach(site => {
+        const siteType = type === 'revenue' ? 'revenue' : type === 'cost' ? 'directCost' : 'overhead';
+        if (!site[siteType]) site[siteType] = {};
+        site[siteType][newKey] = 0;
+      });
+      return p;
+    });
+    setShowAddItemModal({ show: false, type: null });
+  }, [updatePeriod, showAddItemModal]);
+
+  const handleRemoveRow = useCallback((type, key) => {
+    if (!window.confirm('Remove this item?')) return;
+    updatePeriod((p) => {
+      const rowsKey = type === 'revenue' ? 'revenueRows' : type === 'cost' ? 'costRows' : 'overheadRows';
+      p[rowsKey] = p[rowsKey].filter(r => r.key !== key);
+      return p;
+    });
+  }, [updatePeriod]);
 
   const handleSaveData = () => {
     setPlData(prev => {
@@ -641,27 +690,29 @@ const ProfitLoss = ({ syncVersion }) => {
 
   // Computed totals across all sites
   const siteTotals = useMemo(() => {
-    return currentPeriod.sites.map(site => computeSite(site));
+    return currentPeriod.sites.map(site => computeSite(site, currentPeriod));
   }, [currentPeriod]);
 
   const grandTotals = useMemo(() => {
+    const revRows = currentPeriod.revenueRows || REVENUE_ROWS;
+    const costRows = currentPeriod.costRows || COST_ROWS;
+    const ohRows = currentPeriod.overheadRows || OVERHEAD_ROWS;
+
     const gt = {
-      revenue: { regular: 0, extraWork: 0, supervisorAllowance: 0, other: 0 },
-      directCost: { regular: 0, extraWork: 0, motorVehicle: 0, other: 0 },
+      revenue: {},
+      directCost: {},
       totalRevenue: 0, totalCost: 0, grossProfit: 0,
       vehicleAllowanceIncome: 0,
-      overhead: { managerSalaryPct: 0, managerSalary: 0, chemical: 0, motorVehicle: 0, other: 0 },
+      overhead: { managerSalaryPct: 0 },
       totalOverhead: 0, netProfit: 0,
     };
     currentPeriod.sites.forEach((site, i) => {
-      REVENUE_ROWS.forEach(r => { gt.revenue[r.key] = (gt.revenue[r.key] || 0) + (site.revenue?.[r.key] || 0); });
-      COST_ROWS.forEach(r => { gt.directCost[r.key] = (gt.directCost[r.key] || 0) + (site.directCost?.[r.key] || 0); });
+      revRows.forEach(r => { gt.revenue[r.key] = (gt.revenue[r.key] || 0) + (site.revenue?.[r.key] || 0); });
+      costRows.forEach(r => { gt.directCost[r.key] = (gt.directCost[r.key] || 0) + (site.directCost?.[r.key] || 0); });
       gt.vehicleAllowanceIncome += site.vehicleAllowanceIncome || 0;
-      gt.overhead.managerSalaryPct += site.overhead?.managerSalaryPct || 0;
-      gt.overhead.managerSalary += site.overhead?.managerSalary || 0;
-      gt.overhead.chemical += site.overhead?.chemical || 0;
-      gt.overhead.motorVehicle += site.overhead?.motorVehicle || 0;
-      gt.overhead.other += site.overhead?.other || 0;
+      
+      gt.overhead.managerSalaryPct = (gt.overhead.managerSalaryPct || 0) + (site.overhead?.managerSalaryPct || 0);
+      ohRows.forEach(r => { gt.overhead[r.key] = (gt.overhead[r.key] || 0) + (site.overhead?.[r.key] || 0); });
 
       const computed = siteTotals[i];
       gt.totalRevenue += computed.totalRevenue;
@@ -703,6 +754,18 @@ const ProfitLoss = ({ syncVersion }) => {
 
     if (includedPeriods.length === 0) return null;
 
+    const allRevRowsMap = new Map();
+    const allCostRowsMap = new Map();
+    const allOhRowsMap = new Map();
+    includedPeriods.forEach(p => {
+      (p.revenueRows || REVENUE_ROWS).forEach(r => allRevRowsMap.set(r.key, r));
+      (p.costRows || COST_ROWS).forEach(r => allCostRowsMap.set(r.key, r));
+      (p.overheadRows || OVERHEAD_ROWS).forEach(r => allOhRowsMap.set(r.key, r));
+    });
+    const rangeRevRows = Array.from(allRevRowsMap.values());
+    const rangeCostRows = Array.from(allCostRowsMap.values());
+    const rangeOhRows = Array.from(allOhRowsMap.values());
+
     // Aggregate by site name
     const siteMap = {};
     includedPeriods.forEach(period => {
@@ -710,38 +773,36 @@ const ProfitLoss = ({ syncVersion }) => {
         if (!siteMap[site.name]) {
           siteMap[site.name] = {
             name: site.name,
-            revenue: { regular: 0, extraWork: 0, supervisorAllowance: 0, other: 0 },
-            directCost: { regular: 0, extraWork: 0, motorVehicle: 0, other: 0 },
+            revenue: {},
+            directCost: {},
             vehicleAllowanceIncome: 0,
-            overhead: { managerSalary: 0, chemical: 0, motorVehicle: 0, other: 0 },
+            overhead: {},
             managerAllocations: {},
           };
         }
         const agg = siteMap[site.name];
-        REVENUE_ROWS.forEach(r => { agg.revenue[r.key] = (agg.revenue[r.key] || 0) + (site.revenue?.[r.key] || 0); });
-        COST_ROWS.forEach(r => { agg.directCost[r.key] = (agg.directCost[r.key] || 0) + (site.directCost?.[r.key] || 0); });
+        rangeRevRows.forEach(r => { agg.revenue[r.key] = (agg.revenue[r.key] || 0) + (site.revenue?.[r.key] || 0); });
+        rangeCostRows.forEach(r => { agg.directCost[r.key] = (agg.directCost[r.key] || 0) + (site.directCost?.[r.key] || 0); });
         agg.vehicleAllowanceIncome += site.vehicleAllowanceIncome || 0;
-        OVERHEAD_ROWS.forEach(r => { agg.overhead[r.key] = (agg.overhead[r.key] || 0) + (site.overhead?.[r.key] || 0); });
+        rangeOhRows.forEach(r => { agg.overhead[r.key] = (agg.overhead[r.key] || 0) + (site.overhead?.[r.key] || 0); });
       });
     });
 
     const sites = Object.values(siteMap);
-    const rSiteTotals = sites.map(site => computeSite(site));
+    const rSiteTotals = sites.map(site => computeSite(site, { revenueRows: rangeRevRows, costRows: rangeCostRows, overheadRows: rangeOhRows }));
 
     // Grand totals
     const gt = {
-      revenue: { regular: 0, extraWork: 0, supervisorAllowance: 0, other: 0 },
-      directCost: { regular: 0, extraWork: 0, motorVehicle: 0, other: 0 },
+      revenue: {}, directCost: {}, overhead: {},
       totalRevenue: 0, totalCost: 0, grossProfit: 0,
-      vehicleAllowanceIncome: 0,
-      overhead: { managerSalary: 0, chemical: 0, motorVehicle: 0, other: 0 },
-      totalOverhead: 0, netProfit: 0,
+      vehicleAllowanceIncome: 0, totalOverhead: 0, netProfit: 0,
     };
     sites.forEach((site, i) => {
-      REVENUE_ROWS.forEach(r => { gt.revenue[r.key] = (gt.revenue[r.key] || 0) + (site.revenue?.[r.key] || 0); });
-      COST_ROWS.forEach(r => { gt.directCost[r.key] = (gt.directCost[r.key] || 0) + (site.directCost?.[r.key] || 0); });
+      rangeRevRows.forEach(r => { gt.revenue[r.key] = (gt.revenue[r.key] || 0) + (site.revenue?.[r.key] || 0); });
+      rangeCostRows.forEach(r => { gt.directCost[r.key] = (gt.directCost[r.key] || 0) + (site.directCost?.[r.key] || 0); });
       gt.vehicleAllowanceIncome += site.vehicleAllowanceIncome || 0;
-      OVERHEAD_ROWS.forEach(r => { gt.overhead[r.key] = (gt.overhead[r.key] || 0) + (site.overhead?.[r.key] || 0); });
+      rangeOhRows.forEach(r => { gt.overhead[r.key] = (gt.overhead[r.key] || 0) + (site.overhead?.[r.key] || 0); });
+      
       const c = rSiteTotals[i];
       gt.totalRevenue += c.totalRevenue;
       gt.totalCost += c.totalCost;
@@ -751,7 +812,7 @@ const ProfitLoss = ({ syncVersion }) => {
     });
     gt.gpMargin = gt.totalRevenue > 0 ? (gt.grossProfit / gt.totalRevenue) * 100 : 0;
 
-    return { sites, siteTotals: rSiteTotals, grandTotals: gt, periods: [...includedPeriods].reverse().map(p => p.period), periodCount: includedPeriods.length };
+    return { sites, siteTotals: rSiteTotals, grandTotals: gt, periods: [...includedPeriods].reverse().map(p => p.period), periodCount: includedPeriods.length, rangeRevRows, rangeCostRows, rangeOhRows };
   }, [view, allPeriods, rangeStart, rangeEnd]);
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -1015,18 +1076,51 @@ const ProfitLoss = ({ syncVersion }) => {
                   <tbody>
                     {/* ── Revenue ── */}
                     <tr className="bg-blue-50/30">
-                      <td className="px-3 py-1.5 font-bold text-notion-blue text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-blue-50 z-10">Revenue</td>
+                      <td className="px-3 py-1.5 font-bold text-notion-blue text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-blue-50 z-10">
+                        <div className="flex items-center justify-between">
+                          <span>Revenue</span>
+                          {isEditMode && (
+                            <button
+                              onClick={() => setShowAddItemModal({ show: true, type: 'revenue' })}
+                              className="px-2 py-0.5 text-[10px] font-semibold text-notion-blue hover:bg-white/50 rounded transition-colors"
+                            >
+                              + Add Item
+                            </button>
+                          )}
+                        </div>
+                      </td>
                       <td colSpan={currentPeriod.sites.length + 1} className="border-b border-zinc-100"></td>
                     </tr>
-                    {REVENUE_ROWS.map(row => (
-                      <tr key={`rev-${row.key}`} className="hover:bg-blue-50/10 transition-colors">
-                        <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">{row.label}</td>
+                    {(currentPeriod.revenueRows || []).map(row => (
+                      <tr key={`rev-${row.key}`} className="hover:bg-blue-50/10 transition-colors group">
+                        <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">
+                          <div className="flex items-center gap-2">
+                            {isEditMode ? (
+                              <input
+                                type="text"
+                                value={row.label}
+                                onChange={e => handleUpdateRowLabel('revenue', row.key, e.target.value)}
+                                className="flex-1 px-1 py-0.5 text-xs bg-transparent border-b border-dashed border-zinc-200 focus:border-notion-blue focus:outline-none"
+                              />
+                            ) : (
+                              <span>{row.label}</span>
+                            )}
+                            {isEditMode && (
+                              <button
+                                onClick={() => handleRemoveRow('revenue', row.key)}
+                                className="w-4 h-4 rounded-full text-red-300 hover:text-red-600 hover:bg-red-50 text-[9px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center flex-shrink-0"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        </td>
                         {currentPeriod.sites.map((site, i) => (
                           <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-50">
                             <EditableCell isEditable={isEditMode} value={site.revenue?.[row.key] || 0} onChange={v => updateSiteField(i, 'revenue', row.key, v)} />
                           </td>
                         ))}
-                        <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">{fmt(grandTotals.revenue[row.key])}</td>
+                        <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">{fmt(grandTotals.revenue[row.key] || 0)}</td>
                       </tr>
                     ))}
                     {/* Total Revenue */}
@@ -1043,18 +1137,51 @@ const ProfitLoss = ({ syncVersion }) => {
 
                     {/* ── Direct Staff Cost ── */}
                     <tr className="bg-rose-50/30">
-                      <td className="px-3 py-1.5 font-bold text-red-500 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-rose-50 z-10">Direct Staff Cost</td>
+                      <td className="px-3 py-1.5 font-bold text-red-500 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-rose-50 z-10">
+                        <div className="flex items-center justify-between">
+                          <span>Direct Staff Cost</span>
+                          {isEditMode && (
+                            <button
+                              onClick={() => setShowAddItemModal({ show: true, type: 'cost' })}
+                              className="px-2 py-0.5 text-[10px] font-semibold text-red-500 hover:bg-white/50 rounded transition-colors"
+                            >
+                              + Add Item
+                            </button>
+                          )}
+                        </div>
+                      </td>
                       <td colSpan={currentPeriod.sites.length + 1} className="border-b border-zinc-100"></td>
                     </tr>
-                    {COST_ROWS.map(row => (
-                      <tr key={`cost-${row.key}`} className="hover:bg-rose-50/10 transition-colors">
-                        <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">{row.label}</td>
+                    {(currentPeriod.costRows || []).map(row => (
+                      <tr key={`cost-${row.key}`} className="hover:bg-rose-50/10 transition-colors group">
+                        <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">
+                          <div className="flex items-center gap-2">
+                            {isEditMode ? (
+                              <input
+                                type="text"
+                                value={row.label}
+                                onChange={e => handleUpdateRowLabel('cost', row.key, e.target.value)}
+                                className="flex-1 px-1 py-0.5 text-xs bg-transparent border-b border-dashed border-zinc-200 focus:border-red-400 focus:outline-none"
+                              />
+                            ) : (
+                              <span>{row.label}</span>
+                            )}
+                            {isEditMode && (
+                              <button
+                                onClick={() => handleRemoveRow('cost', row.key)}
+                                className="w-4 h-4 rounded-full text-red-300 hover:text-red-600 hover:bg-red-50 text-[9px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center flex-shrink-0"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        </td>
                         {currentPeriod.sites.map((site, i) => (
                           <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-50">
                             <EditableCell isEditable={isEditMode} value={site.directCost?.[row.key] || 0} onChange={v => updateSiteField(i, 'directCost', row.key, v)} />
                           </td>
                         ))}
-                        <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">{fmt(grandTotals.directCost[row.key])}</td>
+                        <td className="px-1.5 py-1 text-right font-semibold text-notion-black border-b border-zinc-50 bg-emerald-50/30">{fmt(grandTotals.directCost[row.key] || 0)}</td>
                       </tr>
                     ))}
                     {/* Total Cost */}
@@ -1112,7 +1239,19 @@ const ProfitLoss = ({ syncVersion }) => {
 
                     {/* ── Overhead ── */}
                     <tr className="bg-amber-50/30">
-                      <td className="px-3 py-1.5 font-bold text-amber-700 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-amber-50 z-10">Overhead</td>
+                      <td className="px-3 py-1.5 font-bold text-amber-700 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-amber-50 z-10">
+                        <div className="flex items-center justify-between">
+                          <span>Overhead</span>
+                          {isEditMode && (
+                            <button
+                              onClick={() => setShowAddItemModal({ show: true, type: 'overhead' })}
+                              className="px-2 py-0.5 text-[10px] font-semibold text-amber-700 hover:bg-white/50 rounded transition-colors"
+                            >
+                              + Add Item
+                            </button>
+                          )}
+                        </div>
+                      </td>
                       <td colSpan={currentPeriod.sites.length + 1} className="border-b border-zinc-100"></td>
                     </tr>
 
@@ -1136,9 +1275,30 @@ const ProfitLoss = ({ syncVersion }) => {
                       </tr>
                     ))}
 
-                    {OVERHEAD_ROWS.map(row => (
-                      <tr key={`oh-${row.key}`} className="hover:bg-amber-50/10 transition-colors">
-                        <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">{row.label}</td>
+                    {(currentPeriod.overheadRows || []).map(row => (
+                      <tr key={`oh-${row.key}`} className="hover:bg-amber-50/10 transition-colors group">
+                        <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">
+                          <div className="flex items-center gap-2">
+                            {isEditMode && row.key !== 'managerSalary' ? (
+                              <input
+                                type="text"
+                                value={row.label}
+                                onChange={e => handleUpdateRowLabel('overhead', row.key, e.target.value)}
+                                className="flex-1 px-1 py-0.5 text-xs bg-transparent border-b border-dashed border-zinc-200 focus:border-amber-400 focus:outline-none"
+                              />
+                            ) : (
+                              <span>{row.label}</span>
+                            )}
+                            {isEditMode && row.key !== 'managerSalary' && (
+                              <button
+                                onClick={() => handleRemoveRow('overhead', row.key)}
+                                className="w-4 h-4 rounded-full text-red-300 hover:text-red-600 hover:bg-red-50 text-[9px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center flex-shrink-0"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        </td>
                         {currentPeriod.sites.map((site, i) => (
                           <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-50">
                             {row.key === 'managerSalary' ? (
@@ -1605,9 +1765,54 @@ const ProfitLoss = ({ syncVersion }) => {
         );
       })()}
 
+      {/* ─── Add Item Modal ───────────────────────────────────────────── */}
+      {showAddItemModal.show && (
+        <AddItemModal 
+          onAdd={handleAddRow} 
+          onClose={() => setShowAddItemModal({ show: false, type: null })}
+          title={`Add ${showAddItemModal.type === 'revenue' ? 'Revenue' : showAddItemModal.type === 'cost' ? 'Direct Staff Cost' : 'Overhead'} Item`}
+        />
+      )}
+
       {/* Close Seetal Management (site_based) conditional */}
       </>
       )}
+    </div>
+  );
+};
+
+// ─── Add Item Modal ─────────────────────────────────────────────────
+const AddItemModal = ({ onAdd, onClose, title = "Add Item" }) => {
+  const [label, setLabel] = useState('');
+  const inputRef = useRef(null);
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    onAdd(trimmed);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="bg-white rounded-standard shadow-notion-deep p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+        <h3 className="text-card-title text-notion-black mb-4">{title}</h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            ref={inputRef}
+            type="text"
+            value={label}
+            onChange={e => setLabel(e.target.value)}
+            placeholder="e.g., New Category"
+            className="w-full px-3 py-2 whisper-border rounded-micro text-sm focus:outline-none focus:ring-1 focus:ring-notion-blue"
+          />
+          <div className="flex gap-2 justify-end pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-1.5 text-sm text-notion-warm-gray-500 hover:text-notion-black transition">Cancel</button>
+            <button type="submit" className="px-4 py-1.5 text-sm bg-notion-blue text-white rounded-micro hover:bg-notion-blue-active transition font-semibold">Add Item</button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
