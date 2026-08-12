@@ -55,21 +55,20 @@ const EditCell = ({ value, onChange, highlight }) => {
   const [raw, setRaw] = useState(value);
   useEffect(() => { if (!editing) setRaw(value); }, [value, editing]);
   return (
-    <td className={`border border-zinc-200 px-0 py-0 text-right text-xs cursor-text
+    <td className={`border border-zinc-200 px-0 py-0 text-right text-xs cursor-text relative
       ${highlight ? 'bg-blue-50 hover:bg-blue-100' : 'bg-white hover:bg-zinc-50'}`}
       onClick={() => setEditing(true)}>
-      {editing ? (
+      {editing && (
         <input type="number" autoFocus value={raw}
           onChange={e => setRaw(e.target.value)}
           onBlur={() => { setEditing(false); onChange(raw); }}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Tab') { setEditing(false); onChange(raw); } }}
-          className={`w-full px-2 py-1.5 text-right text-xs outline-none ring-2 ring-inset ring-notion-blue border-none
+          className={`absolute inset-0 w-full h-full px-2 text-right text-xs outline-none ring-2 ring-inset ring-notion-blue border-none z-10
             ${highlight ? 'bg-blue-100' : 'bg-yellow-50'}`} />
-      ) : (
-        <span className="block px-2 py-1.5 min-w-[64px]">
-          {value === '' ? <span className="text-zinc-300">—</span> : fmt(value)}
-        </span>
       )}
+      <span className={`block px-2 py-1.5 min-w-[64px] ${editing ? 'opacity-0' : ''}`}>
+        {value === '' ? <span className="text-zinc-300">—</span> : fmt(value)}
+      </span>
     </td>
   );
 };
@@ -91,19 +90,18 @@ const EditCountCell = ({ value, onChange }) => {
   const [raw, setRaw] = useState(value);
   useEffect(() => { if (!editing) setRaw(value); }, [value, editing]);
   return (
-    <td className="border border-amber-400 px-0 py-0 text-center text-xs bg-amber-300 cursor-text hover:bg-amber-200"
+    <td className="border border-amber-400 px-0 py-0 text-center text-xs bg-amber-300 cursor-text hover:bg-amber-200 relative"
       onClick={() => setEditing(true)}>
-      {editing ? (
+      {editing && (
         <input type="number" autoFocus value={raw}
           onChange={e => setRaw(e.target.value)}
           onBlur={() => { setEditing(false); onChange(raw); }}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Tab') { setEditing(false); onChange(raw); } }}
-          className="w-full px-2 py-1.5 text-center text-xs outline-none bg-yellow-100 ring-2 ring-inset ring-notion-blue border-none" />
-      ) : (
-        <span className="block px-2 py-1.5 font-bold min-w-[48px] text-zinc-900">
-          {value === '' ? <span className="text-amber-600 font-normal">—</span> : value}
-        </span>
+          className="absolute inset-0 w-full h-full px-2 text-center text-xs outline-none bg-yellow-100 ring-2 ring-inset ring-notion-blue border-none z-10" />
       )}
+      <span className={`block px-2 py-1.5 font-bold min-w-[48px] text-zinc-900 ${editing ? 'opacity-0' : ''}`}>
+        {value === '' ? <span className="text-amber-600 font-normal">—</span> : value}
+      </span>
     </td>
   );
 };
