@@ -94,19 +94,26 @@ const Login = ({ onLogin }) => {
   const isLocked = lockoutSeconds > 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl p-8 transition-all duration-300">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center px-4 relative overflow-hidden">
+      {/* Background pattern */}
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay pointer-events-none"></div>
+      
+      {/* Ambient background glows */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-dashboard-primary/30 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-dashboard-secondary/20 rounded-full blur-[100px] pointer-events-none"></div>
+
+      <div className="max-w-md w-full bg-white rounded-3xl p-10 relative z-10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 transition-all duration-300">
+        <div className="text-center mb-10">
+          <div className="w-16 h-16 bg-gradient-to-br from-dashboard-secondary to-dashboard-primary rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-[0_0_25px_rgba(59,130,246,0.4)]">
             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <h1 className="text-h1 text-gray-900 mb-2">
+          <h1 className="text-3xl font-black text-dashboard-foreground mb-3 tracking-tight">
             {isLoginMode ? 'Welcome Back' : 'Create Account'}
           </h1>
-          <p className="text-gray-600 text-p3">
-            {isLoginMode ? 'Please login to continue' : 'Set up your profile to get started'}
+          <p className="text-slate-500 font-medium">
+            {isLoginMode ? 'Sign in to access your operations dashboard.' : 'Set up your profile to get started'}
           </p>
         </div>
 
@@ -132,7 +139,7 @@ const Login = ({ onLogin }) => {
 
           {/* Email Field */}
           <div>
-            <label className="block text-p3 font-bold text-gray-400 mb-2">
+            <label className="block text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-2">
               Email Address
             </label>
             <input
@@ -143,14 +150,14 @@ const Login = ({ onLogin }) => {
               required
               autoFocus
               disabled={isLocked || loading}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0 outline-none transition font-medium disabled:bg-gray-100 disabled:cursor-not-allowed"
-              placeholder="you@example.com"
+              className="w-full px-4 py-3 border-2 border-slate-100 rounded-xl focus:border-dashboard-secondary focus:ring-4 focus:ring-dashboard-secondary/10 outline-none transition-all font-medium text-slate-800 disabled:bg-slate-50 disabled:text-slate-400"
+              placeholder="admin@example.com"
             />
           </div>
 
           {/* Password Field */}
           <div>
-            <label className="block text-p3 font-bold text-gray-400 mb-2">
+            <label className="block text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-2">
               Password
             </label>
             <input
@@ -161,7 +168,7 @@ const Login = ({ onLogin }) => {
               required
               minLength={6}
               disabled={isLocked || loading}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0 outline-none transition font-medium disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border-2 border-slate-100 rounded-xl focus:border-dashboard-secondary focus:ring-4 focus:ring-dashboard-secondary/10 outline-none transition-all font-medium text-slate-800 disabled:bg-slate-50 disabled:text-slate-400"
               placeholder={isLoginMode ? "Enter password" : "Min 6 characters"}
             />
           </div>
@@ -169,7 +176,7 @@ const Login = ({ onLogin }) => {
           {/* Signup Extra Fields */}
           {!isLoginMode && (
             <div>
-              <label className="block text-p3 font-bold text-gray-400 mb-2">
+              <label className="block text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-2">
                 Confirm Password
               </label>
               <input
@@ -180,7 +187,7 @@ const Login = ({ onLogin }) => {
                 required
                 minLength={6}
                 disabled={loading}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0 outline-none transition font-medium disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 border-2 border-slate-100 rounded-xl focus:border-dashboard-secondary focus:ring-4 focus:ring-dashboard-secondary/10 outline-none transition-all font-medium text-slate-800 disabled:bg-slate-50 disabled:text-slate-400"
                 placeholder="Confirm password"
               />
             </div>
@@ -190,11 +197,11 @@ const Login = ({ onLogin }) => {
           <button
             type="submit"
             disabled={loading || (isLoginMode && isLocked)}
-            className={`w-full text-white py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition font-bold uppercase tracking-wider text-sm mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700`}
+            className={`w-full text-white py-3.5 px-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-dashboard-primary/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-bold uppercase tracking-widest text-sm mt-6 bg-gradient-to-r from-dashboard-primary to-dashboard-secondary shadow-[0_4px_15px_rgba(30,64,175,0.4)] hover:shadow-[0_6px_25px_rgba(30,64,175,0.6)] hover:-translate-y-0.5`}
           >
-            {loading ? (isLoginMode ? 'Logging in...' : 'Creating Account...') :
+            {loading ? (isLoginMode ? 'Authenticating...' : 'Creating Account...') :
               (isLoginMode && isLocked) ? `Locked (${lockoutSeconds}s)` :
-                (isLoginMode ? 'Login' : 'Create Account')}
+                (isLoginMode ? 'Access Dashboard' : 'Create Account')}
           </button>
         </form>
 

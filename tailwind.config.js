@@ -7,9 +7,21 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['"Fira Sans"', 'system-ui', 'sans-serif'],
+        mono: ['"Fira Code"', 'monospace'],
       },
       colors: {
+        // UI-UX-PRO-MAX Master Design System Colors
+        dashboard: {
+          primary: '#1E40AF',
+          secondary: '#3B82F6',
+          accent: '#D97706',
+          bg: '#F8FAFC',
+          foreground: '#1E3A8A',
+          muted: '#E9EEF6',
+          border: '#DBEAFE',
+          destructive: '#DC2626',
+        },
         notion: {
           black: 'rgba(0, 0, 0, 0.95)',
           blue: '#0075de',
