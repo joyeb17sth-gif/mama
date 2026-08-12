@@ -65,73 +65,7 @@ const LeadSettings = ({ counselors, setCounselors, setLeadReports }) => {
     }
   };
 
-  const handleGenerateSampleData = () => {
-    if (!setLeadReports) return;
-    
-    if (counselors.length === 0) {
-      alert('Please add at least one counselor first before generating sample data.');
-      return;
-    }
-    
-    if (window.confirm('This will generate sample data for the current year. Proceed?')) {
-      const year = new Date().getFullYear().toString();
-      const sampleReports = [];
-      
-      for (let month = 1; month <= 12; month++) {
-        const monthStr = `${year}-${String(month).padStart(2, '0')}`;
-        counselors.forEach(c => {
-          // Add some randomness, 80% chance to have data for a month
-          if (Math.random() > 0.2) { 
-             const total = Math.floor(Math.random() * 50) + 10;
-             const yes = Math.floor(total * 0.4);
-             const no = Math.floor(total * 0.3);
-             const dna = total - yes - no;
-             
-             const fb = Math.floor(total * 0.5);
-             const ref = Math.floor(total * 0.2);
-             const web = Math.floor(total * 0.2);
-             const walk = total - fb - ref - web;
-             
-             const applied = Math.floor(yes * 0.8);
-             const waiting = Math.floor(applied * 0.2);
-             const dropped = Math.floor(applied * 0.1);
-             const paymentDone = applied - waiting - dropped;
-             
-             const lodging = Math.floor(paymentDone * 0.9);
-             const inProgress = Math.floor(lodging * 0.3);
-             const granted = Math.floor(lodging * 0.6);
-             const refusal = lodging - inProgress - granted;
 
-             sampleReports.push({
-                id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2),
-                createdAt: new Date().toISOString(),
-                counselorId: c.id,
-                month: monthStr,
-                totalLeads: total,
-                sourceFacebook: fb,
-                sourceReferrals: ref,
-                sourceWebsite: web,
-                sourceWalkIn: walk,
-                convYes: yes,
-                convNo: no,
-                convDNA: dna,
-                appApplied: applied,
-                appWaitingPayment: waiting,
-                appDroppedOut: dropped,
-                paymentDone: paymentDone,
-                visaLodging: lodging,
-                visaInProgress: inProgress,
-                visaGranted: granted,
-                visaRefusal: refusal
-             });
-          }
-        });
-      }
-      
-      setLeadReports(prev => [...prev, ...sampleReports]);
-      alert('Sample data generated successfully!');
-    }
-  };
 
   const inputClasses = "w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-notion-blue/20 focus:border-notion-blue outline-none transition-all";
 
@@ -144,19 +78,12 @@ const LeadSettings = ({ counselors, setCounselors, setLeadReports }) => {
         <h4 className="text-sm font-bold text-zinc-500 uppercase tracking-wider mb-4">Data Management</h4>
         <div className="flex gap-4">
           <button 
-            onClick={handleGenerateSampleData}
-            className="px-4 py-2 bg-notion-blue text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700 transition-colors"
-          >
-            Generate Sample Data
-          </button>
-          <button 
             onClick={handleClearData}
             className="px-4 py-2 bg-rose-100 text-rose-700 rounded-lg text-sm font-bold shadow-sm hover:bg-rose-200 transition-colors"
           >
             Clear All Data
           </button>
         </div>
-        <p className="text-xs text-zinc-400 mt-3">Note: Generating sample data requires at least one counselor to be added below.</p>
       </div>
 
       <h3 className="text-xl font-bold text-notion-black mb-6 mt-10">Counselor Management</h3>
