@@ -482,91 +482,107 @@ const CompanySummaryCard = ({ staffList, year }) => {
   const COLS = 14;
 
   return (
-    <div className="mt-12 mb-8 overflow-hidden">
-      <div className="overflow-x-auto w-full custom-scrollbar pb-4">
-        <table className="w-full text-left border-collapse min-w-max border-none bg-transparent">
+    <div className="mt-16 mb-8 rounded-2xl bg-[#F8FAFC] border border-blue-100 shadow-[0_8px_30px_rgb(30,64,175,0.06)] overflow-hidden ring-1 ring-white">
+      
+      {/* Premium Header */}
+      <div className="px-6 py-4 bg-gradient-to-r from-[#1E40AF] to-[#1E3A8A] text-white flex items-center justify-between shadow-sm relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
+        <div className="flex items-center gap-3 relative z-10">
+          <div className="p-2 bg-white/10 rounded-lg backdrop-blur-md">
+            <svg className="w-5 h-5 text-blue-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+          </div>
+          <div>
+            <h3 className="font-bold tracking-wide text-[15px] text-white shadow-[0_0_10px_rgba(255,255,255,0.2)]">Company Grand Totals</h3>
+            <p className="text-[11px] font-medium text-blue-200 uppercase tracking-widest mt-0.5">Real-Time Aggregation</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto w-full custom-scrollbar pb-6 pt-2 px-2">
+        <table className="w-full text-left border-collapse min-w-max">
           <thead>
             <tr>
-              <th className="px-3 py-1 text-xs font-semibold text-transparent w-48 border-none">_</th>
-              {MONTHS.map((m, i) => <th key={m} className="px-2 py-1 text-center text-xs font-semibold text-transparent w-24 border-none">_</th>)}
-              <th className="px-2 py-1 text-right text-xs font-semibold text-transparent w-28 border-none">_</th>
+              <th className="px-3 py-3 text-xs font-black text-[#1E40AF] uppercase tracking-wider w-48 border-b-2 border-blue-100">Metric</th>
+              {MONTHS.map((m, i) => (
+                <th key={m} className="px-2 py-3 text-center text-[11px] font-black text-[#1E3A8A] uppercase tracking-wider w-24 border-b-2 border-blue-100">
+                  {m}-{year.toString().slice(-2)}
+                </th>
+              ))}
+              <th className="px-3 py-3 text-right text-xs font-black text-[#1E40AF] uppercase tracking-wider w-28 border-b-2 border-blue-100">Grand Total</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-blue-50/50">
             
             {/* Total Cost */}
-            <tr>
-              <td className="border border-zinc-200 px-3 py-1.5 text-sm font-bold text-zinc-900 bg-white">Total Cost Per Month</td>
+            <tr className="hover:bg-blue-50/40 transition-colors duration-300">
+              <td className="px-3 py-2.5 text-[13px] font-bold text-slate-700">Total Cost Per Month</td>
               {aggCost.map((v, i) => (
-                <td key={i} className="border border-zinc-200 px-2 py-1.5 text-right text-xs text-zinc-900 bg-white">{fmt(v)}</td>
+                <td key={i} className="px-2 py-2.5 text-right text-xs font-semibold text-slate-600 tabular-nums">{fmt(v)}</td>
               ))}
-              <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold text-zinc-900 bg-white">{fmt(totalCostSum)}</td>
+              <td className="px-3 py-2.5 text-right text-[13px] font-black text-slate-700 tabular-nums">{fmt(totalCostSum)}</td>
             </tr>
-
-            <tr><td colSpan={COLS} className="py-2 bg-transparent border-none" /></tr>
 
             {/* Revenues */}
-            <tr>
-              <td className="border border-zinc-200 px-3 py-1.5 text-sm font-normal text-zinc-900 bg-white">Revenue Earned</td>
+            <tr className="hover:bg-blue-50/40 transition-colors duration-300">
+              <td className="px-3 py-2 text-xs font-semibold text-[#3B82F6]">Revenue Earned</td>
               {aggRevenueEarned.map((v, i) => (
-                <td key={i} className="border border-zinc-200 px-2 py-1.5 text-right text-xs text-zinc-900 bg-white">{fmt(v)}</td>
+                <td key={i} className="px-2 py-2 text-right text-xs font-medium text-[#3B82F6] tabular-nums">{fmt(v)}</td>
               ))}
-              <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-normal text-zinc-900 bg-white">{fmt(totalRevenueEarnedSum)}</td>
+              <td className="px-3 py-2 text-right text-xs font-bold text-[#3B82F6] tabular-nums">{fmt(totalRevenueEarnedSum)}</td>
             </tr>
-            <tr>
-              <td className="border border-zinc-200 px-3 py-1.5 text-sm italic text-zinc-900 bg-white">Service Fee</td>
+            <tr className="hover:bg-blue-50/40 transition-colors duration-300">
+              <td className="px-3 py-1.5 text-[11px] italic font-medium text-slate-500">Service Fee</td>
               {aggServiceFee.map((v, i) => (
-                <td key={i} className="border border-zinc-200 px-2 py-1.5 text-right text-xs text-zinc-900 bg-white">{fmt(v)}</td>
+                <td key={i} className="px-2 py-1.5 text-right text-[11px] font-medium text-slate-500 tabular-nums">{fmt(v)}</td>
               ))}
-              <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs italic text-zinc-900 bg-white">{fmt(totalServiceFeeSum)}</td>
+              <td className="px-3 py-1.5 text-right text-[11px] italic font-semibold text-slate-500 tabular-nums">{fmt(totalServiceFeeSum)}</td>
             </tr>
-
-            <tr><td colSpan={COLS} className="py-2 bg-transparent border-none" /></tr>
 
             {/* Total Revenue */}
-            <tr>
-              <td className="border border-zinc-200 px-3 py-1.5 text-sm font-bold text-notion-blue bg-white">Total Revenue Earned</td>
+            <tr className="bg-blue-50/50 hover:bg-blue-100/50 transition-colors duration-300 border-y border-blue-100">
+              <td className="px-3 py-3 text-[13px] font-black text-[#1E40AF]">Total Revenue Earned</td>
               {aggTotalRevenueEarnedLine.map((v, i) => (
-                <td key={i} className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold text-notion-blue bg-white">{fmt(v)}</td>
+                <td key={i} className="px-2 py-3 text-right text-xs font-bold text-[#1E40AF] tabular-nums">{fmt(v)}</td>
               ))}
-              <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold text-notion-blue bg-white">{fmt(grandRevenueSum)}</td>
-            </tr>
-            <tr>
-              <td className="border border-zinc-200 px-3 py-1.5 text-sm font-bold bg-white">&nbsp;</td>
-              {aggTotalRevenueEarnedLine.map((v, i) => (
-                <td key={i} className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold text-zinc-900 bg-white">{fmt(v)}</td>
-              ))}
-              <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold text-zinc-900 bg-white">{fmt(grandRevenueSum)}</td>
+              <td className="px-3 py-3 text-right text-[13px] font-black text-[#1E40AF] tabular-nums" style={{ textShadow: '0 0 10px rgba(30,64,175,0.2)' }}>
+                {fmt(grandRevenueSum)}
+              </td>
             </tr>
 
-            <tr><td colSpan={COLS} className="py-2 bg-transparent border-none" /></tr>
+            {/* Empty Spacer */}
+            <tr><td colSpan={COLS} className="py-2" /></tr>
 
             {/* Profit / Loss */}
-            <tr>
-              <td className="border border-[#92d050] px-3 py-1.5 text-sm font-bold text-zinc-900 bg-[#92d050]">Profit / (Loss)</td>
+            <tr className="bg-white hover:bg-emerald-50/30 transition-colors duration-300 shadow-[0_2px_10px_rgba(0,0,0,0.02)] rounded-lg relative z-10 border border-emerald-100/50">
+              <td className="px-3 py-3.5 text-sm font-black text-emerald-700 rounded-l-lg border-l-4 border-emerald-500">
+                Profit / (Loss)
+              </td>
               {aggSurplus.map((v, i) => (
-                <td key={i} className={`border border-[#92d050] px-2 py-1.5 text-right text-xs font-bold bg-[#92d050] ${v < 0 ? 'text-red-800' : 'text-zinc-900'}`}>
+                <td key={i} className={`px-2 py-3.5 text-right text-xs font-bold tabular-nums ${v < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                   {fmt(v)}
                 </td>
               ))}
-              <td className={`border border-[#92d050] px-2 py-1.5 text-right text-xs font-bold bg-[#92d050] ${grandSurplusSum < 0 ? 'text-red-800' : 'text-zinc-900'}`}>
+              <td className={`px-3 py-3.5 text-right text-sm font-black tabular-nums rounded-r-lg ${grandSurplusSum < 0 ? 'text-rose-600' : 'text-emerald-700'}`} 
+                  style={{ textShadow: grandSurplusSum < 0 ? '0 0 12px rgba(225,29,72,0.3)' : '0 0 12px rgba(16,185,129,0.3)' }}>
                 {fmt(grandSurplusSum)}
               </td>
             </tr>
 
-            <tr><td colSpan={COLS} className="py-4 bg-transparent border-none" /></tr>
+            {/* Empty Spacer */}
+            <tr><td colSpan={COLS} className="py-2" /></tr>
 
             {/* Students Closed */}
-            <tr>
-              <td className="border border-[#ffc000] px-3 py-2 text-sm font-bold text-zinc-900 bg-[#ffc000]">
+            <tr className="bg-white hover:bg-amber-50/30 transition-colors duration-300 shadow-[0_2px_10px_rgba(0,0,0,0.02)] rounded-lg relative z-10 border border-amber-100/50">
+              <td className="px-3 py-3 text-[13px] font-black text-[#D97706] rounded-l-lg border-l-4 border-amber-400">
                 Total Student Closed
               </td>
               {aggStudentClosed.map((v, i) => (
-                <td key={i} className="border border-[#ffc000] px-2 py-2 text-center text-xs font-bold text-zinc-900 bg-[#ffc000]">
+                <td key={i} className="px-2 py-3 text-center text-xs font-bold text-[#D97706] tabular-nums">
                   {v || 0}
                 </td>
               ))}
-              <td className="border border-[#ffc000] px-2 py-2 text-center text-xs font-bold text-zinc-900 bg-[#ffc000]">
+              <td className="px-3 py-3 text-center text-[13px] font-black text-[#D97706] tabular-nums rounded-r-lg"
+                  style={{ textShadow: '0 0 12px rgba(217,119,6,0.3)' }}>
                 {studentTotal || 0}
               </td>
             </tr>
