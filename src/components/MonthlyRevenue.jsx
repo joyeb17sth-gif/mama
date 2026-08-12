@@ -10,15 +10,22 @@ const defaultCostRow = () => ({
   values: Array(12).fill(''),
 });
 
+const defaultRevenueRow = () => ({
+  id: crypto.randomUUID(),
+  label: 'New Item',
+  values: Array(12).fill(''),
+});
+
 const defaultStaff = () => ({
   id: crypto.randomUUID(),
   name: 'New Staff Member',
   annualSalary: '',
   basicSalary: Array(12).fill(''),
   superannuation: Array(12).fill(''),
-  costRows: [],          // ← extra cost rows (included in Total Cost)
+  costRows: [],          // ← extra cost rows (added to Total Cost)
   revenueEarned: Array(12).fill(''),
   serviceFeeRef: Array(12).fill(''),
+  revenueRows: [],       // ← extra revenue-section rows (subtracted from Surplus)
   studentClosed: Array(12).fill(''),
 });
 
@@ -118,33 +125,52 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
     onUpdate({ ...staff, costRows: rows });
   };
 
+  const updateRevenueRow = (rowId, idx, value) => {
+    const rows = (staff.revenueRows || []).map(r =>
+      r.id === rowId ? { ...r, values: r.values.map((v, i) => i === idx ? value : v) } : r
+    );
+    onUpdate({ ...staff, revenueRows: rows });
+  };
+
   const updateStudentClosed = (idx, value) => {
     const arr = [...(staff.studentClosed || Array(12).fill(''))]; arr[idx] = value;
     onUpdate({ ...staff, studentClosed: arr });
   };
 
   const addCostRow = () => onUpdate({ ...staff, costRows: [...(staff.costRows || []), defaultCostRow()] });
-
   const removeCostRow = (rowId) => onUpdate({ ...staff, costRows: (staff.costRows || []).filter(r => r.id !== rowId) });
-
   const updateCostRowLabel = (rowId, label) =>
     onUpdate({ ...staff, costRows: (staff.costRows || []).map(r => r.id === rowId ? { ...r, label } : r) });
 
-  // ── Calculations (costRows are included in Total Cost) ──
+  const addRevenueRow = () => onUpdate({ ...staff, revenueRows: [...(staff.revenueRows || []), defaultRevenueRow()] });
+  const removeRevenueRow = (rowId) => onUpdate({ ...staff, revenueRows: (staff.revenueRows || []).filter(r => r.id !== rowId) });
+  const updateRevenueRowLabel = (rowId, label) =>
+    onUpdate({ ...staff, revenueRows: (staff.revenueRows || []).map(r => r.id === rowId ? { ...r, label } : r) });
+
+  // ── Calculations ──
   const costRows = staff.costRows || [];
+  const revenueRows = staff.revenueRows || [];
+
   const totalCost = MONTHS.map((_, i) =>
     num(staff.basicSalary[i]) +
     num(staff.superannuation[i]) +
     costRows.reduce((s, r) => s + num(r.values[i]), 0)
   );
-  const surplus = MONTHS.map((_, i) => num(staff.revenueEarned[i]) - totalCost[i]);
+
+  // revenueRows are SUBTRACTED from surplus (deductions)
+  const surplus = MONTHS.map((_, i) =>
+    num(staff.revenueEarned[i]) -
+    totalCost[i] -
+    revenueRows.reduce((s, r) => s + num(r.values[i]), 0)
+  );
 
   const totalBasic = rowTotal(staff.basicSalary);
   const totalSuper = rowTotal(staff.superannuation);
   const totalCostRowsSum = costRows.reduce((s, r) => s + rowTotal(r.values), 0);
   const totalCostSum = totalBasic + totalSuper + totalCostRowsSum;
   const totalRevenue = rowTotal(staff.revenueEarned);
-  const totalSurplus = totalRevenue - totalCostSum;
+  const totalRevenueRowsDeduction = revenueRows.reduce((s, r) => s + rowTotal(r.values), 0);
+  const totalSurplus = totalRevenue - totalCostSum - totalRevenueRowsDeduction;
 
   const studentClosed = staff.studentClosed || Array(12).fill('');
   const studentTotal = studentClosed.reduce((s, v) => s + (parseInt(v) || 0), 0);
@@ -296,6 +322,51 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
               <td className="border border-zinc-200 px-2 py-1.5 bg-blue-50" />
               {editing && <td className="border border-zinc-200 bg-blue-50" />}
             </tr>
+
+            {/* Extra revenue-section rows (subtracted from Surplus) */}
+            {revenueRows.map(row => (
+              <tr key={row.id} className="bg-blue-50">
+                <td className="border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600">
+                  {editing ? (
+                    <input type="text" value={row.label}
+                      onChange={e => updateRevenueRowLabel(row.id, e.target.value)}
+                      className="w-full bg-transparent outline-none border-b border-zinc-300 focus:border-notion-blue text-xs"
+                      placeholder="Row label" />
+                  ) : row.label}
+                </td>
+                {row.values.map((v, i) =>
+                  <Cell key={i} value={v} onChange={val => updateRevenueRow(row.id, i, val)} highlight editing={editing} />
+                )}
+                <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-semibold bg-blue-50 text-red-600">
+                  {rowTotal(row.values) ? `−${fmt(rowTotal(row.values))}` : ''}
+                </td>
+                {editing && (
+                  <td className="border border-zinc-200 text-center">
+                    <button onClick={() => removeRevenueRow(row.id)}
+                      className="p-1 text-zinc-300 hover:text-red-500 transition-colors" title="Remove row">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </td>
+                )}
+              </tr>
+            ))}
+
+            {/* + Add Row in revenue section */}
+            {editing && (
+              <tr>
+                <td colSpan={COLS} className="border border-zinc-200 bg-blue-50 px-3 py-1.5">
+                  <button onClick={addRevenueRow}
+                    className="flex items-center gap-1 text-xs text-notion-blue hover:text-blue-700 font-semibold transition-colors">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Row
+                  </button>
+                </td>
+              </tr>
+            )}
 
             {/* Spacer */}
             <tr><td colSpan={COLS} className="py-0.5 bg-white border-x-0 border-zinc-100" /></tr>
