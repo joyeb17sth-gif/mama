@@ -319,7 +319,9 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
               {staff.serviceFeeRef.map((v, i) =>
                 <Cell key={i} value={v} onChange={val => updateMonth('serviceFeeRef', i, val)} highlight editing={editing} />
               )}
-              <td className="border border-zinc-200 px-2 py-1.5 bg-blue-50" />
+              <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-semibold bg-blue-50 text-blue-700">
+                {rowTotal(staff.serviceFeeRef) ? fmt(rowTotal(staff.serviceFeeRef)) : ''}
+              </td>
               {editing && <td className="border border-zinc-200 bg-blue-50" />}
             </tr>
 
