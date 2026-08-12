@@ -20,9 +20,42 @@ const defaultStaff = () => ({
   superannuation: Array(12).fill(''),
   revenueEarned: Array(12).fill(''),
   serviceFeeRef: Array(12).fill(''),
+  studentClosed: Array(12).fill(''),
   customRows: [],
-  showStudentClosed: false,
 });
+
+// Plain integer read cell for student counts
+const ReadCountCell = ({ value }) => (
+  <td className="border border-amber-400 px-2 py-1.5 text-center text-xs font-bold text-zinc-900 bg-amber-400 whitespace-nowrap">
+    {value === '' || value === undefined ? '' : value}
+  </td>
+);
+
+// Editable integer cell for student counts
+const EditCountCell = ({ value, onChange }) => {
+  const [editing, setEditing] = useState(false);
+  const [raw, setRaw] = useState(value);
+  useEffect(() => { if (!editing) setRaw(value); }, [value, editing]);
+  return (
+    <td className="border border-amber-400 px-0 py-0 text-center text-xs bg-amber-300 cursor-text hover:bg-amber-200" onClick={() => setEditing(true)}>
+      {editing ? (
+        <input
+          type="number"
+          autoFocus
+          value={raw}
+          onChange={e => setRaw(e.target.value)}
+          onBlur={() => { setEditing(false); onChange(raw); }}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Tab') { setEditing(false); onChange(raw); } }}
+          className="w-full px-2 py-1.5 text-center text-xs outline-none bg-yellow-100 border-2 border-notion-blue"
+        />
+      ) : (
+        <span className="block px-2 py-1.5 font-bold min-w-[48px] text-zinc-900">
+          {value === '' ? <span className="text-amber-600 font-normal">—</span> : value}
+        </span>
+      )}
+    </td>
+  );
+};
 
 const fmt = (val) => {
   const n = parseFloat(val);
@@ -90,10 +123,17 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
     );
     onUpdate({ ...staff, customRows: rows });
   };
+  const updateStudentClosed = (idx, value) => {
+    const arr = [...(staff.studentClosed || Array(12).fill(''))]; arr[idx] = value;
+    onUpdate({ ...staff, studentClosed: arr });
+  };
   const addCustomRow = () => onUpdate({ ...staff, customRows: [...(staff.customRows || []), defaultCustomRow()] });
   const removeCustomRow = (rowId) => onUpdate({ ...staff, customRows: staff.customRows.filter(r => r.id !== rowId) });
   const updateRowLabel = (rowId, label) => onUpdate({ ...staff, customRows: staff.customRows.map(r => r.id === rowId ? { ...r, label } : r) });
   const toggleRowHighlight = (rowId) => onUpdate({ ...staff, customRows: staff.customRows.map(r => r.id === rowId ? { ...r, highlight: !r.highlight } : r) });
+
+  const studentClosed = staff.studentClosed || Array(12).fill('');
+  const studentTotal = studentClosed.reduce((s, v) => s + (parseInt(v) || 0), 0);
 
   const totalCost = MONTHS.map((_, i) => num(staff.basicSalary[i]) + num(staff.superannuation[i]));
   const surplus = MONTHS.map((_, i) => num(staff.revenueEarned[i]) - totalCost[i]);
@@ -132,18 +172,9 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
             <span className="text-xs font-bold text-zinc-800">{staff.annualSalary ? fmt(staff.annualSalary) : '—'}</span>
           )}
           {editing && (
-            <>
-              <label className="flex items-center gap-1 text-xs font-medium text-zinc-700 cursor-pointer ml-1">
-                <input type="checkbox" checked={staff.showStudentClosed} onChange={e => update('showStudentClosed', e.target.checked)} className="accent-zinc-700" />
-                Student Closed
-              </label>
-              <button onClick={onDelete} className="ml-1 p-1.5 text-zinc-600 hover:text-red-700 hover:bg-red-100 rounded-lg transition-colors" title="Remove staff member">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-              </button>
-            </>
-          )}
-          {!editing && staff.showStudentClosed && (
-            <span className="text-xs bg-yellow-200 text-yellow-800 font-semibold px-2 py-0.5 rounded">Student Closed</span>
+            <button onClick={onDelete} className="ml-1 p-1.5 text-zinc-600 hover:text-red-700 hover:bg-red-100 rounded-lg transition-colors" title="Remove staff member">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>
           )}
         </div>
       </div>
@@ -272,12 +303,19 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
               {editing && <td className="border border-zinc-200" />}
             </tr>
 
-            {/* Student Closed */}
-            {staff.showStudentClosed && (
-              <tr className="bg-yellow-100">
-                <td className="border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-yellow-800" colSpan={editing ? 15 : 14}>Student Closed</td>
-              </tr>
-            )}
+            {/* Student Closed — always visible */}
+            <tr>
+              <td className="border border-amber-400 px-3 py-2 text-xs font-black text-zinc-900 bg-amber-400 uppercase tracking-widest">Student Closed</td>
+              {studentClosed.map((v, i) =>
+                editing
+                  ? <EditCountCell key={i} value={v} onChange={val => updateStudentClosed(i, val)} />
+                  : <ReadCountCell key={i} value={v} />
+              )}
+              <td className="border border-amber-400 px-2 py-2 text-center text-xs font-black text-zinc-900 bg-amber-400">
+                {studentTotal || ''}
+              </td>
+              {editing && <td className="border border-amber-400 bg-amber-400" />}
+            </tr>
           </tbody>
         </table>
       </div>
