@@ -55,15 +55,15 @@ const Layout = ({
         if (role === 'admin') return navItems;
 
         if (role === 'supervisor' || role === 'manager') {
-            return navItems.filter(item => ['task-matrix', 'sites', 'lead-manager'].includes(item.id));
+            return navItems.filter(item => ['task-matrix', 'sites'].includes(item.id));
         }
 
         if (role === 'leads_team') {
             return navItems.filter(item => ['lead-manager'].includes(item.id));
         }
 
-        // Default user
-        return navItems.filter(item => ['dashboard'].includes(item.id));
+        // Default user cannot see any navigation items
+        return [];
     };
 
     const filteredNavItems = getFilteredNavItems();
@@ -132,7 +132,7 @@ const Layout = ({
                             </button>
                         ))}
 
-                        {isAdmin && (
+                        {filteredAdminItems.length > 0 && (
                             <>
                                 <div className="text-[11px] font-bold text-notion-warm-gray-300 px-3 mb-2 mt-6 uppercase tracking-widest">
                                     Management

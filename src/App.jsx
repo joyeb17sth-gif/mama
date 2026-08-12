@@ -55,20 +55,15 @@ function App() {
     if (role === 'admin') return true;
 
     if (role === 'supervisor' || role === 'manager') {
-      return ['task-matrix', 'sites', 'lead-manager'].includes(tab);
-    }
-
-    if (role === 'payslip_management') {
-      // Payslip management can access most tabs except task matrix, user management, profit-loss, and settings
-      return !['task-matrix', 'users', 'profit-loss', 'settings'].includes(tab);
+      return ['task-matrix', 'sites'].includes(tab);
     }
 
     if (role === 'leads_team') {
       return ['lead-manager'].includes(tab);
     }
 
-    // Default basic role
-    return ['dashboard', 'timesheets'].includes(tab);
+    // Default basic role cannot see anything
+    return false;
   };
 
 
@@ -140,17 +135,11 @@ function App() {
       } else if (role === 'supervisor' || role === 'manager') {
         promises.push(
           getSitesAsync(),
-          getPeriodicalTasksAsync(),
-          getLeadsAsync(),
-          getLeadReportsAsync(),
-          getLeadCounselorsAsync()
+          getPeriodicalTasksAsync()
         );
         promiseKeys.push(
           'sites',
-          'periodicalTasks',
-          'leads',
-          'leadReports',
-          'leadCounselors'
+          'periodicalTasks'
         );
       } else if (role === 'leads_team') {
         promises.push(

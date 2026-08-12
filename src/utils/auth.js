@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 
 // Login attempt tracking for rate limiting (UI level)
 const MAX_LOGIN_ATTEMPTS = 5;
@@ -41,14 +42,34 @@ export const completeFirstRun = () => {
   localStorage.setItem('isFirstRunComplete', 'true');
 };
 
+
+
+// Get Supabase credentials from environment variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+// Create a secondary client for Admin registration that doesn't persist session
+const adminAuthClient = supabaseUrl && supabaseAnonKey 
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
+    })
+  : null;
+
 /**
  * REGISTER NEW ACCOUNT (Supabase Auth)
  */
 export const registerUser = async (email, password) => {
   if (!email || !password) throw new Error('Email and password are required');
   if (password.length < 6) throw new Error('Password must be at least 6 characters');
+  
+  if (!adminAuthClient) throw new Error('Supabase client is not configured.');
 
-  const { data, error } = await supabase.auth.signUp({
+  // Use the secondary client to prevent logging the current admin out
+  const { data, error } = await adminAuthClient.auth.signUp({
     email: email.trim(),
     password: password
   });
