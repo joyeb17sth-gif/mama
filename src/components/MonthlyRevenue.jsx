@@ -157,20 +157,26 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
     costRows.reduce((s, r) => s + num(r.values[i]), 0)
   );
 
-  // revenueRows are SUBTRACTED from surplus (deductions)
-  const surplus = MONTHS.map((_, i) =>
-    num(staff.revenueEarned[i]) -
-    totalCost[i] -
+  const totalRevenueEarnedLine = MONTHS.map((_, i) =>
+    num(staff.revenueEarned[i]) +
+    num(staff.serviceFeeRef[i]) +
     revenueRows.reduce((s, r) => s + num(r.values[i]), 0)
   );
+
+  // Surplus: Positive means Green, Negative means Red
+  const surplus = MONTHS.map((_, i) => totalRevenueEarnedLine[i] - totalCost[i]);
 
   const totalBasic = rowTotal(staff.basicSalary);
   const totalSuper = rowTotal(staff.superannuation);
   const totalCostRowsSum = costRows.reduce((s, r) => s + rowTotal(r.values), 0);
   const totalCostSum = totalBasic + totalSuper + totalCostRowsSum;
-  const totalRevenue = rowTotal(staff.revenueEarned);
-  const totalRevenueRowsDeduction = revenueRows.reduce((s, r) => s + rowTotal(r.values), 0);
-  const totalSurplus = totalRevenue - totalCostSum - totalRevenueRowsDeduction;
+  
+  const totalRev = rowTotal(staff.revenueEarned);
+  const totalServiceFee = rowTotal(staff.serviceFeeRef);
+  const totalRevenueRowsSum = revenueRows.reduce((s, r) => s + rowTotal(r.values), 0);
+  const totalRevenueSum = totalRev + totalServiceFee + totalRevenueRowsSum;
+  
+  const totalSurplus = totalRevenueSum - totalCostSum;
 
   const studentClosed = staff.studentClosed || Array(12).fill('');
   const studentTotal = studentClosed.reduce((s, v) => s + (parseInt(v) || 0), 0);
@@ -339,8 +345,8 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
                 {row.values.map((v, i) =>
                   <Cell key={i} value={v} onChange={val => updateRevenueRow(row.id, i, val)} highlight editing={editing} />
                 )}
-                <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-semibold bg-blue-50 text-red-600">
-                  {rowTotal(row.values) ? `−${fmt(rowTotal(row.values))}` : ''}
+                <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-semibold bg-blue-50 text-blue-700">
+                  {rowTotal(row.values) ? fmt(rowTotal(row.values)) : ''}
                 </td>
                 {editing && (
                   <td className="border border-zinc-200 text-center">
@@ -373,19 +379,32 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
             {/* Spacer */}
             <tr><td colSpan={COLS} className="py-0.5 bg-white border-x-0 border-zinc-100" /></tr>
 
+            {/* Total Revenue Earned (auto-calculated) */}
+            <tr className="bg-blue-50">
+              <td className="border border-zinc-200 px-3 py-1.5 text-xs font-bold text-blue-800">Total Revenue Earned</td>
+              {totalRevenueEarnedLine.map((v, i) => (
+                <td key={i} className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold text-blue-800">{v ? fmt(v) : ''}</td>
+              ))}
+              <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold text-blue-800">{totalRevenueSum ? fmt(totalRevenueSum) : ''}</td>
+              {editing && <td className="border border-zinc-200 bg-blue-50" />}
+            </tr>
+
+            {/* Spacer */}
+            <tr><td colSpan={COLS} className="py-0.5 bg-white border-x-0 border-zinc-100" /></tr>
+
             {/* ── SURPLUS / DEFICIT (fully correct now) ── */}
             <tr>
               <td className="border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-800">Surplus/(deficit)</td>
               {surplus.map((v, i) => {
                 const hasData = num(staff.revenueEarned[i]) || totalCost[i];
                 return (
-                  <td key={i} className={`border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold whitespace-nowrap ${v < 0 ? 'text-red-600' : 'text-zinc-900'}`}>
+                  <td key={i} className={`border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold whitespace-nowrap ${v > 0 ? 'text-green-600' : v < 0 ? 'text-red-600' : 'text-zinc-900'}`}>
                     {hasData ? fmt(v) : ''}
                   </td>
                 );
               })}
-              <td className={`border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold ${totalSurplus < 0 ? 'text-red-600' : 'text-zinc-900'}`}>
-                {(totalRevenue || totalCostSum) ? fmt(totalSurplus) : ''}
+              <td className={`border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold ${totalSurplus > 0 ? 'text-green-600' : totalSurplus < 0 ? 'text-red-600' : 'text-zinc-900'}`}>
+                {(totalRevenueSum || totalCostSum) ? fmt(totalSurplus) : ''}
               </td>
               {editing && <td className="border border-zinc-200" />}
             </tr>
