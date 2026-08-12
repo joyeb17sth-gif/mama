@@ -8,6 +8,7 @@ import {
   getLeads, saveLeads, getLeadsAsync,
   saveLeadReports, getLeadReportsAsync, getLeadReports,
   saveLeadCounselors, getLeadCounselorsAsync, getLeadCounselors,
+  getStaffProductivityReportsAsync,
   logAction,
   clearSyncTimestamps, setOnSaveError
 } from './utils/storage';
@@ -37,6 +38,7 @@ const TaskMatrix = React.lazy(() => import('./components/TaskMatrix'));
 const TaskBudgetMatrix = React.lazy(() => import('./components/TaskBudgetMatrix'));
 const ProfitLoss = React.lazy(() => import('./components/ProfitLoss'));
 const LeadManager = React.lazy(() => import('./components/LeadManager'));
+const MonthlyRevenue = React.lazy(() => import('./components/MonthlyRevenue'));
 
 function App() {
   const [authenticated, setAuthenticatedState] = useState(false);
@@ -109,7 +111,7 @@ function App() {
     try {
       const role = userProfileData.role?.toLowerCase() || 'user';
 
-      let cloudSites, cloudPeriodicalTasks, cloudProfitLoss, cloudLeads, cloudLeadReports, cloudLeadCounselors;
+      let cloudSites, cloudPeriodicalTasks, cloudProfitLoss, cloudLeads, cloudLeadReports, cloudLeadCounselors, cloudStaffProductivityReports;
 
       const promises = [];
       const promiseKeys = [];
@@ -122,7 +124,8 @@ function App() {
           getProfitLossAsync(),
           getLeadsAsync(),
           getLeadReportsAsync(),
-          getLeadCounselorsAsync()
+          getLeadCounselorsAsync(),
+          getStaffProductivityReportsAsync()
         );
         promiseKeys.push(
           'sites',
@@ -130,7 +133,8 @@ function App() {
           'profitLoss',
           'leads',
           'leadReports',
-          'leadCounselors'
+          'leadCounselors',
+          'staffProductivityReports'
         );
       } else if (role === 'supervisor' || role === 'manager') {
         promises.push(
@@ -167,6 +171,7 @@ function App() {
           else if (key === 'leads') cloudLeads = val;
           else if (key === 'leadReports') cloudLeadReports = val;
           else if (key === 'leadCounselors') cloudLeadCounselors = val;
+          else if (key === 'staffProductivityReports') cloudStaffProductivityReports = val;
         });
       }
 
@@ -233,6 +238,14 @@ function App() {
           // Cloud is empty but local has migrated legacy data, so push local to cloud!
           saveLeadCounselors(memoryCache.payscleep_lead_counselors_v3);
           setLeadCounselors(memoryCache.payscleep_lead_counselors_v3);
+        }
+      }
+
+      if (cloudStaffProductivityReports !== undefined) {
+        hasChanges = true;
+        if (cloudStaffProductivityReports) {
+          memoryCache.staffProductivityReports = cloudStaffProductivityReports;
+          await localforage.setItem('staffProductivityReports', encryptData(cloudStaffProductivityReports));
         }
       }
 
@@ -892,6 +905,11 @@ function App() {
           <div className="mt-6">
             <UserManagement />
           </div>
+        )}
+
+        {/* Monthly Revenue Tab (Main Admin Only) */}
+        {activeTab === 'monthly-revenue' && hasPermission('monthly-revenue') && (
+          <MonthlyRevenue />
         )}
         </React.Suspense>
       </Layout>

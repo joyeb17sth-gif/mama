@@ -25,7 +25,8 @@ export const memoryCache = {
   profiles: null,
   leads: [],
   payscleep_lead_reports_v2: [],
-  payscleep_lead_counselors_v3: []
+  payscleep_lead_counselors_v3: [],
+  staffProductivityReports: []
 };
 
 export const syncMetadata = {};
@@ -246,6 +247,15 @@ export const savePublicHolidays = async (holidays) => {
 };
 export const getPublicHolidaysAsync = () => getSingleFromCloud('public_holidays', 'main_list');
 export const getPublicHolidays = () => memoryCache.publicHolidays;
+
+// --- STAFF PRODUCTIVITY REPORTS ---
+export const saveStaffProductivityReports = async (reports) => {
+  memoryCache.staffProductivityReports = reports;
+  await localforage.setItem('staffProductivityReports', encryptData(reports));
+  await saveToCloud('staff_productivity_reports', 'main_list', reports);
+};
+export const getStaffProductivityReportsAsync = () => getSingleFromCloud('staff_productivity_reports', 'main_list');
+export const getStaffProductivityReports = () => memoryCache.staffProductivityReports;
 
 // --- PERIODICAL TASKS ---
 export const savePeriodicalTasks = async (tasks) => {

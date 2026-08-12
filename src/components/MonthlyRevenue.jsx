@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { getStaffProductivityReports, saveStaffProductivityReports } from '../utils/storage';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const STORAGE_KEY = 'staff_productivity_report';
@@ -436,13 +437,33 @@ const StaffProductivityReport = () => {
   const [year, setYear] = useState(CURRENT_YEAR);
   const [editing, setEditing] = useState(false);
   const [staffList, setStaffList] = useState(() => {
+    // 1. Check cloud cache first
+    const cloudData = getStaffProductivityReports();
+    if (cloudData && cloudData.length > 0) return cloudData;
+
+    // 2. Migration fallback: check old local storage
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.length > 0) {
+          // Push to cloud and clean up localStorage immediately
+          saveStaffProductivityReports(parsed);
+          localStorage.removeItem(STORAGE_KEY);
+          return parsed;
+        }
+      }
+    } catch { }
+
+    return [];
   });
 
-  useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(staffList)); }, [staffList]);
+  // Sync to cloud when data changes
+  useEffect(() => {
+    if (staffList.length > 0 || getStaffProductivityReports()?.length > 0) {
+      saveStaffProductivityReports(staffList);
+    }
+  }, [staffList]);
 
   const addStaff = () => setStaffList(prev => [...prev, defaultStaff()]);
   const updateStaff = useCallback((id, updated) => setStaffList(prev => prev.map(s => s.id === id ? updated : s)), []);
@@ -458,7 +479,7 @@ const StaffProductivityReport = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-display-secondary text-notion-black tracking-notion-display">Staff Productivity Report</h2>
-          <p className="text-xs text-zinc-400 mt-1">Admin only · Data saved locally</p>
+          <p className="text-xs text-zinc-400 mt-1">Admin only · Synced to Cloud</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 bg-zinc-100 rounded-lg px-3 py-2">
