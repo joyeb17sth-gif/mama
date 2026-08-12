@@ -63,7 +63,7 @@ const EditCell = ({ value, onChange, highlight }) => {
           onChange={e => setRaw(e.target.value)}
           onBlur={() => { setEditing(false); onChange(raw); }}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Tab') { setEditing(false); onChange(raw); } }}
-          className={`w-full px-2 py-1.5 text-right text-xs outline-none border-2 border-notion-blue
+          className={`w-full px-2 py-1.5 text-right text-xs outline-none ring-2 ring-inset ring-notion-blue border-none
             ${highlight ? 'bg-blue-100' : 'bg-yellow-50'}`} />
       ) : (
         <span className="block px-2 py-1.5 min-w-[64px]">
@@ -98,7 +98,7 @@ const EditCountCell = ({ value, onChange }) => {
           onChange={e => setRaw(e.target.value)}
           onBlur={() => { setEditing(false); onChange(raw); }}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Tab') { setEditing(false); onChange(raw); } }}
-          className="w-full px-2 py-1.5 text-center text-xs outline-none bg-yellow-100 border-2 border-notion-blue" />
+          className="w-full px-2 py-1.5 text-center text-xs outline-none bg-yellow-100 ring-2 ring-inset ring-notion-blue border-none" />
       ) : (
         <span className="block px-2 py-1.5 font-bold min-w-[48px] text-zinc-900">
           {value === '' ? <span className="text-amber-600 font-normal">—</span> : value}
