@@ -316,7 +316,7 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
               {staff.revenueEarned.map((v, i) =>
                 <Cell key={i} value={v} onChange={val => updateMonth('revenueEarned', i, val)} highlight editing={editing} />
               )}
-              <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold text-blue-700 bg-blue-50">{totalRevenue ? fmt(totalRevenue) : ''}</td>
+              <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold text-blue-700 bg-blue-50">{totalRev ? fmt(totalRev) : ''}</td>
               {editing && <td className="border border-zinc-200 bg-blue-50" />}
             </tr>
 
