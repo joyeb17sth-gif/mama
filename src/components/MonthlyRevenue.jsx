@@ -431,6 +431,153 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
   );
 };
 
+// ── Company Summary Card ───────────────────────────────────────────────────────
+
+const CompanySummaryCard = ({ staffList, year }) => {
+  if (!staffList || staffList.length === 0) return null;
+
+  const aggCost = Array(12).fill(0);
+  const aggRevenueEarned = Array(12).fill(0);
+  const aggServiceFee = Array(12).fill(0);
+  const aggTotalRevenueEarnedLine = Array(12).fill(0);
+  const aggSurplus = Array(12).fill(0);
+  const aggStudentClosed = Array(12).fill(0);
+
+  staffList.forEach(staff => {
+    const costRows = staff.costRows || [];
+    const revenueRows = staff.revenueRows || [];
+
+    const totalCost = MONTHS.map((_, i) =>
+      num(staff.basicSalary[i]) +
+      num(staff.superannuation[i]) +
+      costRows.reduce((s, r) => s + num(r.values[i]), 0)
+    );
+
+    const totalRevenueEarnedLine = MONTHS.map((_, i) =>
+      num(staff.revenueEarned[i]) +
+      num(staff.serviceFeeRef[i]) +
+      revenueRows.reduce((s, r) => s + num(r.values[i]), 0)
+    );
+
+    const surplus = MONTHS.map((_, i) => totalRevenueEarnedLine[i] - totalCost[i]);
+    const studentClosed = staff.studentClosed || Array(12).fill('');
+
+    for (let i = 0; i < 12; i++) {
+      aggCost[i] += totalCost[i];
+      aggRevenueEarned[i] += num(staff.revenueEarned[i]);
+      aggServiceFee[i] += num(staff.serviceFeeRef[i]);
+      aggTotalRevenueEarnedLine[i] += totalRevenueEarnedLine[i];
+      aggSurplus[i] += surplus[i];
+      aggStudentClosed[i] += (parseInt(studentClosed[i]) || 0);
+    }
+  });
+
+  const totalCostSum = rowTotal(aggCost);
+  const totalRevenueEarnedSum = rowTotal(aggRevenueEarned);
+  const totalServiceFeeSum = rowTotal(aggServiceFee);
+  const grandRevenueSum = rowTotal(aggTotalRevenueEarnedLine);
+  const grandSurplusSum = grandRevenueSum - totalCostSum;
+  const studentTotal = aggStudentClosed.reduce((s, v) => s + v, 0);
+
+  const COLS = 14;
+
+  return (
+    <div className="mt-12 mb-8 overflow-hidden">
+      <div className="overflow-x-auto w-full custom-scrollbar pb-4">
+        <table className="w-full text-left border-collapse min-w-max border-none bg-transparent">
+          <thead>
+            <tr>
+              <th className="px-3 py-1 text-xs font-semibold text-transparent w-48 border-none">_</th>
+              {MONTHS.map((m, i) => <th key={m} className="px-2 py-1 text-center text-xs font-semibold text-transparent w-24 border-none">_</th>)}
+              <th className="px-2 py-1 text-right text-xs font-semibold text-transparent w-28 border-none">_</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+            {/* Total Cost */}
+            <tr>
+              <td className="border border-zinc-200 px-3 py-1.5 text-sm font-bold text-zinc-900 bg-white">Total Cost Per Month</td>
+              {aggCost.map((v, i) => (
+                <td key={i} className="border border-zinc-200 px-2 py-1.5 text-right text-xs text-zinc-900 bg-white">{fmt(v)}</td>
+              ))}
+              <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold text-zinc-900 bg-white">{fmt(totalCostSum)}</td>
+            </tr>
+
+            <tr><td colSpan={COLS} className="py-2 bg-transparent border-none" /></tr>
+
+            {/* Revenues */}
+            <tr>
+              <td className="border border-zinc-200 px-3 py-1.5 text-sm font-normal text-zinc-900 bg-white">Revenue Earned</td>
+              {aggRevenueEarned.map((v, i) => (
+                <td key={i} className="border border-zinc-200 px-2 py-1.5 text-right text-xs text-zinc-900 bg-white">{fmt(v)}</td>
+              ))}
+              <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-normal text-zinc-900 bg-white">{fmt(totalRevenueEarnedSum)}</td>
+            </tr>
+            <tr>
+              <td className="border border-zinc-200 px-3 py-1.5 text-sm italic text-zinc-900 bg-white">Service Fee</td>
+              {aggServiceFee.map((v, i) => (
+                <td key={i} className="border border-zinc-200 px-2 py-1.5 text-right text-xs text-zinc-900 bg-white">{fmt(v)}</td>
+              ))}
+              <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs italic text-zinc-900 bg-white">{fmt(totalServiceFeeSum)}</td>
+            </tr>
+
+            <tr><td colSpan={COLS} className="py-2 bg-transparent border-none" /></tr>
+
+            {/* Total Revenue */}
+            <tr>
+              <td className="border border-zinc-200 px-3 py-1.5 text-sm font-bold text-notion-blue bg-white">Total Revenue Earned</td>
+              {aggTotalRevenueEarnedLine.map((v, i) => (
+                <td key={i} className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold text-notion-blue bg-white">{fmt(v)}</td>
+              ))}
+              <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold text-notion-blue bg-white">{fmt(grandRevenueSum)}</td>
+            </tr>
+            <tr>
+              <td className="border border-zinc-200 px-3 py-1.5 text-sm font-bold bg-white">&nbsp;</td>
+              {aggTotalRevenueEarnedLine.map((v, i) => (
+                <td key={i} className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold text-zinc-900 bg-white">{fmt(v)}</td>
+              ))}
+              <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold text-zinc-900 bg-white">{fmt(grandRevenueSum)}</td>
+            </tr>
+
+            <tr><td colSpan={COLS} className="py-2 bg-transparent border-none" /></tr>
+
+            {/* Profit / Loss */}
+            <tr>
+              <td className="border border-[#92d050] px-3 py-1.5 text-sm font-bold text-zinc-900 bg-[#92d050]">Profit / (Loss)</td>
+              {aggSurplus.map((v, i) => (
+                <td key={i} className={`border border-[#92d050] px-2 py-1.5 text-right text-xs font-bold bg-[#92d050] ${v < 0 ? 'text-red-800' : 'text-zinc-900'}`}>
+                  {fmt(v)}
+                </td>
+              ))}
+              <td className={`border border-[#92d050] px-2 py-1.5 text-right text-xs font-bold bg-[#92d050] ${grandSurplusSum < 0 ? 'text-red-800' : 'text-zinc-900'}`}>
+                {fmt(grandSurplusSum)}
+              </td>
+            </tr>
+
+            <tr><td colSpan={COLS} className="py-4 bg-transparent border-none" /></tr>
+
+            {/* Students Closed */}
+            <tr>
+              <td className="border border-[#ffc000] px-3 py-2 text-sm font-bold text-zinc-900 bg-[#ffc000]">
+                Total Student Closed
+              </td>
+              {aggStudentClosed.map((v, i) => (
+                <td key={i} className="border border-[#ffc000] px-2 py-2 text-center text-xs font-bold text-zinc-900 bg-[#ffc000]">
+                  {v || 0}
+                </td>
+              ))}
+              <td className="border border-[#ffc000] px-2 py-2 text-center text-xs font-bold text-zinc-900 bg-[#ffc000]">
+                {studentTotal || 0}
+              </td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 const StaffProductivityReport = () => {
@@ -523,21 +670,6 @@ const StaffProductivityReport = () => {
         </div>
       )}
 
-      {staffList.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-16 h-16 rounded-full bg-zinc-100 flex items-center justify-center mb-4">
-            <svg className="w-8 h-8 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </div>
-          <p className="text-zinc-500 font-medium mb-1">No staff members yet</p>
-          <p className="text-zinc-400 text-xs mb-4">Click "Edit Data" then "Add Staff" to get started</p>
-          <button onClick={() => { setEditing(true); addStaff(); }}
-            className="px-4 py-2 bg-notion-blue text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors">
-            Add First Staff Member
-          </button>
-        </div>
-      )}
 
       {staffList.map(staff => (
         <StaffCard
@@ -549,6 +681,8 @@ const StaffProductivityReport = () => {
           onDelete={() => deleteStaff(staff.id)}
         />
       ))}
+
+      <CompanySummaryCard staffList={staffList} year={year} />
     </div>
   );
 };
