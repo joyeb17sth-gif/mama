@@ -173,8 +173,8 @@ const Layout = ({
                     {/* User Profile / Bottom Actions */}
                     <div className="p-4 border-t border-zinc-100 bg-white">
                         
-                        {/* Role Simulator */}
-                        {isAdmin && (
+                        {/* Role Simulator - LOCAL DEV ONLY */}
+                        {isAdmin && import.meta.env.DEV && (
                             <div className="mb-4 p-2 bg-amber-50 rounded border border-amber-100">
                                 <label className="block text-[10px] font-bold text-amber-800 uppercase tracking-wider mb-1">
                                     Simulate Role
