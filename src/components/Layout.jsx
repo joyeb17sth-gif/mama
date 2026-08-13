@@ -9,7 +9,9 @@ const Layout = ({
     syncData,
     onForceSync,
     userProfile = { name: 'Admin User', role: 'Staff Admin' },
-    isAdmin = false
+    isAdmin = false,
+    simulatedRole,
+    setSimulatedRole
 }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -56,7 +58,7 @@ const Layout = ({
 
     // Filter Navigation Items based on Role
     const getFilteredNavItems = () => {
-        const role = userProfile.role?.toLowerCase() || 'user';
+        const role = (simulatedRole || userProfile.role)?.toLowerCase() || 'user';
         if (role === 'admin') return navItems;
 
         if (role === 'supervisor' || role === 'manager') {
@@ -74,7 +76,7 @@ const Layout = ({
     const filteredNavItems = getFilteredNavItems();
 
     const filteredAdminItems = adminItems.filter(item => {
-        const role = userProfile.role?.toLowerCase() || 'user';
+        const role = (simulatedRole || userProfile.role)?.toLowerCase() || 'user';
         return role === 'admin';
     });
 
@@ -170,6 +172,27 @@ const Layout = ({
 
                     {/* User Profile / Bottom Actions */}
                     <div className="p-4 border-t border-zinc-100 bg-white">
+                        
+                        {/* Role Simulator */}
+                        {isAdmin && (
+                            <div className="mb-4 p-2 bg-amber-50 rounded border border-amber-100">
+                                <label className="block text-[10px] font-bold text-amber-800 uppercase tracking-wider mb-1">
+                                    Simulate Role
+                                </label>
+                                <select 
+                                    value={simulatedRole || ''} 
+                                    onChange={(e) => setSimulatedRole(e.target.value || null)}
+                                    className="w-full text-xs p-1 border border-amber-200 rounded bg-white text-notion-black outline-none focus:border-amber-400"
+                                >
+                                    <option value="">Off (Use Actual Role)</option>
+                                    <option value="manager">Manager</option>
+                                    <option value="supervisor">Supervisor</option>
+                                    <option value="leads_team">Leads Team</option>
+                                    <option value="user">Basic User</option>
+                                </select>
+                            </div>
+                        )}
+
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-notion-warm-white flex items-center justify-center text-notion-warm-gray-500 font-bold text-xs">
                                 {userProfile.name.charAt(0)}

@@ -51,10 +51,12 @@ function App() {
   const [syncVersion, setSyncVersion] = useState(0);
   const [userProfileData, setUserProfileData] = useState({ name: 'Loading...', role: 'user' });
   const [isAdmin, setIsAdmin] = useState(false);
+  const [simulatedRole, setSimulatedRole] = useState(null);
 
   const hasPermission = (tab) => {
-    const role = userProfileData.role?.toLowerCase() || 'user';
-    if (role === 'admin') return true;
+    const role = (simulatedRole || userProfileData.role)?.toLowerCase() || 'user';
+    if (userProfileData.role === 'admin' && !simulatedRole) return true;
+    if (simulatedRole === 'admin') return true;
 
     if (role === 'supervisor' || role === 'manager') {
       return ['task-matrix', 'sites'].includes(tab);
@@ -93,14 +95,14 @@ function App() {
   }, [sites]);
 
   const visiblePeriodicalTasks = React.useMemo(() => {
-    if (isAdmin) return periodicalTasks;
+    if (isAdmin && !simulatedRole) return periodicalTasks;
 
     const userEmail = userProfileData?.name;
     if (!userEmail || userEmail === 'Loading...') return [];
 
     // Only show tasks specifically assigned to this user, regardless of whether they are a supervisor or normal user
     return periodicalTasks.filter(t => Array.isArray(t.assignedTo) ? t.assignedTo.includes(userEmail) : t.assignedTo === userEmail);
-  }, [periodicalTasks, isAdmin, userProfileData]);
+  }, [periodicalTasks, isAdmin, simulatedRole, userProfileData]);
 
   const syncDataRef = React.useRef(null);
 
@@ -109,7 +111,7 @@ function App() {
     setIsSyncing(true);
     setSyncError(null);
     try {
-      const role = userProfileData.role?.toLowerCase() || 'user';
+      const role = (simulatedRole || userProfileData.role)?.toLowerCase() || 'user';
 
       let cloudSites, cloudPeriodicalTasks, cloudProfitLoss, cloudLeads, cloudLeadReports, cloudLeadCounselors, cloudStaffProductivityReports;
 
@@ -454,7 +456,7 @@ function App() {
     }
 
     // Merge into global periodicalTasks (remove old ones for this site, add new ones)
-    const otherTasks = isAdmin
+    const otherTasks = (isAdmin && !simulatedRole)
       ? currentGlobalTasks.filter(t => t.siteId !== siteId)
       : currentGlobalTasks.filter(t => !(t.siteId === siteId && (Array.isArray(t.assignedTo) ? t.assignedTo.includes(userProfileData.name) : t.assignedTo === userProfileData.name)));
     const updatedPeriodicalTasks = [...otherTasks, ...tasksToSave];
@@ -767,6 +769,8 @@ function App() {
         onForceSync={forceSync}
         userProfile={{ name: userProfileData.name, role: userProfileData.role }}
         isAdmin={isAdmin}
+        simulatedRole={simulatedRole}
+        setSimulatedRole={setSimulatedRole}
       >
         <div className="print:hidden">
           {showToast && (
