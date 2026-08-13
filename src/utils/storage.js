@@ -47,20 +47,28 @@ export const initStorage = async () => {
   }
 
   const keys = Object.keys(memoryCache);
-  for (const key of keys) {
-    let stored = await localforage.getItem(key);
 
-    // Migration from old localStorage
-    if (!stored) {
-      const legacyStored = localStorage.getItem(key);
-      if (legacyStored) {
-        await localforage.setItem(key, legacyStored);
-        stored = legacyStored;
-        // Clean up small local storage but keeping it clean
-        localStorage.removeItem(key);
+  // Load all keys from IndexedDB in PARALLEL instead of sequentially
+  const results = await Promise.all(
+    keys.map(async (key) => {
+      let stored = await localforage.getItem(key);
+
+      // Migration from old localStorage
+      if (!stored) {
+        const legacyStored = localStorage.getItem(key);
+        if (legacyStored) {
+          await localforage.setItem(key, legacyStored);
+          stored = legacyStored;
+          // Clean up small local storage but keeping it clean
+          localStorage.removeItem(key);
+        }
       }
-    }
+      return { key, stored };
+    })
+  );
 
+  // Apply results to memoryCache (synchronous, fast)
+  for (const { key, stored } of results) {
     if (stored) {
       const decrypted = decryptData(stored);
       // For some keys it might be null, default to empty array
@@ -70,6 +78,7 @@ export const initStorage = async () => {
     }
   }
 };
+
 
 // Helper to save data to Supabase
 const saveToCloud = async (table, id, data, consultantId = null) => {

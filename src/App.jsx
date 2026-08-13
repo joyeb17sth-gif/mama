@@ -302,6 +302,7 @@ function App() {
     let intervalId;
     let focusListener;
     let visibilityListener;
+    let syncDebounceTimer = null;
 
     const checkAuth = async () => {
       const authStatus = await isAuthenticated();
@@ -343,15 +344,20 @@ function App() {
         setPeriodicalTasks(getPeriodicalTasks());
         setLeads(getLeads());
 
-        // Force fresh download on login by clearing stale timestamps, then sync
+        // Incremental sync on login — only downloads data that's newer than local cache
+        // (clearSyncTimestamps is only called on explicit "Force Sync" button click)
         if (document.visibilityState === 'visible') {
-          clearSyncTimestamps().then(() => syncDataRef.current?.());
+          syncDataRef.current?.();
         }
 
-        // Active focus / visible trigger
+        // Debounced focus / visible trigger to prevent stacking syncs
         const triggerSyncIfVisible = () => {
           if (document.visibilityState === 'visible' && syncDataRef.current) {
-            syncDataRef.current();
+            // Debounce: cancel previous pending sync, wait 2s before firing
+            if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+            syncDebounceTimer = setTimeout(() => {
+              syncDataRef.current?.();
+            }, 2000);
           }
         };
 
@@ -374,6 +380,7 @@ function App() {
 
     return () => {
       if (intervalId) clearInterval(intervalId);
+      if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
       if (focusListener) window.removeEventListener('focus', focusListener);
       if (visibilityListener) document.removeEventListener('visibilitychange', visibilityListener);
     };

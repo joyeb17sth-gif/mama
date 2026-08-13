@@ -325,50 +325,49 @@ const ProfitLossMedisafe = ({ companyPeriods, onSave, isEditMode, view = 'table'
       {/* P&L Table */}
       <div className="notion-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs border-collapse min-w-[500px]" id="medisafe-pnl-table">
+          <table className="w-full text-sm border-collapse min-w-[500px]" id="medisafe-pnl-table">
             <thead>
-              <tr className="bg-gradient-to-r from-emerald-50 to-teal-50">
-                <th className="text-left px-4 py-3 font-bold text-emerald-700 text-[11px] uppercase tracking-widest border-b border-emerald-100 w-[45%] min-w-[280px]">
+              <tr className="border-b border-zinc-200 bg-white">
+                <th className="text-left px-4 py-3 font-bold text-notion-warm-gray-500 text-[11px] uppercase tracking-widest w-[45%] min-w-[280px]">
                   Description
                 </th>
-                <th className="text-right px-4 py-3 font-bold text-notion-black text-[11px] uppercase tracking-widest border-b border-emerald-100 w-[150px] pr-8">
+                <th className="text-right px-4 py-3 font-bold text-notion-warm-gray-500 text-[11px] uppercase tracking-widest w-[150px] pr-8">
                   Total
                 </th>
-                <th className="border-b border-emerald-100 w-full"></th>
+                <th className="w-full"></th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="text-zinc-700">
               {/* ── Income ── */}
-              <tr><td colSpan={3} className="h-1"></td></tr>
-              <tr className="bg-emerald-50/30">
-                <td className="px-4 py-2 font-bold text-emerald-700 text-[11px] uppercase tracking-widest border-b border-emerald-100">
+              <tr className="bg-blue-50/30 group">
+                <td className="px-4 py-2 font-bold text-blue-500 text-[11px] uppercase tracking-widest border-b border-zinc-100">
                   <div className="flex items-center justify-between">
                     <span>Income</span>
                     {isEditMode && (
                       <button
                         onClick={() => setShowAddItemModal({ show: true, type: 'income' })}
-                        className="px-2 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-white/50 rounded transition-colors"
+                        className="px-2 py-0.5 text-[10px] font-semibold text-blue-500 hover:bg-white/50 rounded transition-colors opacity-0 group-hover:opacity-100"
                       >
                         + Add Item
                       </button>
                     )}
                   </div>
                 </td>
-                <td className="border-b border-emerald-100"></td>
-                <td className="border-b border-emerald-100"></td>
+                <td className="border-b border-zinc-100"></td>
+                <td className="border-b border-zinc-100"></td>
               </tr>
               {(currentPeriod.incomeRows || []).map(row => {
                 const val = currentPeriod.income?.[row.key] || 0;
                 return (
-                  <tr key={`inc-${row.key}`} className="hover:bg-emerald-50/10 transition-colors group">
-                    <td className="px-4 py-0.5 text-notion-warm-gray-600 pl-8 border-b border-zinc-50">
+                  <tr key={`inc-${row.key}`} className="hover:bg-blue-50/10 transition-colors group">
+                    <td className="px-4 py-1 pl-8 border-b border-zinc-50 text-notion-warm-gray-500 italic text-[13px]">
                       <div className="flex items-center gap-2">
                         {isEditMode ? (
                           <input
                             type="text"
                             value={row.label}
                             onChange={e => handleUpdateRowLabel('income', row.key, e.target.value)}
-                            className="flex-1 px-1 py-0.5 text-xs bg-transparent border-b border-dashed border-zinc-200 focus:border-emerald-400 focus:outline-none"
+                            className="flex-1 px-1 py-0.5 text-sm bg-transparent border-b border-dashed border-zinc-200 focus:border-blue-400 focus:outline-none not-italic"
                           />
                         ) : (
                           <span>{row.label}</span>
@@ -376,78 +375,74 @@ const ProfitLossMedisafe = ({ companyPeriods, onSave, isEditMode, view = 'table'
                         {isEditMode && (
                           <button
                             onClick={() => handleRemoveRow('income', row.key)}
-                            className="w-4 h-4 rounded-full text-red-300 hover:text-red-600 hover:bg-red-50 text-[9px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center flex-shrink-0"
+                            className="w-5 h-5 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                           >
-                            ✕
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                           </button>
                         )}
                       </div>
                     </td>
-                    <td className="px-1 py-0.5 border-b border-zinc-50 pr-6">
-                      <EditableCell isEditable={isEditMode} value={val} onChange={v => updateField('income', row.key, v)} />
+                    <td className="px-1 py-1 border-b border-zinc-50 pr-6 text-notion-black font-semibold">
+                      <EditableCell isEditable={isEditMode} value={val} onChange={v => updateField('income', row.key, v)} className="py-1" />
                     </td>
                     <td className="border-b border-zinc-50"></td>
                   </tr>
                 );
               })}
               {/* Total Income */}
-              <tr className="bg-emerald-50/40 font-bold">
-                <td className="px-4 py-1.5 text-emerald-700 border-b border-emerald-100"></td>
-                <td className="px-2 py-1.5 text-right text-xs text-emerald-700 border-b border-emerald-100 font-bold pr-8">{fmt(totalIncome)}</td>
-                <td className="border-b border-emerald-100"></td>
+              <tr className="bg-blue-50/50 font-bold">
+                <td className="px-4 py-2 text-blue-500 border-b border-zinc-100">Total Income</td>
+                <td className="px-2 py-2 text-right text-sm text-blue-500 border-b border-zinc-100 font-bold pr-8">{fmt(totalIncome)}</td>
+                <td className="border-b border-zinc-100"></td>
               </tr>
 
               {/* ── Cost of Goods Sold ── */}
-              <tr><td colSpan={3} className="h-2"></td></tr>
-              <tr className="hover:bg-orange-50/10 transition-colors">
-                <td className="px-4 py-1.5 font-bold text-orange-700 text-[11px] uppercase tracking-widest border-b border-orange-100">Cost of Good Sold</td>
-                <td className="px-1 py-1 border-b border-orange-100 pr-6">
-                  <EditableCell isEditable={isEditMode} value={cogs} onChange={v => updateField('cogs', null, v)} />
+              <tr className="bg-orange-50/30 group mt-2">
+                <td className="px-4 py-2 font-bold text-orange-600 text-[11px] uppercase tracking-widest border-b border-zinc-100 mt-2">Cost of Good Sold</td>
+                <td className="px-1 py-2 border-b border-zinc-100 pr-6 text-notion-black font-semibold">
+                  <EditableCell isEditable={isEditMode} value={cogs} onChange={v => updateField('cogs', null, v)} className="py-1" />
                 </td>
-                <td className="border-b border-orange-100"></td>
+                <td className="border-b border-zinc-100"></td>
               </tr>
 
               {/* ── Gross Profit ── */}
-              <tr><td colSpan={3} className="h-1 border-b border-zinc-100"></td></tr>
-              <tr className={`font-bold text-sm ${grossProfit >= 0 ? 'bg-emerald-50/60' : 'bg-red-50/60'}`}>
-                <td className="px-4 py-2 font-bold border-b border-zinc-200">Gross Profit</td>
-                <td className={`px-2 py-2 text-right text-sm font-bold border-b border-zinc-200 pr-8 ${grossProfit >= 0 ? 'text-emerald-800' : 'text-red-600'}`}>
+              <tr className="bg-emerald-50/60 font-bold text-sm">
+                <td className="px-4 py-2 font-bold text-emerald-700 border-b border-zinc-200">Gross Profit</td>
+                <td className={`px-2 py-2 text-right text-sm font-bold border-b border-zinc-200 pr-8 ${grossProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
                   {fmt(grossProfit)}
                 </td>
                 <td className="border-b border-zinc-200"></td>
               </tr>
 
               {/* ── Expenses ── */}
-              <tr><td colSpan={3} className="h-2"></td></tr>
-              <tr className="bg-rose-50/30">
-                <td className="px-4 py-2 font-bold text-red-600 text-[11px] uppercase tracking-widest border-b border-red-100">
+              <tr className="bg-rose-50/30 group mt-2">
+                <td className="px-4 py-2 font-bold text-red-500 text-[11px] uppercase tracking-widest border-b border-zinc-100 mt-2">
                   <div className="flex items-center justify-between">
                     <span>Expenses</span>
                     {isEditMode && (
                       <button
                         onClick={() => setShowAddItemModal({ show: true, type: 'expenses' })}
-                        className="px-2 py-0.5 text-[10px] font-semibold text-red-600 hover:bg-white/50 rounded transition-colors"
+                        className="px-2 py-0.5 text-[10px] font-semibold text-red-500 hover:bg-white/50 rounded transition-colors opacity-0 group-hover:opacity-100"
                       >
                         + Add Item
                       </button>
                     )}
                   </div>
                 </td>
-                <td className="border-b border-red-100"></td>
-                <td className="border-b border-red-100"></td>
-              </tr>
-              {(currentPeriod.expenseRows || []).map(row => {
+                <td className="border-b border-zinc-100"></td>
+                <td className="border-b border-zinc-100"></td>
+              </tr>d              {(currentPeriod.expenseRows || []).map(row => {
                 const val = currentPeriod.expenses?.[row.key] || 0;
                 return (
                   <tr key={`exp-${row.key}`} className="hover:bg-rose-50/10 transition-colors group">
-                    <td className="px-4 py-0.5 text-notion-warm-gray-600 pl-8 border-b border-zinc-50">
+                    <td className="px-4 py-1 pl-8 border-b border-zinc-50 text-notion-warm-gray-500 italic text-[13px]">
                       <div className="flex items-center gap-2">
                         {isEditMode ? (
                           <input
                             type="text"
                             value={row.label}
                             onChange={e => handleUpdateRowLabel('expenses', row.key, e.target.value)}
-                            className="flex-1 px-1 py-0.5 text-xs bg-transparent border-b border-dashed border-zinc-200 focus:border-red-400 focus:outline-none"
+                            className="flex-1 px-1 py-0.5 text-sm bg-transparent border-b border-dashed border-zinc-200 focus:border-red-400 focus:outline-none not-italic"
                           />
                         ) : (
                           <span>{row.label}</span>
@@ -455,15 +450,15 @@ const ProfitLossMedisafe = ({ companyPeriods, onSave, isEditMode, view = 'table'
                         {isEditMode && (
                           <button
                             onClick={() => handleRemoveRow('expenses', row.key)}
-                            className="w-4 h-4 rounded-full text-red-300 hover:text-red-600 hover:bg-red-50 text-[9px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center flex-shrink-0"
+                            className="w-5 h-5 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                           >
-                            ✕
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                           </button>
                         )}
                       </div>
                     </td>
-                    <td className="px-1 py-0.5 border-b border-zinc-50 pr-6">
-                      <EditableCell isEditable={isEditMode} value={val} onChange={v => updateField('expenses', row.key, v)} />
+                    <td className="px-1 py-1 border-b border-zinc-50 pr-6 text-notion-black font-semibold">
+                      <EditableCell isEditable={isEditMode} value={val} onChange={v => updateField('expenses', row.key, v)} className="py-1" />
                     </td>
                     <td className="border-b border-zinc-50"></td>
                   </tr>
@@ -471,16 +466,15 @@ const ProfitLossMedisafe = ({ companyPeriods, onSave, isEditMode, view = 'table'
               })}
               {/* Total Expenses */}
               <tr className="bg-rose-50/50 font-bold">
-                <td className="px-4 py-2 text-red-600 border-b border-red-100">Total Expenses</td>
-                <td className="px-2 py-2 text-right text-sm text-red-600 border-b border-red-100 font-bold pr-8">{fmt(totalExpenses)}</td>
-                <td className="border-b border-red-100"></td>
+                <td className="px-4 py-2 text-red-500 border-b border-zinc-100">Total Expenses</td>
+                <td className="px-2 py-2 text-right text-sm text-red-500 border-b border-zinc-100 font-bold pr-8">{fmt(totalExpenses)}</td>
+                <td className="border-b border-zinc-100"></td>
               </tr>
-
+ 
               {/* ── Net Profit ── */}
-              <tr><td colSpan={3} className="h-2 border-b-2 border-zinc-200"></td></tr>
-              <tr className={`font-bold text-sm ${netProfit >= 0 ? 'bg-gradient-to-r from-emerald-50 to-teal-50' : 'bg-gradient-to-r from-red-50 to-rose-50'}`}>
-                <td className="px-4 py-3 font-bold text-zinc-800 border-b border-zinc-200">Net Profit</td>
-                <td className={`px-2 py-3 text-right text-sm font-bold border-b border-zinc-200 pr-8 ${netProfit >= 0 ? 'text-emerald-800' : 'text-red-600'}`}>
+              <tr className="bg-emerald-50/60 font-bold text-sm">
+                <td className="px-4 py-3 font-bold text-emerald-700 border-b border-zinc-200">Net Profit</td>
+                <td className={`px-2 py-3 text-right text-sm font-bold border-b border-zinc-200 pr-8 ${netProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
                   {fmt(netProfit)}
                 </td>
                 <td className="border-b border-zinc-200"></td>
@@ -592,61 +586,56 @@ const ProfitLossMedisafe = ({ companyPeriods, onSave, isEditMode, view = 'table'
                   ))}
                 </tr>
               </thead>
-              <tbody>
-                <tr><td colSpan={trendData.length + 1} className="h-1"></td></tr>
-                <tr className="bg-emerald-50/30">
-                  <td className="px-4 py-2 font-bold text-emerald-700 text-[11px] uppercase tracking-widest border-b border-emerald-100 sticky left-0 z-10 bg-emerald-50/90">Sales Revenue</td>
-                  {trendData.map(p => <td key={p.name} className="border-b border-emerald-100"></td>)}
+              <tbody className="text-zinc-700">
+                <tr className="bg-blue-50/30">
+                  <td className="px-4 py-2 font-bold text-blue-500 text-[11px] uppercase tracking-widest border-b border-zinc-100 sticky left-0 z-10 bg-blue-50">Sales Revenue</td>
+                  {trendData.map(p => <td key={p.name} className="border-b border-zinc-100"></td>)}
                 </tr>
                 {(currentPeriod.incomeRows || []).map(row => (
-                  <tr key={`rinc-${row.key}`} className="hover:bg-emerald-50/10">
-                    <td className="px-4 py-1 text-notion-warm-gray-600 pl-8 border-b border-zinc-50 sticky left-0 z-10 bg-white">{row.label}</td>
+                  <tr key={`rinc-${row.key}`} className="hover:bg-blue-50/10 transition-colors group">
+                    <td className="px-4 py-1 pl-8 border-b border-zinc-50 sticky left-0 z-10 bg-white group-hover:bg-zinc-50/50 transition-colors text-notion-warm-gray-500 italic text-[13px]">{row.label}</td>
                     {trendData.map(p => {
                       const period = allPeriods.find(ap => ap.period === p.name);
-                      return <td key={p.name} className="px-4 py-1 text-right text-notion-warm-gray-500 border-b border-zinc-50">{fmt(period?.income?.[row.key] || 0)}</td>
+                      return <td key={p.name} className="px-4 py-1 text-right border-b border-zinc-50 text-notion-black font-semibold">{fmt(period?.income?.[row.key] || 0)}</td>
                     })}
                   </tr>
                 ))}
                 
-                <tr><td colSpan={trendData.length + 1} className="h-2"></td></tr>
-                <tr className="bg-orange-50/30">
-                  <td className="px-4 py-2 font-bold text-orange-700 text-[11px] uppercase tracking-widest border-b border-orange-100 sticky left-0 z-10 bg-orange-50/90">Cost of Goods Sold</td>
+                <tr className="bg-orange-50/30 mt-2">
+                  <td className="px-4 py-2 font-bold text-orange-600 text-[11px] uppercase tracking-widest border-b border-zinc-100 sticky left-0 z-10 bg-orange-50 mt-2">Cost of Goods Sold</td>
                   {trendData.map(p => {
                     const period = allPeriods.find(ap => ap.period === p.name);
-                    return <td key={p.name} className="px-4 py-2 text-right font-semibold text-orange-600 border-b border-orange-100">{fmt(period?.cogs || 0)}</td>
+                    return <td key={p.name} className="px-4 py-2 text-right border-b border-zinc-100 text-notion-black font-semibold">{fmt(period?.cogs || 0)}</td>
                   })}
                 </tr>
 
-                <tr><td colSpan={trendData.length + 1} className="h-2"></td></tr>
                 <tr className="bg-emerald-50/60 font-bold text-sm">
-                  <td className="px-4 py-2.5 font-bold border-b border-zinc-200 sticky left-0 z-10 bg-emerald-50 text-emerald-800">Gross Profit</td>
+                  <td className="px-4 py-3 font-bold text-emerald-700 border-b border-zinc-200 sticky left-0 z-10 bg-emerald-50">Gross Profit</td>
                   {trendData.map(p => (
-                    <td key={p.name} className="px-4 py-2.5 text-right border-b border-zinc-200 text-emerald-800">
+                    <td key={p.name} className="px-4 py-3 text-right border-b border-zinc-200 text-emerald-700 font-bold bg-emerald-50/80">
                       {fmt(p['Sales'] - p['COGS'])}
                     </td>
                   ))}
                 </tr>
                 
-                <tr><td colSpan={trendData.length + 1} className="h-2"></td></tr>
-                <tr className="bg-rose-50/30">
-                  <td className="px-4 py-2 font-bold text-red-600 text-[11px] uppercase tracking-widest border-b border-red-100 sticky left-0 z-10 bg-rose-50/90">Operating Expenses</td>
-                  {trendData.map(p => <td key={p.name} className="border-b border-red-100"></td>)}
+                <tr className="bg-rose-50/30 mt-2">
+                  <td className="px-4 py-2 font-bold text-red-500 text-[11px] uppercase tracking-widest border-b border-zinc-100 sticky left-0 z-10 bg-rose-50 mt-2">Operating Expenses</td>
+                  {trendData.map(p => <td key={p.name} className="border-b border-zinc-100"></td>)}
                 </tr>
                 {(currentPeriod.expenseRows || []).map(row => (
-                  <tr key={`rexp-${row.key}`} className="hover:bg-rose-50/10">
-                    <td className="px-4 py-1 text-notion-warm-gray-600 pl-8 border-b border-zinc-50 sticky left-0 z-10 bg-white">{row.label}</td>
+                  <tr key={`rexp-${row.key}`} className="hover:bg-rose-50/10 transition-colors group">
+                    <td className="px-4 py-1 pl-8 border-b border-zinc-50 sticky left-0 z-10 bg-white group-hover:bg-zinc-50/50 transition-colors text-notion-warm-gray-500 italic text-[13px]">{row.label}</td>
                     {trendData.map(p => {
                       const period = allPeriods.find(ap => ap.period === p.name);
-                      return <td key={p.name} className="px-4 py-1 text-right text-notion-warm-gray-500 border-b border-zinc-50">{fmt(period?.expenses?.[row.key] || 0)}</td>
+                      return <td key={p.name} className="px-4 py-1 text-right border-b border-zinc-50 text-notion-black font-semibold">{fmt(period?.expenses?.[row.key] || 0)}</td>
                     })}
                   </tr>
                 ))}
                 
-                <tr><td colSpan={trendData.length + 1} className="h-2 border-b-2 border-zinc-200"></td></tr>
-                <tr className="bg-blue-50/60 font-bold text-sm">
-                  <td className="px-4 py-2.5 font-bold border-b border-zinc-200 sticky left-0 z-10 bg-blue-50 text-blue-800">Net Profit</td>
+                <tr className="bg-emerald-50/60 font-bold text-sm">
+                  <td className="px-4 py-3 font-bold text-emerald-700 border-b border-zinc-200 sticky left-0 z-10 bg-emerald-50">Net Profit</td>
                   {trendData.map(p => (
-                    <td key={p.name} className="px-4 py-2.5 text-right border-b border-zinc-200 text-blue-800">
+                    <td key={p.name} className={`px-4 py-3 text-right border-b border-zinc-200 font-bold bg-emerald-50/80 ${p['Net Profit'] >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
                       {fmt(p['Net Profit'])}
                     </td>
                   ))}

@@ -482,18 +482,17 @@ const CompanySummaryCard = ({ staffList, year }) => {
   const COLS = 14;
 
   return (
-    <div className="mt-16 mb-8 rounded-2xl bg-[#F8FAFC] border border-blue-100 shadow-[0_8px_30px_rgb(30,64,175,0.06)] overflow-hidden ring-1 ring-white">
+    <div className="mb-8 rounded-xl bg-white border border-zinc-200 overflow-hidden shadow-sm">
       
       {/* Premium Header */}
-      <div className="px-6 py-4 bg-gradient-to-r from-[#1E40AF] to-[#1E3A8A] text-white flex items-center justify-between shadow-sm relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
-        <div className="flex items-center gap-3 relative z-10">
-          <div className="p-2 bg-white/10 rounded-lg backdrop-blur-md">
-            <svg className="w-5 h-5 text-blue-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+      <div className="px-6 py-4 bg-zinc-50 border-b border-zinc-200 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-white rounded-lg shadow-sm border border-zinc-200">
+            <svg className="w-5 h-5 text-notion-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
           </div>
           <div>
-            <h3 className="font-bold tracking-wide text-[15px] text-white shadow-[0_0_10px_rgba(255,255,255,0.2)]">Company Grand Totals</h3>
-            <p className="text-[11px] font-medium text-blue-200 uppercase tracking-widest mt-0.5">Real-Time Aggregation</p>
+            <h3 className="font-bold tracking-wide text-[15px] text-notion-black">Company Grand Totals</h3>
+            <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-widest mt-0.5">Real-Time Aggregation</p>
           </div>
         </div>
       </div>
@@ -597,6 +596,7 @@ const CompanySummaryCard = ({ staffList, year }) => {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 const StaffProductivityReport = () => {
+  const [activeTab, setActiveTab] = useState('staff');
   const [year, setYear] = useState(CURRENT_YEAR);
   const [editing, setEditing] = useState(false);
   const [staffList, setStaffList] = useState(() => {
@@ -636,6 +636,46 @@ const StaffProductivityReport = () => {
     }
   }, []);
 
+  const generateSampleData = () => {
+    if (staffList.length > 0) {
+      if (!window.confirm('This will replace your current data. Are you sure?')) return;
+    }
+    const sample1 = {
+      id: crypto.randomUUID(),
+      name: 'Alice Johnson (Senior Agent)',
+      annualSalary: '85000',
+      basicSalary: ['7083.33', '7083.33', '7083.33', '7083.33', '7083.33', '7083.33', '7083.33', '7083.33', '7083.33', '7083.33', '7083.33', '7083.33'],
+      superannuation: ['779.16', '779.16', '779.16', '779.16', '779.16', '779.16', '779.16', '779.16', '779.16', '779.16', '779.16', '779.16'],
+      costRows: [
+        { id: crypto.randomUUID(), label: 'Software Licenses', values: ['150', '150', '150', '150', '150', '150', '150', '150', '150', '150', '150', '150'] },
+        { id: crypto.randomUUID(), label: 'Travel Allowance', values: ['0', '300', '0', '0', '450', '0', '0', '200', '0', '0', '0', '0'] }
+      ],
+      revenueEarned: ['12500', '14200', '11800', '15600', '13400', '16200', '14100', '12900', '15500', '17100', '16800', '19500'],
+      serviceFeeRef: ['500', '500', '500', '500', '500', '500', '500', '500', '500', '500', '500', '500'],
+      revenueRows: [
+        { id: crypto.randomUUID(), label: 'Bonus Revenue', values: ['0', '0', '2000', '0', '0', '2500', '0', '0', '0', '1000', '0', '3500'] }
+      ],
+      studentClosed: ['3', '4', '2', '5', '4', '6', '4', '3', '5', '6', '5', '7']
+    };
+
+    const sample2 = {
+      id: crypto.randomUUID(),
+      name: 'Bob Smith (Junior Agent)',
+      annualSalary: '55000',
+      basicSalary: ['4583.33', '4583.33', '4583.33', '4583.33', '4583.33', '4583.33', '4583.33', '4583.33', '4583.33', '4583.33', '4583.33', '4583.33'],
+      superannuation: ['504.16', '504.16', '504.16', '504.16', '504.16', '504.16', '504.16', '504.16', '504.16', '504.16', '504.16', '504.16'],
+      costRows: [
+        { id: crypto.randomUUID(), label: 'Training Course', values: ['500', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'] }
+      ],
+      revenueEarned: ['6500', '7200', '6800', '8100', '7900', '9200', '8500', '8900', '9500', '9100', '10500', '11200'],
+      serviceFeeRef: ['250', '250', '250', '250', '250', '250', '250', '250', '250', '250', '250', '250'],
+      revenueRows: [],
+      studentClosed: ['1', '2', '1', '2', '2', '3', '2', '2', '3', '2', '3', '4']
+    };
+    
+    setStaffList([sample1, sample2]);
+  };
+
   return (
     <div className="p-6 max-w-full">
       {/* Header */}
@@ -670,11 +710,19 @@ const StaffProductivityReport = () => {
           </button>
 
           {editing && (
-            <button onClick={addStaff}
-              className="flex items-center gap-2 px-4 py-2 bg-notion-blue text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700 transition-colors">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-              Add Staff
-            </button>
+            <>
+              <button onClick={generateSampleData}
+                title="Generate Sample Data"
+                className="flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-bold shadow-sm transition-colors border border-indigo-200">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                <span className="hidden sm:inline">Sample Data</span>
+              </button>
+              <button onClick={addStaff}
+                className="flex items-center gap-2 px-4 py-2 bg-notion-blue text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700 transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+                Add Staff
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -686,19 +734,52 @@ const StaffProductivityReport = () => {
         </div>
       )}
 
+      {/* Tabs */}
+      <div className="flex border-b border-zinc-200 mb-6 mt-2">
+        <button
+          className={`px-6 py-2.5 font-bold text-sm transition-colors ${activeTab === 'staff' ? 'border-b-2 border-notion-blue text-notion-blue bg-notion-blue/5' : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50'}`}
+          onClick={() => setActiveTab('staff')}
+        >
+          Staff Details
+        </button>
+        <button
+          className={`px-6 py-2.5 font-bold text-sm transition-colors ${activeTab === 'company' ? 'border-b-2 border-notion-blue text-notion-blue bg-notion-blue/5' : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-50'}`}
+          onClick={() => setActiveTab('company')}
+        >
+          Company Grand Totals
+        </button>
+      </div>
 
-      {staffList.map(staff => (
-        <StaffCard
-          key={staff.id}
-          staff={staff}
-          year={year}
-          editing={editing}
-          onUpdate={updated => updateStaff(staff.id, updated)}
-          onDelete={() => deleteStaff(staff.id)}
-        />
-      ))}
+      {activeTab === 'staff' && (
+        <div className="animate-fade-in-up">
+          {staffList.map(staff => (
+            <StaffCard
+              key={staff.id}
+              staff={staff}
+              year={year}
+              editing={editing}
+              onUpdate={updated => updateStaff(staff.id, updated)}
+              onDelete={() => deleteStaff(staff.id)}
+            />
+          ))}
+          {staffList.length === 0 && (
+            <div className="text-center py-12 bg-zinc-50 border border-zinc-200 rounded-xl">
+              <p className="text-sm text-zinc-500 font-medium">No staff added yet.</p>
+              {editing && (
+                <button onClick={addStaff} className="mt-3 px-4 py-2 bg-notion-blue text-white rounded-lg text-sm font-bold">
+                  Add First Staff
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
-      <CompanySummaryCard staffList={staffList} year={year} />
+      {activeTab === 'company' && (
+        <div className="animate-fade-in-up">
+          <CompanySummaryCard staffList={staffList} year={year} />
+        </div>
+      )}
     </div>
   );
 };

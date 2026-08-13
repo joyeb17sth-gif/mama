@@ -1050,7 +1050,7 @@ const ProfitLoss = ({ syncVersion }) => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-xs border-collapse min-w-[800px]" id="pnl-table">
+                <table className="w-full text-sm border-collapse min-w-[800px]" id="pnl-table">
                   <thead>
                     <tr className="bg-gradient-to-r from-slate-50 to-zinc-50">
                       <th className="text-left px-3 py-2.5 font-bold text-notion-warm-gray-500 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-gradient-to-r from-slate-50 to-zinc-50 z-10 min-w-[180px]">
@@ -1075,14 +1075,14 @@ const ProfitLoss = ({ syncVersion }) => {
                   </thead>
                   <tbody>
                     {/* ── Revenue ── */}
-                    <tr className="bg-blue-50/30">
-                      <td className="px-3 py-1.5 font-bold text-notion-blue text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-blue-50 z-10">
+                    <tr className="bg-blue-50/30 group">
+                      <td className="px-3 py-2 font-bold text-blue-500 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-blue-50 z-10">
                         <div className="flex items-center justify-between">
                           <span>Revenue</span>
                           {isEditMode && (
                             <button
                               onClick={() => setShowAddItemModal({ show: true, type: 'revenue' })}
-                              className="px-2 py-0.5 text-[10px] font-semibold text-notion-blue hover:bg-white/50 rounded transition-colors"
+                              className="px-2 py-0.5 text-[10px] font-semibold text-blue-500 hover:bg-white/50 rounded transition-colors opacity-0 group-hover:opacity-100"
                             >
                               + Add Item
                             </button>
@@ -1093,14 +1093,14 @@ const ProfitLoss = ({ syncVersion }) => {
                     </tr>
                     {(currentPeriod.revenueRows || []).map(row => (
                       <tr key={`rev-${row.key}`} className="hover:bg-blue-50/10 transition-colors group">
-                        <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">
+                        <td className="pl-8 pr-3 py-1 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10 text-[13px]">
                           <div className="flex items-center gap-2">
                             {isEditMode ? (
                               <input
                                 type="text"
                                 value={row.label}
                                 onChange={e => handleUpdateRowLabel('revenue', row.key, e.target.value)}
-                                className="flex-1 px-1 py-0.5 text-xs bg-transparent border-b border-dashed border-zinc-200 focus:border-notion-blue focus:outline-none"
+                                className="flex-1 px-1 py-0.5 text-sm bg-transparent border-b border-dashed border-zinc-200 focus:border-blue-400 focus:outline-none not-italic"
                               />
                             ) : (
                               <span>{row.label}</span>
@@ -1125,25 +1125,25 @@ const ProfitLoss = ({ syncVersion }) => {
                     ))}
                     {/* Total Revenue */}
                     <tr className="bg-blue-50/50 font-bold">
-                      <td className="px-3 py-1.5 text-notion-blue border-r border-b border-zinc-100 sticky left-0 bg-blue-50 z-10">Total Revenue</td>
+                      <td className="px-3 py-2 text-blue-500 border-r border-b border-zinc-100 sticky left-0 bg-blue-50 z-10">Total Revenue</td>
                       {currentPeriod.sites.map((_, i) => (
-                        <td key={i} className="px-1.5 py-1.5 text-right text-notion-blue border-r border-b border-zinc-100">{fmt(siteTotals[i]?.totalRevenue || 0)}</td>
+                        <td key={i} className="px-1.5 py-2 text-right text-blue-500 border-r border-b border-zinc-100">{fmt(siteTotals[i]?.totalRevenue || 0)}</td>
                       ))}
-                      <td className="px-1.5 py-1.5 text-right text-notion-blue border-b border-zinc-100 bg-emerald-50/50">{fmt(grandTotals.totalRevenue)}</td>
+                      <td className="px-1.5 py-2 text-right text-blue-500 border-b border-zinc-100 bg-emerald-50/50">{fmt(grandTotals.totalRevenue)}</td>
                     </tr>
 
                     {/* Spacer */}
                     <tr><td colSpan={currentPeriod.sites.length + 2} className="h-1 border-b border-zinc-100"></td></tr>
 
                     {/* ── Direct Staff Cost ── */}
-                    <tr className="bg-rose-50/30">
-                      <td className="px-3 py-1.5 font-bold text-red-500 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-rose-50 z-10">
+                    <tr className="bg-rose-50/30 group">
+                      <td className="px-3 py-2 font-bold text-red-500 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-rose-50 z-10 mt-2">
                         <div className="flex items-center justify-between">
                           <span>Direct Staff Cost</span>
                           {isEditMode && (
                             <button
                               onClick={() => setShowAddItemModal({ show: true, type: 'cost' })}
-                              className="px-2 py-0.5 text-[10px] font-semibold text-red-500 hover:bg-white/50 rounded transition-colors"
+                              className="px-2 py-0.5 text-[10px] font-semibold text-red-500 hover:bg-white/50 rounded transition-colors opacity-0 group-hover:opacity-100"
                             >
                               + Add Item
                             </button>
@@ -1154,14 +1154,14 @@ const ProfitLoss = ({ syncVersion }) => {
                     </tr>
                     {(currentPeriod.costRows || []).map(row => (
                       <tr key={`cost-${row.key}`} className="hover:bg-rose-50/10 transition-colors group">
-                        <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">
+                        <td className="pl-8 pr-3 py-1 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10 text-[13px]">
                           <div className="flex items-center gap-2">
                             {isEditMode ? (
                               <input
                                 type="text"
                                 value={row.label}
                                 onChange={e => handleUpdateRowLabel('cost', row.key, e.target.value)}
-                                className="flex-1 px-1 py-0.5 text-xs bg-transparent border-b border-dashed border-zinc-200 focus:border-red-400 focus:outline-none"
+                                className="flex-1 px-1 py-0.5 text-sm bg-transparent border-b border-dashed border-zinc-200 focus:border-red-400 focus:outline-none not-italic"
                               />
                             ) : (
                               <span>{row.label}</span>
@@ -1169,9 +1169,9 @@ const ProfitLoss = ({ syncVersion }) => {
                             {isEditMode && (
                               <button
                                 onClick={() => handleRemoveRow('cost', row.key)}
-                                className="w-4 h-4 rounded-full text-red-300 hover:text-red-600 hover:bg-red-50 text-[9px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center flex-shrink-0"
+                                className="w-5 h-5 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                               >
-                                ✕
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                               </button>
                             )}
                           </div>
@@ -1186,11 +1186,11 @@ const ProfitLoss = ({ syncVersion }) => {
                     ))}
                     {/* Total Cost */}
                     <tr className="bg-rose-50/50 font-bold">
-                      <td className="px-3 py-1.5 text-red-500 border-r border-b border-zinc-100 sticky left-0 bg-rose-50 z-10">Total Cost</td>
+                      <td className="px-3 py-2 text-red-500 border-r border-b border-zinc-100 sticky left-0 bg-rose-50 z-10">Total Cost</td>
                       {currentPeriod.sites.map((_, i) => (
-                        <td key={i} className="px-1.5 py-1.5 text-right text-red-500 border-r border-b border-zinc-100">{fmt(siteTotals[i]?.totalCost || 0)}</td>
+                        <td key={i} className="px-1.5 py-2 text-right text-red-500 border-r border-b border-zinc-100">{fmt(siteTotals[i]?.totalCost || 0)}</td>
                       ))}
-                      <td className="px-1.5 py-1.5 text-right text-red-500 border-b border-zinc-100 bg-emerald-50/50">{fmt(grandTotals.totalCost)}</td>
+                      <td className="px-1.5 py-2 text-right text-red-500 border-b border-zinc-100 bg-emerald-50/50">{fmt(grandTotals.totalCost)}</td>
                     </tr>
 
                     {/* Spacer */}
@@ -1225,9 +1225,9 @@ const ProfitLoss = ({ syncVersion }) => {
 
                     {/* ── Vehicle Allowance Income ── */}
                     <tr className="hover:bg-zinc-50/50 transition-colors">
-                      <td className="px-3 py-0.5 text-notion-warm-gray-500 font-semibold border-r border-b border-zinc-100 sticky left-0 bg-white z-10">Vehicle Allowance - Income</td>
+                      <td className="pl-8 pr-3 py-1 text-notion-warm-gray-500 font-semibold border-r border-b border-zinc-100 sticky left-0 bg-white z-10 text-[13px]">Vehicle Allowance - Income</td>
                       {currentPeriod.sites.map((site, i) => (
-                        <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-100">
+                        <td key={i} className="px-0.5 py-1 border-r border-b border-zinc-100">
                           <EditableCell isEditable={isEditMode} value={site.vehicleAllowanceIncome || 0} onChange={v => updateSiteField(i, 'vehicleAllowanceIncome', null, v)} />
                         </td>
                       ))}
@@ -1238,14 +1238,14 @@ const ProfitLoss = ({ syncVersion }) => {
                     <tr><td colSpan={currentPeriod.sites.length + 2} className="h-1 border-b border-zinc-100"></td></tr>
 
                     {/* ── Overhead ── */}
-                    <tr className="bg-amber-50/30">
-                      <td className="px-3 py-1.5 font-bold text-amber-700 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-amber-50 z-10">
+                    <tr className="bg-amber-50/30 group">
+                      <td className="px-3 py-2 font-bold text-amber-700 text-[11px] uppercase tracking-widest border-b border-r border-zinc-100 sticky left-0 bg-amber-50 z-10 mt-2">
                         <div className="flex items-center justify-between">
                           <span>Overhead</span>
                           {isEditMode && (
                             <button
                               onClick={() => setShowAddItemModal({ show: true, type: 'overhead' })}
-                              className="px-2 py-0.5 text-[10px] font-semibold text-amber-700 hover:bg-white/50 rounded transition-colors"
+                              className="px-2 py-0.5 text-[10px] font-semibold text-amber-700 hover:bg-white/50 rounded transition-colors opacity-0 group-hover:opacity-100"
                             >
                               + Add Item
                             </button>
@@ -1258,14 +1258,14 @@ const ProfitLoss = ({ syncVersion }) => {
                     {/* Dynamic Manager Allocation Rows */}
                     {currentPeriod.managers?.map(mgr => (
                       <tr key={`mgr-alloc-${mgr.id}`} className="hover:bg-amber-50/10 transition-colors">
-                        <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">
+                        <td className="pl-8 pr-3 py-1 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10 text-[13px]">
                           <div className="flex items-center justify-between">
                             <span>{mgr.name} Alloc %</span>
                             <span className="text-[9px] text-notion-warm-gray-400 font-normal no-italic">of {fmt(mgr.totalSalary || 0)}</span>
                           </div>
                         </td>
                         {currentPeriod.sites.map((site, i) => (
-                          <td key={i} className="px-0.5 py-0.5 border-r border-b border-zinc-50">
+                          <td key={i} className="px-0.5 py-1 border-r border-b border-zinc-50">
                             <EditableCell isEditable={isEditMode} value={site.managerAllocations?.[mgr.id] || 0} onChange={v => handleUpdateManagerAllocation(i, mgr.id, v)} isPct={true} />
                           </td>
                         ))}
@@ -1277,14 +1277,14 @@ const ProfitLoss = ({ syncVersion }) => {
 
                     {(currentPeriod.overheadRows || []).map(row => (
                       <tr key={`oh-${row.key}`} className="hover:bg-amber-50/10 transition-colors group">
-                        <td className="px-3 py-0.5 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10">
+                        <td className="pl-8 pr-3 py-1 text-notion-warm-gray-500 italic border-r border-b border-zinc-50 sticky left-0 bg-white z-10 text-[13px]">
                           <div className="flex items-center gap-2">
                             {isEditMode && row.key !== 'managerSalary' ? (
                               <input
                                 type="text"
                                 value={row.label}
                                 onChange={e => handleUpdateRowLabel('overhead', row.key, e.target.value)}
-                                className="flex-1 px-1 py-0.5 text-xs bg-transparent border-b border-dashed border-zinc-200 focus:border-amber-400 focus:outline-none"
+                                className="flex-1 px-1 py-0.5 text-sm bg-transparent border-b border-dashed border-zinc-200 focus:border-amber-400 focus:outline-none not-italic"
                               />
                             ) : (
                               <span>{row.label}</span>
@@ -1292,9 +1292,9 @@ const ProfitLoss = ({ syncVersion }) => {
                             {isEditMode && row.key !== 'managerSalary' && (
                               <button
                                 onClick={() => handleRemoveRow('overhead', row.key)}
-                                className="w-4 h-4 rounded-full text-red-300 hover:text-red-600 hover:bg-red-50 text-[9px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center flex-shrink-0"
+                                className="w-5 h-5 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                               >
-                                ✕
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                               </button>
                             )}
                           </div>

@@ -86,7 +86,18 @@ const UserManagement = () => {
         
         try {
             const { error } = await supabase.from('profiles').update({ role: roleChangeTarget.targetRole }).eq('id', roleChangeTarget.id);
-            if (error) throw error;
+            if (error) {
+                // Handle specific constraint violation (e.g., invalid role value)
+                if (error.message.includes('profiles_role_check')) {
+                    setError(`Role "${roleChangeTarget.targetRole}" is not allowed by the database. Please run the latest SECURITY_FIX.sql to update allowed roles.`);
+                } else if (error.code === '42501' || error.message.includes('policy')) {
+                    setError('Permission denied. Only administrators can change user roles.');
+                } else {
+                    setError('Failed to update role: ' + error.message);
+                }
+                setRoleChangeTarget(null);
+                return;
+            }
             
             clearProfilesCache();
             // Show inline success on the table temporarily
@@ -95,11 +106,12 @@ const UserManagement = () => {
             
             loadUsers();
         } catch (err) {
-            alert('Failed to update permissions: ' + err.message);
+            setError('Failed to update permissions: ' + (err.message || 'Unknown error'));
         } finally {
             setRoleChangeTarget(null);
         }
     };
+
 
     // Robust polling mechanism for role assignment
     const assignRoleWithRetry = async (email, role, retries = 10, delayMs = 500) => {

@@ -231,18 +231,18 @@ const ProfitLossAstra = ({ companyPeriods, onSave, isEditMode, view = 'table' })
   }, [currentPeriod]);
 
   // Dynamic items renderer
-  const renderDynamicList = (type, listData, titleColorClass, headerBgClass, totalVal, totalLabel) => {
+  const renderDynamicList = (type, listData, titleColorClass, headerBgClass, rowHoverClass, inputFocusClass, totalVal, totalLabel) => {
     return (
       <>
-        <tr><td colSpan={3} className="h-3"></td></tr>
+        <tr><td colSpan={3} className="h-3 border-b border-zinc-100"></td></tr>
         <tr className={headerBgClass}>
-          <td className={`px-4 py-2 font-bold ${titleColorClass} text-[11px] uppercase tracking-widest border-b border-zinc-100`}>
+          <td className={`px-4 py-2 font-bold ${titleColorClass} text-[11px] uppercase tracking-widest border-b border-zinc-100 mt-2`}>
             <div className="flex items-center justify-between">
               <span>{type === 'income' ? 'Income' : type === 'expenses' ? 'Expenses' : 'Add Back'}</span>
               {isEditMode && (
                 <button
                   onClick={() => setShowAddItemModal({ show: true, type })}
-                  className={`px-2 py-0.5 text-[10px] font-semibold ${titleColorClass} hover:bg-white/50 rounded transition-colors`}
+                  className={`px-2 py-0.5 text-[10px] font-semibold ${titleColorClass} hover:bg-white/50 rounded transition-colors opacity-0 group-hover:opacity-100`}
                 >
                   + Add Item
                 </button>
@@ -253,15 +253,15 @@ const ProfitLossAstra = ({ companyPeriods, onSave, isEditMode, view = 'table' })
           <td className="border-b border-zinc-100"></td>
         </tr>
         {(listData || []).map(ab => (
-          <tr key={ab.id} className="hover:bg-violet-50/10 transition-colors group">
-            <td className="px-4 py-0.5 text-notion-warm-gray-600 pl-8 border-b border-zinc-50">
+          <tr key={ab.id} className={`${rowHoverClass} transition-colors group`}>
+            <td className="px-4 py-1 pl-8 border-b border-zinc-50 text-notion-warm-gray-500 italic text-[13px]">
               <div className="flex items-center gap-2">
                 {isEditMode ? (
                   <input
                     type="text"
                     value={ab.label}
                     onChange={e => handleUpdateItem(type, ab.id, 'label', e.target.value)}
-                    className="flex-1 px-1 py-0.5 text-xs bg-transparent border-b border-dashed border-zinc-200 focus:border-violet-400 focus:outline-none"
+                    className={`flex-1 px-1 py-0.5 text-sm bg-transparent border-b border-dashed border-zinc-200 focus:outline-none not-italic ${inputFocusClass}`}
                   />
                 ) : (
                   <span>{ab.label}</span>
@@ -269,21 +269,21 @@ const ProfitLossAstra = ({ companyPeriods, onSave, isEditMode, view = 'table' })
                 {isEditMode && (
                   <button
                     onClick={() => handleRemoveItem(type, ab.id)}
-                    className="w-4 h-4 rounded-full text-red-300 hover:text-red-600 hover:bg-red-50 text-[9px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center flex-shrink-0"
+                    className="w-5 h-5 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    ✕
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                 )}
               </div>
             </td>
-            <td className="px-1 py-0.5 border-b border-zinc-50 pr-6">
-              <EditableCell isEditable={isEditMode} value={ab.value || 0} onChange={v => handleUpdateItem(type, ab.id, 'value', v)} />
+            <td className="px-1 py-1 border-b border-zinc-50 pr-6 text-notion-black font-semibold">
+              <EditableCell isEditable={isEditMode} value={ab.value || 0} onChange={v => handleUpdateItem(type, ab.id, 'value', v)} className="py-1" />
             </td>
             <td className="border-b border-zinc-50"></td>
           </tr>
         ))}
         {/* Total */}
-        <tr className="bg-zinc-50/50 font-bold">
+        <tr className={`${headerBgClass.replace('30', '50')} font-bold`}>
           <td className={`px-4 py-2 ${titleColorClass} border-b border-zinc-100`}>{totalLabel}</td>
           <td className={`px-2 py-2 text-right text-sm ${titleColorClass} border-b border-zinc-100 font-bold pr-8`}>{fmt(totalVal)}</td>
           <td className="border-b border-zinc-100"></td>
@@ -321,32 +321,31 @@ const ProfitLossAstra = ({ companyPeriods, onSave, isEditMode, view = 'table' })
         <>
       <div className="notion-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs border-collapse min-w-[500px]">
+          <table className="w-full text-sm border-collapse min-w-[500px]">
             <thead>
-              <tr className="bg-gradient-to-r from-violet-50 to-purple-50">
-                <th className="text-left px-4 py-3 font-bold text-violet-600 text-[11px] uppercase tracking-widest border-b border-violet-100 w-[45%] min-w-[280px]">
+              <tr className="border-b border-zinc-200 bg-white">
+                <th className="text-left px-4 py-3 font-bold text-notion-warm-gray-500 text-[11px] uppercase tracking-widest w-[45%] min-w-[280px]">
                   Description
                 </th>
-                <th className="text-right px-4 py-3 font-bold text-notion-black text-[11px] uppercase tracking-widest border-b border-violet-100 w-[150px] pr-8">
+                <th className="text-right px-4 py-3 font-bold text-notion-warm-gray-500 text-[11px] uppercase tracking-widest w-[150px] pr-8">
                   Total
                 </th>
-                <th className="border-b border-violet-100 w-full"></th>
+                <th className="w-full"></th>
               </tr>
             </thead>
-            <tbody>
-              {renderDynamicList('income', currentPeriod.income, 'text-violet-700', 'bg-violet-50/30', totalIncome, 'Total Income')}
-              {renderDynamicList('expenses', currentPeriod.expenses, 'text-red-600', 'bg-rose-50/30', totalExpenses, 'Total Expenses')}
-              {renderDynamicList('addBacks', currentPeriod.addBacks, 'text-amber-700', 'bg-amber-50/30', totalAddBack, 'Total Add Backs')}
+            <tbody className="text-zinc-700">
+              {renderDynamicList('income', currentPeriod.income, 'text-blue-500', 'bg-blue-50/30 group', 'hover:bg-blue-50/10', 'focus:border-blue-400', totalIncome, 'Total Income')}
+              {renderDynamicList('expenses', currentPeriod.expenses, 'text-red-500', 'bg-rose-50/30 group', 'hover:bg-rose-50/10', 'focus:border-red-400', totalExpenses, 'Total Expenses')}
+              {renderDynamicList('addBacks', currentPeriod.addBacks, 'text-amber-700', 'bg-amber-50/30 group', 'hover:bg-amber-50/10', 'focus:border-amber-400', totalAddBack, 'Total Add Backs')}
 
-              <tr><td colSpan={3} className="h-2 border-b-2 border-zinc-200"></td></tr>
-              <tr className="font-bold text-sm" style={{ background: 'linear-gradient(90deg, #fef9c3 0%, #fef08a 50%, #fde68a 100%)' }}>
-                <td className="px-4 py-3 font-bold text-zinc-800 border-b border-amber-300">Net Profit & Loss after Adjustment</td>
-                <td className={`px-2 py-3 text-right text-sm font-bold border-b border-amber-300 pr-8 ${netProfitLossAfterAdjustment >= 0 ? 'text-emerald-800' : 'text-red-600'}`}>
-                  <span className="px-3 py-1 rounded" style={{ backgroundColor: '#ffff00' }}>
-                    {fmt(netProfitLossAfterAdjustment)}
-                  </span>
+              <tr><td colSpan={3} className="h-1 border-b border-zinc-100"></td></tr>
+              
+              <tr className="bg-emerald-50/60 font-bold text-sm">
+                <td className="px-4 py-3 text-emerald-700 border-b border-zinc-200">Net Profit & Loss after Adjustment</td>
+                <td className={`px-2 py-3 text-right text-sm font-bold border-b border-zinc-200 pr-8 ${netProfitLossAfterAdjustment >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                  {fmt(netProfitLossAfterAdjustment)}
                 </td>
-                <td className="border-b border-amber-300"></td>
+                <td className="border-b border-zinc-200"></td>
               </tr>
             </tbody>
           </table>
