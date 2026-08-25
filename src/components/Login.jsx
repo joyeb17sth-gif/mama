@@ -1,17 +1,12 @@
 import { useState, useEffect } from 'react';
-import { loginUser, registerUser, setAuthenticated, isAccountLocked, getLockoutRemainingSeconds } from '../utils/auth';
+import { loginUser, setAuthenticated, isAccountLocked, getLockoutRemainingSeconds } from '../utils/auth';
 
 const Login = ({ onLogin }) => {
-  // Registration is disabled for security — only admins can create users via User Management
-  const isLoginMode = true;
-
   // Form State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
 
   const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [lockoutSeconds, setLockoutSeconds] = useState(0);
 
@@ -30,59 +25,33 @@ const Login = ({ onLogin }) => {
     return () => clearInterval(timer);
   }, [lockoutSeconds]);
 
-  const resetForm = () => {
-    setError('');
-    setSuccessMsg('');
-    setPassword('');
-    setConfirmPassword('');
-  };
-
-  const toggleMode = () => {
-    setIsLoginMode(!isLoginMode);
-    resetForm();
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccessMsg('');
 
-    // Check lockout first (only relevant for login, but good practice)
-    if (isLoginMode && isAccountLocked()) {
+    // Check lockout first
+    if (isAccountLocked()) {
       setLockoutSeconds(getLockoutRemainingSeconds());
       setError(`Too many failed attempts. Please wait ${getLockoutRemainingSeconds()} seconds.`);
-      return;
-    }
-
-    if (!isLoginMode && password !== confirmPassword) {
-      setError('Passwords do not match');
       return;
     }
 
     setLoading(true);
 
     try {
-      if (isLoginMode) {
-        // LOGIN FLOW
-        const result = await loginUser(email, password);
+      const result = await loginUser(email, password);
 
-        if (result.success) {
-          setAuthenticated(true);
-          onLogin();
-        } else if (result.locked) {
-          setLockoutSeconds(result.remainingSeconds);
-          setError(`Too many failed attempts. Please wait ${result.remainingSeconds} seconds.`);
-          setPassword('');
-        } else {
-          const attemptsMsg = result.attemptsRemaining !== undefined ? ` (${result.attemptsRemaining} attempts remaining)` : '';
-          setError((result.error || 'Login failed') + attemptsMsg);
-          setPassword('');
-        }
+      if (result.success) {
+        setAuthenticated(true);
+        onLogin();
+      } else if (result.locked) {
+        setLockoutSeconds(result.remainingSeconds);
+        setError(`Too many failed attempts. Please wait ${result.remainingSeconds} seconds.`);
+        setPassword('');
       } else {
-        // SIGNUP FLOW
-        await registerUser(email, password);
-        setSuccessMsg('Account created successfully! You can now login.');
-        setIsLoginMode(true);
+        const attemptsMsg = result.attemptsRemaining !== undefined ? ` (${result.attemptsRemaining} attempts remaining)` : '';
+        setError((result.error || 'Login failed') + attemptsMsg);
+        setPassword('');
       }
     } catch (err) {
       setError(err.message || "An unexpected error occurred");
@@ -103,21 +72,18 @@ const Login = ({ onLogin }) => {
             </svg>
           </div>
           <h1 className="text-h1 text-gray-900 mb-2">
-            {isLoginMode ? 'Welcome Back' : 'Create Account'}
+            Welcome Back
           </h1>
           <p className="text-gray-600 text-p3">
-            {isLoginMode ? 'Please login to continue' : 'Set up your profile to get started'}
+            Please login to continue
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Error / Success Messages */}
-          {(error || successMsg) && (
-            <div className={`px-4 py-3 rounded-xl text-p3 font-medium ${successMsg ? 'bg-green-50 border border-green-200 text-green-700' :
-              isLocked ? 'bg-yellow-50 border border-yellow-200 text-yellow-700' :
-                'bg-red-50 border border-red-200 text-red-700'
-              }`}>
-              {isLocked && (
+          {/* Error Message */}
+          {error && (
+            <div className={`px-4 py-3 rounded-xl text-p3 font-medium ${isLocked ? 'bg-yellow-50 border border-yellow-200 text-yellow-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+              {isLocked ? (
                 <div className="flex items-center gap-2">
                   <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -125,8 +91,7 @@ const Login = ({ onLogin }) => {
                   </svg>
                   <span>Account locked. Try again in {lockoutSeconds}s</span>
                 </div>
-              )}
-              {!isLocked && (error || successMsg)}
+              ) : error}
             </div>
           )}
 
@@ -162,53 +127,29 @@ const Login = ({ onLogin }) => {
               minLength={6}
               disabled={isLocked || loading}
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0 outline-none transition font-medium disabled:bg-gray-100 disabled:cursor-not-allowed"
-              placeholder={isLoginMode ? "Enter password" : "Min 6 characters"}
+              placeholder="Enter password"
             />
           </div>
-
-          {/* Signup Extra Fields */}
-          {!isLoginMode && (
-            <div>
-              <label className="block text-p3 font-bold text-gray-400 mb-2">
-                Confirm Password
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={6}
-                disabled={loading}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0 outline-none transition font-medium disabled:bg-gray-100 disabled:cursor-not-allowed"
-                placeholder="Confirm password"
-              />
-            </div>
-          )}
 
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading || (isLoginMode && isLocked)}
+            disabled={loading || isLocked}
             className={`w-full text-white py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition font-bold uppercase tracking-wider text-sm mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700`}
           >
-            {loading ? (isLoginMode ? 'Logging in...' : 'Creating Account...') :
-              (isLoginMode && isLocked) ? `Locked (${lockoutSeconds}s)` :
-                (isLoginMode ? 'Login' : 'Create Account')}
+            {loading ? 'Logging in...' : (isLocked ? `Locked (${lockoutSeconds}s)` : 'Login')}
           </button>
         </form>
 
         <div className="mt-6 flex flex-col gap-3 text-center">
-          {isLoginMode && (
-            <button
-              type="button"
-              onClick={() => onLogin('forgot')}
-              disabled={isLocked || loading}
-              className="text-sm text-gray-500 hover:text-gray-700 hover:underline disabled:opacity-50"
-            >
-              Forgot Password?
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => onLogin('forgot')}
+            disabled={isLocked || loading}
+            className="text-sm text-gray-500 hover:text-gray-700 hover:underline disabled:opacity-50"
+          >
+            Forgot Password?
+          </button>
         </div>
       </div>
     </div>

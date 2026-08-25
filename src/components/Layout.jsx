@@ -46,6 +46,16 @@ const Layout = ({
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             )
         },
+        {
+            id: 'branch-performance', label: 'Branch Performance', icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+            )
+        },
+        {
+            id: 'sydney-sales', label: 'Sydney Sales', icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            )
+        },
     ];
 
     const adminItems = [
@@ -82,6 +92,29 @@ const Layout = ({
 
     const activeNavItem = [...filteredNavItems, ...filteredAdminItems].find(item => item.id === activeTab) || filteredNavItems[0] || navItems[0];
 
+    const renderNavItem = (item) => (
+        <button
+            key={item.id}
+            onClick={() => {
+                setActiveTab(item.id);
+                setIsMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center px-3 py-1.5 text-nav-button rounded-micro transition-all duration-200 group relative
+                ${activeTab === item.id
+                    ? 'bg-notion-blue/5 text-notion-blue'
+                    : 'text-notion-warm-gray-500 hover:bg-notion-warm-white hover:text-notion-black'
+                }`}
+        >
+            <span className={`mr-2.5 transition-colors ${activeTab === item.id ? 'text-notion-blue' : 'text-notion-warm-gray-300 group-hover:text-notion-warm-gray-500'}`}>
+                {item.icon}
+            </span>
+            {item.label}
+            {activeTab === item.id && (
+                <div className="absolute left-0 w-0.5 h-4 bg-notion-blue rounded-r-full"></div>
+            )}
+        </button>
+    );
+
     return (
         <div className="flex h-screen bg-notion-warm-white font-sans text-notion-black overflow-hidden selection:bg-notion-blue/20">
 
@@ -113,59 +146,30 @@ const Layout = ({
 
                     {/* Nav Links */}
                     <div className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5 custom-scrollbar">
-                        <div className="text-[11px] font-bold text-notion-warm-gray-300 px-3 mb-2 mt-2 uppercase tracking-widest">
-                            Overview
-                        </div>
-                        {filteredNavItems.map((item) => (
-                            <button
-                                key={item.id}
-                                onClick={() => {
-                                    setActiveTab(item.id);
-                                    setIsMobileMenuOpen(false);
-                                }}
-                                className={`w-full flex items-center px-3 py-1.5 text-nav-button rounded-micro transition-all duration-200 group relative
-                   ${activeTab === item.id
-                                        ? 'bg-notion-blue/5 text-notion-blue'
-                                        : 'text-notion-warm-gray-500 hover:bg-notion-warm-white hover:text-notion-black'
-                                    }`}
-                            >
-                                <span className={`mr-2.5 transition-colors ${activeTab === item.id ? 'text-notion-blue' : 'text-notion-warm-gray-300 group-hover:text-notion-warm-gray-500'}`}>
-                                    {item.icon}
-                                </span>
-                                {item.label}
-                                {activeTab === item.id && (
-                                    <div className="absolute left-0 w-0.5 h-4 bg-notion-blue rounded-r-full"></div>
-                                )}
-                            </button>
-                        ))}
+                        {filteredNavItems.filter(item => !['monthly-revenue', 'branch-performance', 'sydney-sales'].includes(item.id)).length > 0 && (
+                            <>
+                                <div className="text-[11px] font-bold text-notion-warm-gray-300 px-3 mb-2 mt-2 uppercase tracking-widest">
+                                    Overview
+                                </div>
+                                {filteredNavItems.filter(item => !['monthly-revenue', 'branch-performance', 'sydney-sales'].includes(item.id)).map(renderNavItem)}
+                            </>
+                        )}
+
+                        {filteredNavItems.filter(item => ['monthly-revenue', 'branch-performance', 'sydney-sales'].includes(item.id)).length > 0 && (
+                            <>
+                                <div className="text-[11px] font-bold text-notion-warm-gray-300 px-3 mb-2 mt-6 uppercase tracking-widest">
+                                    Performance & Analytics
+                                </div>
+                                {filteredNavItems.filter(item => ['monthly-revenue', 'branch-performance', 'sydney-sales'].includes(item.id)).map(renderNavItem)}
+                            </>
+                        )}
 
                         {filteredAdminItems.length > 0 && (
                             <>
                                 <div className="text-[11px] font-bold text-notion-warm-gray-300 px-3 mb-2 mt-6 uppercase tracking-widest">
                                     Management
                                 </div>
-                                {filteredAdminItems.map((item) => (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => {
-                                            setActiveTab(item.id);
-                                            setIsMobileMenuOpen(false);
-                                        }}
-                                        className={`w-full flex items-center px-3 py-1.5 text-nav-button rounded-micro transition-all duration-200 group relative
-                                            ${activeTab === item.id
-                                                ? 'bg-notion-blue/5 text-notion-blue'
-                                                : 'text-notion-warm-gray-500 hover:bg-notion-warm-white hover:text-notion-black'
-                                            }`}
-                                    >
-                                        <span className={`mr-2.5 transition-colors ${activeTab === item.id ? 'text-notion-blue' : 'text-notion-warm-gray-300 group-hover:text-notion-warm-gray-500'}`}>
-                                            {item.icon}
-                                        </span>
-                                        {item.label}
-                                        {activeTab === item.id && (
-                                            <div className="absolute left-0 w-0.5 h-4 bg-notion-blue rounded-r-full"></div>
-                                        )}
-                                    </button>
-                                ))}
+                                {filteredAdminItems.map(renderNavItem)}
                             </>
                         )}
                     </div>
@@ -222,7 +226,8 @@ const Layout = ({
                         {/* Mobile Menu Button */}
                         <button
                             onClick={() => setIsMobileMenuOpen(true)}
-                            className="lg:hidden p-1.5 text-notion-warm-gray-500 hover:bg-notion-warm-white rounded-micro"
+                            aria-label="Open Menu"
+                            className="p-1 -ml-1 text-notion-warm-gray-500 hover:bg-notion-warm-gray-100 rounded-sm lg:hidden transition-colors"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                         </button>
@@ -246,17 +251,18 @@ const Layout = ({
                                 <span>Syncing...</span>
                             </div>
                         ) : (
-                            <div
+                            <button
+                                type="button"
                                 onClick={onForceSync}
                                 title="Click to force sync from cloud"
-                                className="flex items-center gap-2 px-2.5 py-1 text-emerald-600 bg-emerald-50 rounded-pill text-[11px] font-semibold border border-emerald-100 group cursor-pointer hover:bg-emerald-100 active:scale-95 transition-all select-none"
+                                className="flex items-center gap-2 px-2.5 py-1 text-emerald-600 bg-emerald-50 rounded-pill text-[11px] font-semibold border border-emerald-100 group cursor-pointer hover:bg-emerald-100 active:scale-95 transition-all select-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
                             >
                                 <span className="relative flex h-1.5 w-1.5 mr-0.5">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                                 </span>
                                 <span className="hidden sm:inline">Live Mode</span>
-                            </div>
+                            </button>
                         )}
                     </div>
                 </header>

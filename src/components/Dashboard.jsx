@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getSites, getPeriodicalTasks } from '../utils/storage';
-import Archiver from './Archiver';
+import LeadCumulativeData from './LeadCumulativeData';
 
 const Dashboard = ({ syncVersion, periodicalTasks: propPeriodicalTasks }) => {
     const [sites, setSites] = useState([]);
@@ -144,10 +144,6 @@ const Dashboard = ({ syncVersion, periodicalTasks: propPeriodicalTasks }) => {
                 </div>
             )}
 
-            {/* Data Archiving Section */}
-            <div>
-                <Archiver />
-            </div>
         </div>
     );
 };

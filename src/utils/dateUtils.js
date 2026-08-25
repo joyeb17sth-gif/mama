@@ -1,5 +1,11 @@
 // Native helpers
-export const parseISO = (dateStr) => new Date(dateStr);
+export const parseISO = (dateStr) => {
+  if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [y, m, d] = dateStr.split('-');
+    return new Date(y, m - 1, d);
+  }
+  return new Date(dateStr);
+};
 export const addDays = (date, days) => {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
@@ -124,7 +130,10 @@ export const format = (date, formatStr) => {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
+    
+    // Replace longest tokens first to avoid partial replacements
     res = res.replace(/yyyy/g, year);
+    res = res.replace(/MMM/g, new Intl.DateTimeFormat('en-US', { month: 'short' }).format(d));
     res = res.replace(/MM/g, month);
     res = res.replace(/dd/g, day);
     return res;

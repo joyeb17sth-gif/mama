@@ -9,7 +9,6 @@ import {
   saveLeadReports, getLeadReportsAsync, getLeadReports,
   saveLeadCounselors, getLeadCounselorsAsync, getLeadCounselors,
   getStaffProductivityReportsAsync,
-  logAction,
   clearSyncTimestamps, setOnSaveError
 } from './utils/storage';
 import { encryptData } from './utils/encryptionUtils';
@@ -25,8 +24,8 @@ import TaskManagementModal from './components/TaskManagementModal';
 import Login from './components/Login';
 import Dropdown from './components/Dropdown';
 import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
 import UserManagement from './components/UserManagement';
-import InitialSetup from './components/InitialSetup';
 import ErrorBoundary from './components/ErrorBoundary';
 
 import Toast from './components/Toast';
@@ -39,15 +38,19 @@ const TaskBudgetMatrix = React.lazy(() => import('./components/TaskBudgetMatrix'
 const ProfitLoss = React.lazy(() => import('./components/ProfitLoss'));
 const LeadManager = React.lazy(() => import('./components/LeadManager'));
 const MonthlyRevenue = React.lazy(() => import('./components/MonthlyRevenue'));
+const BranchPerformanceDashboard = React.lazy(() => import('./components/BranchPerformanceDashboard'));
+const SydneySalesSummary = React.lazy(() => import('./components/SydneySalesSummary'));
 
 function App() {
   const [authenticated, setAuthenticatedState] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
   const [showInitialSetup, setShowInitialSetup] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState(null);
   const [isStorageReady, setIsStorageReady] = useState(false);
+  const [storageInitError, setStorageInitError] = useState(null);
   const [syncVersion, setSyncVersion] = useState(0);
   const [userProfileData, setUserProfileData] = useState({ name: 'Loading...', role: 'user' });
   const [isAdmin, setIsAdmin] = useState(false);
@@ -105,9 +108,11 @@ function App() {
   }, [periodicalTasks, isAdmin, simulatedRole, userProfileData]);
 
   const syncDataRef = React.useRef(null);
+  const isSyncInProgress = React.useRef(false);
 
   const syncData = async () => {
-    if (!isAuthenticated()) return;
+    if (!isAuthenticated() || isSyncInProgress.current) return;
+    isSyncInProgress.current = true;
     setIsSyncing(true);
     setSyncError(null);
     try {
@@ -181,8 +186,8 @@ function App() {
 
       // Update memoryCache + localforage + React state for data types that were queried
       if (cloudSites !== undefined) {
-        hasChanges = true;
-        if (cloudSites) {
+        if (Array.isArray(cloudSites) && cloudSites.length > 0) {
+          hasChanges = true;
           memoryCache.sites = cloudSites;
           await localforage.setItem('sites', encryptData(cloudSites));
           setSites(cloudSites);
@@ -190,16 +195,18 @@ function App() {
       }
 
       if (cloudPeriodicalTasks !== undefined) {
-        hasChanges = true;
-        if (cloudPeriodicalTasks) {
+        if (Array.isArray(cloudPeriodicalTasks) && cloudPeriodicalTasks.length > 0) {
+          hasChanges = true;
           memoryCache.periodicalTasks = cloudPeriodicalTasks;
           await localforage.setItem('periodicalTasks', encryptData(cloudPeriodicalTasks));
           setPeriodicalTasks(cloudPeriodicalTasks);
         }
       }
+
       if (cloudProfitLoss !== undefined) {
-        hasChanges = true;
-        if (cloudProfitLoss) {
+        // ProfitLoss is an object in v2. Check if it's a valid object or array with content.
+        if (cloudProfitLoss && ((Array.isArray(cloudProfitLoss) && cloudProfitLoss.length > 0) || (!Array.isArray(cloudProfitLoss) && cloudProfitLoss.version))) {
+          hasChanges = true;
           const migratedPL = migrateProfitLossData(cloudProfitLoss);
           memoryCache.profitLoss = migratedPL;
           await localforage.setItem('profitLoss', encryptData(migratedPL));
@@ -218,8 +225,8 @@ function App() {
       }
 
       if (cloudLeadReports !== undefined) {
-        hasChanges = true;
-        if (cloudLeadReports) {
+        if (Array.isArray(cloudLeadReports) && cloudLeadReports.length > 0) {
+          hasChanges = true;
           memoryCache.payscleep_lead_reports_v2 = cloudLeadReports;
           await localforage.setItem('payscleep_lead_reports_v2', encryptData(cloudLeadReports));
           setLeadReports(cloudLeadReports);
@@ -231,8 +238,8 @@ function App() {
       }
 
       if (cloudLeadCounselors !== undefined) {
-        hasChanges = true;
-        if (cloudLeadCounselors) {
+        if (Array.isArray(cloudLeadCounselors) && cloudLeadCounselors.length > 0) {
+          hasChanges = true;
           memoryCache.payscleep_lead_counselors_v3 = cloudLeadCounselors;
           await localforage.setItem('payscleep_lead_counselors_v3', encryptData(cloudLeadCounselors));
           setLeadCounselors(cloudLeadCounselors);
@@ -244,8 +251,8 @@ function App() {
       }
 
       if (cloudStaffProductivityReports !== undefined) {
-        hasChanges = true;
-        if (cloudStaffProductivityReports) {
+        if (Array.isArray(cloudStaffProductivityReports) && cloudStaffProductivityReports.length > 0) {
+          hasChanges = true;
           memoryCache.staffProductivityReports = cloudStaffProductivityReports;
           await localforage.setItem('staffProductivityReports', encryptData(cloudStaffProductivityReports));
         }
@@ -261,6 +268,7 @@ function App() {
       setSyncError('Sync failed. Working offline.');
     } finally {
       setIsSyncing(false);
+      isSyncInProgress.current = false;
     }
   };
 
@@ -277,6 +285,9 @@ function App() {
   useEffect(() => {
     initStorage().then(() => {
       setIsStorageReady(true);
+    }).catch((err) => {
+      console.error("Critical: Storage init failed", err);
+      setStorageInitError("Failed to initialize secure storage. Please clear your browser data or try incognito mode.");
     });
   }, []);
 
@@ -288,6 +299,18 @@ function App() {
       setShowToast(true);
     });
     return () => setOnSaveError(null);
+  }, []);
+
+  // Listen for password recovery events
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setShowResetPassword(true);
+      }
+    });
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -422,11 +445,6 @@ function App() {
       );
       setSites(updated);
       saveSites(updated);
-      logAction('UPDATE_SITE', {
-        id: siteId,
-        name: formData.siteName,
-        changes: formData
-      });
     } else {
       siteId = crypto.randomUUID();
       const newSite = {
@@ -437,10 +455,6 @@ function App() {
       const updated = [...sites, newSite];
       setSites(updated);
       saveSites(updated);
-      logAction('CREATE_SITE', {
-        id: newSite.id,
-        name: newSite.siteName
-      });
     }
 
     // Process Periodical Tasks for this site
@@ -481,11 +495,6 @@ function App() {
         setPeriodicalTasks(cleanedTasks);
         savePeriodicalTasks(cleanedTasks);
       }
-
-      logAction('DELETE_SITE', {
-        id,
-        siteName: siteToDelete?.siteName || 'Unknown Site'
-      });
     }
   };
 
@@ -520,7 +529,6 @@ function App() {
 
     setPeriodicalTasks(updatedTasks);
     savePeriodicalTasks(updatedTasks);
-    logAction('UPDATE_TASK_STATUS', { taskId: task.id, scheduleId: schedule.id, newStatus, scopeOfWork: scopeOfWork || '', completedHours, completionDate });
   };
 
   const handleUpdateScheduleOverrides = (taskId, scheduleId, overrides) => {
@@ -552,7 +560,6 @@ function App() {
 
     setPeriodicalTasks(updatedTasks);
     savePeriodicalTasks(updatedTasks);
-    logAction('UPDATE_SCHEDULE_OVERRIDES', { taskId, scheduleId, overrides });
   };
 
   // Lead Manager handler
@@ -562,15 +569,12 @@ function App() {
       updatedLeads = leadData; // Full replacement (e.g., sample data)
     } else if (actionType === 'DELETE') {
       updatedLeads = leadData; // leadData contains the updated array
-      logAction('DELETE_LEAD', { count: leads.length - updatedLeads.length });
     } else {
       const isEditing = actionType;
       if (isEditing) {
         updatedLeads = leads.map(l => l.id === leadData.id ? leadData : l);
-        logAction('UPDATE_LEAD', { id: leadData.id, name: leadData.name });
       } else {
         updatedLeads = [leadData, ...leads]; // Add to beginning
-        logAction('CREATE_LEAD', { id: leadData.id, name: leadData.name });
       }
     }
     setLeads(updatedLeads);
@@ -590,50 +594,6 @@ function App() {
     saveLeadCounselors(newVal);
   };
 
-  // Timesheet handler
-  const handleSaveTimesheet = (timesheet) => {
-    const allTimesheets = getTimesheets();
-    const existingIndex = allTimesheets.findIndex(t => t.id === timesheet.id);
-
-    if (existingIndex >= 0) {
-      allTimesheets[existingIndex] = timesheet;
-      logAction('UPDATE_TIMESHEET', {
-        id: timesheet.id,
-        siteName: timesheet.siteName,
-        totalPay: timesheet.entries.reduce((sum, e) => sum + e.totalPay, 0)
-      });
-    } else {
-      allTimesheets.push(timesheet);
-      logAction('SAVE_TIMESHEET', {
-        siteId: timesheet.siteId,
-        siteName: timesheet.siteName,
-        period: `${timesheet.periodStart} to ${timesheet.periodEnd}`,
-        totalPay: timesheet.entries.reduce((sum, e) => sum + e.totalPay, 0)
-      });
-    }
-
-    saveTimesheets(allTimesheets);
-    setToastMessage(`Timesheet saved successfully for ${timesheet.siteName}!`);
-    setShowToast(true);
-    setSelectedSiteForTimesheet(null);
-    setTimesheetPeriodStart('');
-    setTimesheetPeriodEnd('');
-    setEditingTimesheet(null);
-  };
-
-  const handleEditTimesheet = (timesheet) => {
-    const site = getSites().find(s => s.id === timesheet.siteId);
-    if (!site) {
-      showToastMessage('Error: Associated site not found. It may have been deleted.', 'error');
-      return;
-    }
-    setSelectedSiteForTimesheet(site);
-    setTimesheetPeriodStart(timesheet.periodStart);
-    setTimesheetPeriodEnd(timesheet.periodEnd);
-    setEditingTimesheet(timesheet);
-    setIsEnteringTimesheet(true);
-    setShowTimesheetList(false);
-  };
 
   const showToastMessage = (message, type = 'success') => {
     setToastMessage(message);
@@ -717,11 +677,20 @@ function App() {
   // Loading state while IndexedDB mounts
   if (!isStorageReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 rounded-full border-4 border-zinc-200 border-t-primary-600 animate-spin"></div>
-          <p className="text-zinc-500 font-medium text-sm">Mounting Secure Storage...</p>
-        </div>
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
+        {storageInitError ? (
+          <div className="flex flex-col items-center gap-4 bg-white p-6 rounded-xl shadow-sm border border-red-200">
+            <svg className="w-12 h-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p className="text-red-700 font-medium text-center max-w-sm">{storageInitError}</p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-8 h-8 rounded-full border-4 border-zinc-200 border-t-primary-600 animate-spin"></div>
+            <p className="text-zinc-500 font-medium text-sm">Mounting Secure Storage...</p>
+          </div>
+        )}
       </div>
     );
   }
@@ -743,6 +712,17 @@ function App() {
 
   // Show login if not authenticated
   if (!authenticated) {
+    if (showResetPassword) {
+      return (
+        <ResetPassword 
+          onComplete={() => {
+            setShowResetPassword(false);
+            setAuthenticatedState(true);
+            syncData();
+          }} 
+        />
+      );
+    }
     if (showForgotPassword) {
       return (
         <ForgotPassword
@@ -921,6 +901,16 @@ function App() {
         {/* Monthly Revenue Tab (Main Admin Only) */}
         {activeTab === 'monthly-revenue' && hasPermission('monthly-revenue') && (
           <MonthlyRevenue />
+        )}
+
+        {/* Branch Performance Tab (Main Admin Only) */}
+        {activeTab === 'branch-performance' && hasPermission('branch-performance') && (
+          <BranchPerformanceDashboard />
+        )}
+
+        {/* Sydney Sales Tab (Main Admin Only) */}
+        {activeTab === 'sydney-sales' && hasPermission('sydney-sales') && (
+          <SydneySalesSummary />
         )}
         </React.Suspense>
       </Layout>

@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { logAction } from '../utils/storage';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+
 
 const monthNames = [
   "January", "February", "March", "April", "May", "June",
@@ -54,19 +54,28 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
     return agg;
   }, [existingReports, selectedYear]);
 
-  // Load existing data when counselor changes inside the form
+  // Keep the latest reports in a ref so the loader below can read them WITHOUT
+  // re-running on every background sync. If existingReports were an effect dependency,
+  // a cloud sync mid-entry would re-fire this effect and wipe the user's unsaved input (§4.5).
+  const existingReportsRef = useRef(existingReports);
+  useEffect(() => { existingReportsRef.current = existingReports; }, [existingReports]);
+
+  const blankForm = {
+    totalLeads: '', sourceFacebook: '', sourceReferrals: '', sourceWebsite: '', sourceWalkIn: '',
+    convYes: '', convNo: '', convDNA: '',
+    appApplied: '', appWaitingPayment: '', appDroppedOut: '',
+    visaLodging: '', visaInProgress: '', visaGranted: '', visaRefusal: ''
+  };
+
+  // Load existing data ONLY when the selected counselor or month changes — NOT when
+  // existingReports updates underneath us (that would discard in-progress edits, §4.5).
   useEffect(() => {
     if (!selectedMonthForInput || !selectedCounselorId) {
-      setFormData({
-        totalLeads: '', sourceFacebook: '', sourceReferrals: '', sourceWebsite: '', sourceWalkIn: '',
-        convYes: '', convNo: '', convDNA: '',
-        appApplied: '', appWaitingPayment: '', appDroppedOut: '',
-        visaLodging: '', visaInProgress: '', visaGranted: '', visaRefusal: ''
-      });
+      setFormData(blankForm);
       return;
     }
-    
-    const existing = existingReports.find(r => r.month === selectedMonthForInput && r.counselorId === selectedCounselorId);
+
+    const existing = existingReportsRef.current.find(r => r.month === selectedMonthForInput && r.counselorId === selectedCounselorId);
     if (existing) {
       setFormData({
         totalLeads: existing.totalLeads || '',
@@ -86,14 +95,10 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
         visaRefusal: existing.visaRefusal || ''
       });
     } else {
-      setFormData({
-        totalLeads: '', sourceFacebook: '', sourceReferrals: '', sourceWebsite: '', sourceWalkIn: '',
-        convYes: '', convNo: '', convDNA: '',
-        appApplied: '', appWaitingPayment: '', appDroppedOut: '',
-        visaLodging: '', visaInProgress: '', visaGranted: '', visaRefusal: ''
-      });
+      setFormData(blankForm);
     }
-  }, [selectedMonthForInput, selectedCounselorId, existingReports]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMonthForInput, selectedCounselorId]);
 
   // Calculate payment done
   const paymentDone = useMemo(() => {
@@ -169,13 +174,13 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
       onSaveData(reportData);
     }
     
-    logAction('SAVE_MONTHLY_LEAD_REPORT', { month: selectedMonthForInput, totalLeads: formData.totalLeads });
+
     
     // Reset and return to grid
     setStep(1);
     setSelectedCounselorId('');
     setSelectedMonthForInput(null);
-    alert('Report saved successfully!');
+    alert('Report saved locally and will sync to the cloud automatically.');
   };
 
   const renderStepIndicator = () => {

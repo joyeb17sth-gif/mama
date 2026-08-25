@@ -10,7 +10,7 @@ const LeadManager = ({ leads, onSave, leadReports = [], setLeadReports, counselo
   const handleSaveReport = (report) => {
     if (!setLeadReports) return;
     setLeadReports(prev => {
-      const existingIdx = prev.findIndex(r => r.month === report.month);
+      const existingIdx = prev.findIndex(r => r.month === report.month && r.counselorId === report.counselorId);
       if (existingIdx >= 0) {
         const updated = [...prev];
         updated[existingIdx] = report;

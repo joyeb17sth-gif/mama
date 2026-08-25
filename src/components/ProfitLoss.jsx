@@ -652,10 +652,11 @@ const ProfitLoss = ({ syncVersion }) => {
     copied.createdAt = new Date().toISOString();
     copied.updatedAt = new Date().toISOString();
 
-    // Zero out all values but keep site structure and overhead %
+    // Zero out all values but keep site structure, overhead %, and manager allocations
     copied.sites = copied.sites.map(s => ({
       ...createEmptySiteData(s.name),
       overhead: { ...createEmptySiteData(s.name).overhead, managerSalaryPct: s.overhead?.managerSalaryPct || 0 },
+      managerAllocations: s.managerAllocations ? { ...s.managerAllocations } : {}
     }));
     copied.overheadTotals = prev.overheadTotals ? { ...prev.overheadTotals } : { managerSalaryTotal: 0, chemicalTotal: 0, motorVehicleTotal: 0 };
 
@@ -1359,10 +1360,10 @@ const ProfitLoss = ({ syncVersion }) => {
                     {compareMode && comparePeriod && (() => {
                       const compSites = comparePeriod.sites || [];
                       let compVal = 0;
-                      if (card.label === 'Total Revenue') compVal = compSites.reduce((s, site) => s + (site.revenue?.regular || 0) + (site.revenue?.extraWork || 0) + (site.revenue?.supervisorAllowance || 0), 0);
-                      else if (card.label === 'Total Cost') compVal = compSites.reduce((s, site) => s + (site.directCost?.regular || 0) + (site.directCost?.extraWork || 0) + (site.directCost?.motorVehicle || 0), 0);
-                      else if (card.label === 'Gross Profit') { const rev = compSites.reduce((s, site) => s + (site.revenue?.regular || 0) + (site.revenue?.extraWork || 0) + (site.revenue?.supervisorAllowance || 0), 0); const cost = compSites.reduce((s, site) => s + (site.directCost?.regular || 0) + (site.directCost?.extraWork || 0) + (site.directCost?.motorVehicle || 0), 0); compVal = rev - cost; }
-                      else { compVal = compSites.reduce((s, site) => { const c = computeSite(site); return s + c.netProfit; }, 0); }
+                      if (card.label === 'Total Revenue') compVal = compSites.reduce((s, site) => s + computeSite(site, comparePeriod).totalRevenue, 0);
+                      else if (card.label === 'Total Cost') compVal = compSites.reduce((s, site) => s + computeSite(site, comparePeriod).totalCost, 0);
+                      else if (card.label === 'Gross Profit') compVal = compSites.reduce((s, site) => s + computeSite(site, comparePeriod).grossProfit, 0);
+                      else { compVal = compSites.reduce((s, site) => s + computeSite(site, comparePeriod).netProfit, 0); }
                       const delta = card.value - compVal;
                       return (
                         <p className={`text-[10px] font-semibold mt-0.5 ${delta >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>

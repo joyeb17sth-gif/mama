@@ -113,7 +113,7 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
   const update = (field, value) => onUpdate({ ...staff, [field]: value });
 
   const updateMonth = (field, idx, value) => {
-    const arr = [...staff[field]]; arr[idx] = value;
+    const arr = [...(staff[field] || Array(12).fill(''))]; arr[idx] = value;
     onUpdate({ ...staff, [field]: arr });
   };
 
@@ -151,27 +151,27 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
   const revenueRows = staff.revenueRows || [];
 
   const totalCost = MONTHS.map((_, i) =>
-    num(staff.basicSalary[i]) +
-    num(staff.superannuation[i]) +
+    num((staff.basicSalary || [])[i]) +
+    num((staff.superannuation || [])[i]) +
     costRows.reduce((s, r) => s + num(r.values[i]), 0)
   );
 
   const totalRevenueEarnedLine = MONTHS.map((_, i) =>
-    num(staff.revenueEarned[i]) +
-    num(staff.serviceFeeRef[i]) +
+    num((staff.revenueEarned || [])[i]) +
+    num((staff.serviceFeeRef || [])[i]) +
     revenueRows.reduce((s, r) => s + num(r.values[i]), 0)
   );
 
   // Surplus: Positive means Green, Negative means Red
   const surplus = MONTHS.map((_, i) => totalRevenueEarnedLine[i] - totalCost[i]);
 
-  const totalBasic = rowTotal(staff.basicSalary);
-  const totalSuper = rowTotal(staff.superannuation);
+  const totalBasic = rowTotal(staff.basicSalary || []);
+  const totalSuper = rowTotal(staff.superannuation || []);
   const totalCostRowsSum = costRows.reduce((s, r) => s + rowTotal(r.values), 0);
   const totalCostSum = totalBasic + totalSuper + totalCostRowsSum;
   
-  const totalRev = rowTotal(staff.revenueEarned);
-  const totalServiceFee = rowTotal(staff.serviceFeeRef);
+  const totalRev = rowTotal(staff.revenueEarned || []);
+  const totalServiceFee = rowTotal(staff.serviceFeeRef || []);
   const totalRevenueRowsSum = revenueRows.reduce((s, r) => s + rowTotal(r.values), 0);
   const totalRevenueSum = totalRev + totalServiceFee + totalRevenueRowsSum;
   
@@ -235,7 +235,7 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
             {/* ── COST SECTION ── */}
             <tr>
               <td className="border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600">Basic Salary</td>
-              {staff.basicSalary.map((v, i) =>
+              {(staff.basicSalary || Array(12).fill('')).map((v, i) =>
                 <Cell key={i} value={v} onChange={val => updateMonth('basicSalary', i, val)} editing={editing} />
               )}
               <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-semibold bg-zinc-50">{totalBasic ? fmt(totalBasic) : ''}</td>
@@ -244,7 +244,7 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
 
             <tr>
               <td className="border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600">Superannuation</td>
-              {staff.superannuation.map((v, i) =>
+              {(staff.superannuation || Array(12).fill('')).map((v, i) =>
                 <Cell key={i} value={v} onChange={val => updateMonth('superannuation', i, val)} editing={editing} />
               )}
               <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-semibold bg-zinc-50">{totalSuper ? fmt(totalSuper) : ''}</td>
@@ -312,7 +312,7 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
             {/* ── REVENUE SECTION ── */}
             <tr>
               <td className="border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50">Revenue Earned</td>
-              {staff.revenueEarned.map((v, i) =>
+              {(staff.revenueEarned || Array(12).fill('')).map((v, i) =>
                 <Cell key={i} value={v} onChange={val => updateMonth('revenueEarned', i, val)} highlight editing={editing} />
               )}
               <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold text-blue-700 bg-blue-50">{totalRev ? fmt(totalRev) : ''}</td>
@@ -321,11 +321,11 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
 
             <tr>
               <td className="border border-zinc-200 px-3 py-1.5 text-xs text-zinc-500 bg-blue-50">Service Fee Ref</td>
-              {staff.serviceFeeRef.map((v, i) =>
+              {(staff.serviceFeeRef || Array(12).fill('')).map((v, i) =>
                 <Cell key={i} value={v} onChange={val => updateMonth('serviceFeeRef', i, val)} highlight editing={editing} />
               )}
               <td className="border border-zinc-200 px-2 py-1.5 text-right text-xs font-semibold bg-blue-50 text-blue-700">
-                {rowTotal(staff.serviceFeeRef) ? fmt(rowTotal(staff.serviceFeeRef)) : ''}
+                {totalServiceFee ? fmt(totalServiceFee) : ''}
               </td>
               {editing && <td className="border border-zinc-200 bg-blue-50" />}
             </tr>
@@ -395,7 +395,7 @@ const StaffCard = ({ staff, year, onUpdate, onDelete, editing }) => {
             <tr>
               <td className="border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-800">Surplus/(deficit)</td>
               {surplus.map((v, i) => {
-                const hasData = num(staff.revenueEarned[i]) || totalCost[i];
+                const hasData = num((staff.revenueEarned || [])[i]) || num((staff.serviceFeeRef || [])[i]) || revenueRows.reduce((s, r) => s + num(r.values[i]), 0) || totalCost[i];
                 return (
                   <td key={i} className={`border border-zinc-200 px-2 py-1.5 text-right text-xs font-bold whitespace-nowrap ${v > 0 ? 'text-green-600' : v < 0 ? 'text-red-600' : 'text-zinc-900'}`}>
                     {hasData ? fmt(v) : ''}
@@ -448,14 +448,14 @@ const CompanySummaryCard = ({ staffList, year }) => {
     const revenueRows = staff.revenueRows || [];
 
     const totalCost = MONTHS.map((_, i) =>
-      num(staff.basicSalary[i]) +
-      num(staff.superannuation[i]) +
+      num((staff.basicSalary || [])[i]) +
+      num((staff.superannuation || [])[i]) +
       costRows.reduce((s, r) => s + num(r.values[i]), 0)
     );
 
     const totalRevenueEarnedLine = MONTHS.map((_, i) =>
-      num(staff.revenueEarned[i]) +
-      num(staff.serviceFeeRef[i]) +
+      num((staff.revenueEarned || [])[i]) +
+      num((staff.serviceFeeRef || [])[i]) +
       revenueRows.reduce((s, r) => s + num(r.values[i]), 0)
     );
 
@@ -464,8 +464,8 @@ const CompanySummaryCard = ({ staffList, year }) => {
 
     for (let i = 0; i < 12; i++) {
       aggCost[i] += totalCost[i];
-      aggRevenueEarned[i] += num(staff.revenueEarned[i]);
-      aggServiceFee[i] += num(staff.serviceFeeRef[i]);
+      aggRevenueEarned[i] += num((staff.revenueEarned || [])[i]);
+      aggServiceFee[i] += num((staff.serviceFeeRef || [])[i]);
       aggTotalRevenueEarnedLine[i] += totalRevenueEarnedLine[i];
       aggSurplus[i] += surplus[i];
       aggStudentClosed[i] += (parseInt(studentClosed[i]) || 0);

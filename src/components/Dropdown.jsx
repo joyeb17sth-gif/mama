@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 
 const Dropdown = ({
     label,
-    options,
+    options = [],
     value,
     onChange,
     placeholder = 'Select an option',

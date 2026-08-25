@@ -24,7 +24,18 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
       } catch (e) { /* ignore */ }
     };
     loadProfiles();
-  }, []);
+
+    // Global escape key handler
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
 
   const getInitialPeriods = (freq) => {
     if (freq === 'Custom Date') return [{ name: 'Custom Schedule', hours: 0, pricing: 0, customDate: '', endDate: '', scopeOfWork: '' }];
@@ -359,7 +370,11 @@ const TaskManagementModal = ({ site, tasks: initialTasks, onSave, onClose }) => 
   }, [profileUsers]);
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 sm:p-8 overflow-hidden">
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 sm:p-8 overflow-hidden"
+      role="dialog"
+      aria-modal="true"
+    >
       <div className="bg-white w-full max-w-5xl max-h-[95vh] rounded-xl shadow-2xl animate-fade-in-up flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center p-4 sm:p-6 border-b border-notion-warm-gray-200 bg-notion-warm-white rounded-t-xl shrink-0">

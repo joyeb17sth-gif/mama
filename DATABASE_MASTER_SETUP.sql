@@ -226,3 +226,70 @@ CREATE POLICY "Public Access for scope files" ON storage.objects FOR SELECT USIN
 CREATE POLICY "Authenticated Upload for scope files" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'scope_files' AND auth.role() = 'authenticated');
 CREATE POLICY "Authenticated Update for scope files" ON storage.objects FOR UPDATE USING (bucket_id = 'scope_files' AND auth.role() = 'authenticated');
 CREATE POLICY "Authenticated Delete for scope files" ON storage.objects FOR DELETE USING (bucket_id = 'scope_files' AND auth.role() = 'authenticated');
+
+
+-- =========================
+-- 5. RLS SELECT HARDENING  (Audit §3.1)
+-- =========================
+-- Section 2 above creates a permissive `<t>_select_auth ... USING (true)` SELECT policy on
+-- every core table, which would let ANY authenticated account read all payroll / PII /
+-- financial rows. This section REPLACES those SELECT policies with role predicates that
+-- mirror the app's own permission model (src/App.jsx hasPermission / Layout nav):
+--   * Facilities data (sites, periodical_tasks) ....... admin, supervisor, manager
+--   * Financial / payroll / PII (all other tables) .... admin only
+--   * profiles ........................................ own row always; admin reads all
+-- INSERT/UPDATE/DELETE stay admin-only (unchanged). leads/lead_status_history keep their
+-- existing row-scoped consultant/admin(+leads_team) policies and are not touched here.
+-- (This is identical to the standalone FIX_RLS_SELECT_POLICIES.sql — keep the two in sync.)
+
+-- Role-lookup helper. SECURITY DEFINER so its read bypasses RLS: this is required, else the
+-- profiles SELECT policy below (which checks for admin) would recurse on profiles.
+CREATE OR REPLACE FUNCTION public.current_user_role()
+RETURNS text
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = ''
+AS $$
+  SELECT role FROM public.profiles WHERE id = auth.uid()
+$$;
+
+GRANT EXECUTE ON FUNCTION public.current_user_role() TO authenticated;
+
+DO $$
+DECLARE
+    t_name text;
+    admin_only text[] := ARRAY[
+        'contractors', 'timesheets', 'pay_rates', 'training_releases',
+        'audit_logs', 'payment_summaries', 'public_holidays', 'global_rates',
+        'staff_productivity_reports', 'profit_loss'
+    ];
+    facilities text[] := ARRAY['sites', 'periodical_tasks'];
+BEGIN
+    FOREACH t_name IN ARRAY admin_only LOOP
+        EXECUTE format($fmt$
+            DROP POLICY IF EXISTS %1$I ON public.%2$I;
+            CREATE POLICY %1$I ON public.%2$I
+              FOR SELECT TO authenticated
+              USING (public.current_user_role() = 'admin');
+        $fmt$, t_name || '_select_auth', t_name);
+    END LOOP;
+
+    FOREACH t_name IN ARRAY facilities LOOP
+        EXECUTE format($fmt$
+            DROP POLICY IF EXISTS %1$I ON public.%2$I;
+            CREATE POLICY %1$I ON public.%2$I
+              FOR SELECT TO authenticated
+              USING (public.current_user_role() IN ('admin', 'supervisor', 'manager'));
+        $fmt$, t_name || '_select_auth', t_name);
+    END LOOP;
+END $$;
+
+-- profiles: own row always (needed for login role resolution); admin sees all (User Management).
+DROP POLICY IF EXISTS "profiles_select" ON public.profiles;
+CREATE POLICY "profiles_select" ON public.profiles
+  FOR SELECT TO authenticated
+  USING (
+    auth.uid() = id
+    OR public.current_user_role() = 'admin'
+  );

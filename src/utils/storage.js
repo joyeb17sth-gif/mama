@@ -7,26 +7,21 @@ localforage.config({
   storeName: 'app_data'
 });
 
-export const DEFAULT_GLOBAL_RATES = { allowancePerHour: 2.80, otherPerDay: 10.00 };
-
 export const memoryCache = {
   contractors: [],
   sites: [],
   siteAllocations: [],
-  timesheets: [],
-  payRates: [],
-  trainingReleases: [],
-  auditLogs: [],
-  paymentSummaries: [],
-  publicHolidays: [],
   periodicalTasks: [],
-  globalRates: { ...DEFAULT_GLOBAL_RATES },
   profitLoss: null,
   profiles: null,
   leads: [],
   payscleep_lead_reports_v2: [],
   payscleep_lead_counselors_v3: [],
-  staffProductivityReports: []
+  staffProductivityReports: [],
+  branchPerformance: [],
+  sydneySalesSummary: [],
+  branchPerformanceConfig: null,
+  sydneySalesConfig: null
 };
 
 export const syncMetadata = {};
@@ -205,58 +200,6 @@ export const getSites = () => memoryCache.sites;
 // --- SITE ALLOCATIONS ---
 export const getSiteAllocations = () => memoryCache.siteAllocations;
 
-// --- TIMESHEETS ---
-export const saveTimesheets = async (timesheets) => {
-  memoryCache.timesheets = timesheets;
-  await localforage.setItem('timesheets', encryptData(timesheets));
-  await saveToCloud('timesheets', 'main_list', timesheets);
-};
-export const getTimesheetsAsync = () => getSingleFromCloud('timesheets', 'main_list');
-export const getTimesheets = () => memoryCache.timesheets;
-
-// --- PAY RATES ---
-export const savePayRates = async (rates) => {
-  memoryCache.payRates = rates;
-  await localforage.setItem('payRates', encryptData(rates));
-  await saveToCloud('pay_rates', 'main_list', rates);
-};
-export const getPayRatesAsync = () => getSingleFromCloud('pay_rates', 'main_list');
-export const getPayRates = () => memoryCache.payRates;
-
-// --- TRAINING RELEASES ---
-export const saveTrainingReleases = async (releases) => {
-  memoryCache.trainingReleases = releases;
-  await localforage.setItem('trainingReleases', encryptData(releases));
-  await saveToCloud('training_releases', 'main_list', releases);
-};
-export const getTrainingReleasesAsync = () => getSingleFromCloud('training_releases', 'main_list');
-export const getTrainingReleases = () => memoryCache.trainingReleases;
-
-// --- AUDIT LOGS ---
-export const saveAuditLogs = async (logs) => {
-  // Audit logging removed to minimize Supabase egress
-};
-export const getAuditLogsAsync = () => Promise.resolve(undefined);
-export const getAuditLogs = () => [];
-
-// --- PAYMENT SUMMARIES ---
-export const savePaymentSummaries = async (summaries) => {
-  memoryCache.paymentSummaries = summaries;
-  await localforage.setItem('paymentSummaries', encryptData(summaries));
-  await saveToCloud('payment_summaries', 'main_list', summaries);
-};
-export const getPaymentSummariesAsync = () => getSingleFromCloud('payment_summaries', 'main_list');
-export const getPaymentSummaries = () => memoryCache.paymentSummaries;
-
-// --- PUBLIC HOLIDAYS ---
-export const savePublicHolidays = async (holidays) => {
-  memoryCache.publicHolidays = holidays;
-  await localforage.setItem('publicHolidays', encryptData(holidays));
-  await saveToCloud('public_holidays', 'main_list', holidays);
-};
-export const getPublicHolidaysAsync = () => getSingleFromCloud('public_holidays', 'main_list');
-export const getPublicHolidays = () => memoryCache.publicHolidays;
-
 // --- STAFF PRODUCTIVITY REPORTS ---
 export const saveStaffProductivityReports = async (reports) => {
   memoryCache.staffProductivityReports = reports;
@@ -274,15 +217,6 @@ export const savePeriodicalTasks = async (tasks) => {
 };
 export const getPeriodicalTasksAsync = () => getSingleFromCloud('periodical_tasks', 'main_list');
 export const getPeriodicalTasks = () => memoryCache.periodicalTasks;
-
-// --- GLOBAL RATES (Allowance per hour, Other per day) ---
-export const saveGlobalRates = async (rates) => {
-  memoryCache.globalRates = rates;
-  await localforage.setItem('globalRates', encryptData(rates));
-  await saveToCloud('global_rates', 'main_list', rates);
-};
-export const getGlobalRatesAsync = () => getSingleFromCloud('global_rates', 'main_list');
-export const getGlobalRates = () => ({ ...DEFAULT_GLOBAL_RATES, ...(memoryCache.globalRates || {}) });
 
 // --- PROFIT & LOSS (Multi-Company) ---
 // Data shape: { version: 2, profiles: [...], companies: { companyId: [...periods] } }
@@ -364,9 +298,9 @@ export const saveLeads = async (leads) => {
     if (!session) return;
     const userId = session.user.id;
     
-    // Check if user is Admin
+    // Check if user is Admin or Leads Team
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single();
-    const isAdmin = profile?.role === 'admin';
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'leads_team';
     
     if (isAdmin) {
       // Group leads by consultantId (fallback to admin's ID if unassigned)
@@ -377,14 +311,17 @@ export const saveLeads = async (leads) => {
         return acc;
       }, {});
       
-      // Save each group to its respective row
-      for (const cid in grouped) {
-        await saveToCloud('leads', 'user_' + cid, grouped[cid], cid);
-      }
+      // Save every group. saveToCloud resolves false (it never throws) and surfaces its
+      // own error on failure, so run the groups concurrently and let every group be
+      // attempted even if one fails — no early-abort partial write (§4.6).
+      const results = await Promise.all(
+        Object.keys(grouped).map(cid => saveToCloud('leads', 'user_' + cid, grouped[cid], cid))
+      );
+      return results.every(Boolean);
     } else {
       // Consultant: force all leads to belong to them and save to their row
       const myLeads = leads.map(l => ({ ...l, consultantId: userId }));
-      await saveToCloud('leads', 'user_' + userId, myLeads, userId);
+      return await saveToCloud('leads', 'user_' + userId, myLeads, userId);
     }
   } catch (err) {
     if (import.meta.env.DEV) console.error("Error saving leads to cloud:", err);
@@ -398,13 +335,21 @@ export const getLeadsAsync = async () => {
     if (!session) return null;
     const userId = session.user.id;
     
-    // Check if user is Admin
+    // Check if user is Admin or Leads Team
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single();
-    const isAdmin = profile?.role === 'admin';
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'leads_team';
     
     if (isAdmin) {
-      // Fetch all rows for Admin
-      const { data, error } = await supabase.from('leads').select('data, consultant_id');
+      // Fetch all genuine lead rows for Admin / Leads Team.
+      // IMPORTANT: the `leads` table is a shared blob store — it ALSO holds non-lead
+      // datasets under fixed ids (payscleep_lead_reports_v2, payscleep_lead_counselors_v3,
+      // branchPerformance_v1, sydneySalesSummary_v1, *_config_v1). Genuine per-consultant
+      // lead rows are always keyed 'user_<uuid>', so restrict the read to those; otherwise
+      // those other arrays get flattened into the lead list and corrupt admin analytics (§4.1).
+      const { data, error } = await supabase
+        .from('leads')
+        .select('data, consultant_id')
+        .like('id', 'user_%');
       if (error) return null;
       
       let allLeads = [];
@@ -437,7 +382,15 @@ export const getLeads = () => memoryCache.leads;
 export const saveLeadReports = async (reports) => {
   memoryCache.payscleep_lead_reports_v2 = reports;
   await localforage.setItem('payscleep_lead_reports_v2', encryptData(reports));
-  await saveToCloud('leads', 'payscleep_lead_reports_v2', reports);
+  
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    await saveToCloud('leads', 'payscleep_lead_reports_v2', reports, userId);
+  } catch (err) {
+    if (import.meta.env.DEV) console.error("Error saving lead reports to cloud:", err);
+    if (_onSaveError) _onSaveError('Failed to sync data to cloud. Changes saved locally.');
+  }
 };
 export const getLeadReportsAsync = () => getSingleFromCloud('leads', 'payscleep_lead_reports_v2');
 export const getLeadReports = () => memoryCache.payscleep_lead_reports_v2 || [];
@@ -446,16 +399,20 @@ export const getLeadReports = () => memoryCache.payscleep_lead_reports_v2 || [];
 export const saveLeadCounselors = async (counselors) => {
   memoryCache.payscleep_lead_counselors_v3 = counselors;
   await localforage.setItem('payscleep_lead_counselors_v3', encryptData(counselors));
-  await saveToCloud('leads', 'payscleep_lead_counselors_v3', counselors);
+  
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    await saveToCloud('leads', 'payscleep_lead_counselors_v3', counselors, userId);
+  } catch (err) {
+    if (import.meta.env.DEV) console.error("Error saving lead counselors to cloud:", err);
+    if (_onSaveError) _onSaveError('Failed to sync data to cloud. Changes saved locally.');
+  }
 };
 export const getLeadCounselorsAsync = () => getSingleFromCloud('leads', 'payscleep_lead_counselors_v3');
 export const getLeadCounselors = () => memoryCache.payscleep_lead_counselors_v3 || [];
 
 
-// --- ACTIONS LOGGING ---
-export const logAction = async (action, details, user = null) => {
-  // Audit logging removed completely to eliminate Supabase egress/storage usage
-};
 
 // --- PROFILES CACHE & FETCH ---
 export const getProfilesAsync = async (forceRefresh = false) => {
@@ -485,3 +442,64 @@ export const clearSyncTimestamps = async () => {
   Object.keys(syncMetadata).forEach(key => delete syncMetadata[key]);
   await localforage.removeItem('sync_metadata');
 };
+
+// --- BRANCH PERFORMANCE ---
+export const saveBranchPerformance = async (data) => {
+  memoryCache.branchPerformance = data;
+  await localforage.setItem('branchPerformance', encryptData(data));
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    await saveToCloud('leads', 'branchPerformance_v1', data, userId);
+  } catch (err) {
+    if (import.meta.env.DEV) console.error("Error saving branch performance to cloud:", err);
+    if (_onSaveError) _onSaveError('Failed to sync data to cloud. Changes saved locally.');
+  }
+};
+export const getBranchPerformanceAsync = () => getSingleFromCloud('leads', 'branchPerformance_v1');
+export const getBranchPerformance = () => memoryCache.branchPerformance || [];
+export const saveBranchPerformanceConfig = async (data) => {
+  memoryCache.branchPerformanceConfig = data;
+  await localforage.setItem('branchPerformanceConfig', encryptData(data));
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    await saveToCloud('leads', 'branchPerformanceConfig_v1', data, userId);
+  } catch (err) {
+    if (import.meta.env.DEV) console.error("Error saving branch performance config to cloud:", err);
+    if (_onSaveError) _onSaveError('Failed to sync data to cloud. Changes saved locally.');
+  }
+};
+export const getBranchPerformanceConfigAsync = () => getSingleFromCloud('leads', 'branchPerformanceConfig_v1');
+export const getBranchPerformanceConfig = () => memoryCache.branchPerformanceConfig;
+
+// --- SYDNEY SALES SUMMARY ---
+export const saveSydneySales = async (data) => {
+  memoryCache.sydneySalesSummary = data;
+  await localforage.setItem('sydneySalesSummary', encryptData(data));
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    await saveToCloud('leads', 'sydneySalesSummary_v1', data, userId);
+  } catch (err) {
+    if (import.meta.env.DEV) console.error("Error saving sydney sales to cloud:", err);
+    if (_onSaveError) _onSaveError('Failed to sync data to cloud. Changes saved locally.');
+  }
+};
+export const getSydneySalesAsync = () => getSingleFromCloud('leads', 'sydneySalesSummary_v1');
+export const getSydneySales = () => memoryCache.sydneySalesSummary || [];
+export const saveSydneySalesConfig = async (data) => {
+  memoryCache.sydneySalesConfig = data;
+  await localforage.setItem('sydneySalesConfig', encryptData(data));
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    await saveToCloud('leads', 'sydneySalesConfig_v1', data, userId);
+  } catch (err) {
+    if (import.meta.env.DEV) console.error("Error saving sydney sales config to cloud:", err);
+    if (_onSaveError) _onSaveError('Failed to sync data to cloud. Changes saved locally.');
+  }
+};
+export const getSydneySalesConfigAsync = () => getSingleFromCloud('leads', 'sydneySalesConfig_v1');
+export const getSydneySalesConfig = () => memoryCache.sydneySalesConfig;
+
