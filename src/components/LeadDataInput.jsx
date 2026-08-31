@@ -162,6 +162,13 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
         setError(`Application outcomes (${applied} + ${waitingApp} + ${dropoutThis} = ${applied + waitingApp + dropoutThis}) must equal Total 'Yes' Conversions (${yes}).`);
         return;
       }
+
+      const payDone = parseInt(formData.paymentDone) || 0;
+      const waitPay = parseInt(formData.appWaitingPayment) || 0;
+      if ((payDone + waitPay) > applied) {
+        setError(`Payment Done (${payDone}) + Waiting on Payment (${waitPay}) = ${payDone + waitPay} cannot exceed Total Applied (${applied}).`);
+        return;
+      }
     }
 
     setError('');
