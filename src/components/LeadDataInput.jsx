@@ -27,6 +27,7 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
     appApplied: '',
     appWaitingPayment: '',
     appDroppedOut: '',
+    paymentDone: '',
     visaLodging: '',
     visaInProgress: '',
     visaGranted: '',
@@ -66,7 +67,7 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
   const blankForm = {
     totalLeads: '', sourceFacebook: '', sourceReferrals: '', sourceWebsite: '', sourceWalkIn: '',
     convYes: '', convNo: '', convDNA: '',
-    appApplied: '', appWaitingPayment: '', appDroppedOut: '',
+    appApplied: '', appWaitingPayment: '', appDroppedOut: '', paymentDone: '',
     visaLodging: '', visaInProgress: '', visaGranted: '', visaRefusal: ''
   };
 
@@ -92,6 +93,7 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
         appApplied: existing.appApplied || '',
         appWaitingPayment: existing.appWaitingPayment || '',
         appDroppedOut: existing.appDroppedOut || '',
+        paymentDone: existing.paymentDone || '',
         visaLodging: existing.visaLodging || '',
         visaInProgress: existing.visaInProgress || '',
         visaGranted: existing.visaGranted || '',
@@ -102,14 +104,6 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMonthForInput, selectedCounselorId]);
-
-  // Calculate payment done
-  const paymentDone = useMemo(() => {
-    const applied = parseInt(formData.appApplied) || 0;
-    const waiting = parseInt(formData.appWaitingPayment) || 0;
-    const dropped = parseInt(formData.appDroppedOut) || 0;
-    return Math.max(0, applied - waiting - dropped);
-  }, [formData.appApplied, formData.appWaitingPayment, formData.appDroppedOut]);
 
   // Handle Input Changes
   const handleChange = (e) => {
@@ -160,15 +154,9 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
       const waiting = parseInt(formData.appWaitingPayment) || 0;
       const dropped = parseInt(formData.appDroppedOut) || 0;
       
-      if (applied > yes) {
-        setError(`Applications (${applied}) cannot exceed 'Yes' conversions (${yes}).`);
-        return;
-      }
       
-      if ((waiting + dropped) > applied) {
-        setError(`Waiting Payment (${waiting}) + Dropped Out (${dropped}) cannot exceed Total Applications (${applied}).`);
-        return;
-      }
+      
+      
     }
 
     setError('');
@@ -187,10 +175,7 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
     const granted = parseInt(formData.visaGranted) || 0;
     const refusal = parseInt(formData.visaRefusal) || 0;
     
-    if (lodging > paymentDone) {
-      setError(`Visa Lodging (${lodging}) cannot exceed Payment Done (${paymentDone}).`);
-      return;
-    }
+    
 
     if (lodging !== (inProgress + granted + refusal)) {
       setError(`Sum of Visa outcomes (${inProgress + granted + refusal}) must equal Visa Lodging (${lodging}).`);
@@ -204,9 +189,7 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
       createdAt: new Date().toISOString(),
       counselorId: selectedCounselorId,
       month: selectedMonthForInput,
-      ...formData,
-      paymentDone
-    };
+      ...formData };
     
     if (onSaveData) {
       onSaveData(reportData);
@@ -477,10 +460,14 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
             <h3 className="text-xl font-bold text-notion-black mb-6">Application & Payment Phase</h3>
             
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
                 <label className={labelClasses}>Applied</label>
                 <input type="number" min="0" name="appApplied" value={formData.appApplied} onChange={handleChange} className={inputClasses} placeholder="0" />
+              </div>
+              <div>
+                <label className={labelClasses}>Payment Done</label>
+                <input type="number" min="0" name="paymentDone" value={formData.paymentDone} onChange={handleChange} className={inputClasses} placeholder="0" />
               </div>
               <div>
                 <label className={labelClasses}>Waiting on Payment</label>
