@@ -182,7 +182,7 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                 Lead Stage
               </th>
               
-              <th colSpan={5} className={`${groupThClass} bg-emerald-50 text-emerald-700 `}>
+              <th colSpan={4} className={`${groupThClass} bg-emerald-50 text-emerald-700 `}>
                 Application State
               </th>
               
@@ -213,8 +213,7 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
               <th rowSpan={2} className={`${thClass} align-bottom !bg-emerald-50 !text-emerald-700`}>Applied</th>
               <th rowSpan={2} className={`${thClass} align-bottom min-w-[100px] !bg-emerald-50 !text-emerald-700`}>Wait on<br/>App</th>
               <th rowSpan={2} className={`${thClass} align-bottom min-w-[110px] !bg-emerald-50 !text-emerald-700`}>Wait on<br/>Payment</th>
-              <th rowSpan={2} className={`${thClass} align-bottom min-w-[110px] !bg-emerald-50 !text-emerald-700`}>Dropout<br/>(This M)</th>
-              <th rowSpan={2} className={`${thClass} align-bottom min-w-[110px] !bg-emerald-50 !text-emerald-700`}>Dropout<br/>(Prev M)</th>
+              <th rowSpan={2} className={`${thClass} align-bottom min-w-[110px] !bg-emerald-50 !text-emerald-700`}>Dropout</th>
 
               <th rowSpan={2} className={`${thClass} align-bottom !bg-indigo-50 !text-indigo-700`}>Visa Lodge</th>
               <th rowSpan={2} className={`${thClass} align-bottom !bg-indigo-50 !text-indigo-700`}>In Process</th>
@@ -263,8 +262,7 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                 <td className={`${tdClass} font-bold text-amber-900`}>{carryoverTotals.appApplied || 0}</td>
                 <td className={`${tdClass} text-amber-700`}>{carryoverTotals.appWaitingApplication || 0}</td>
                 <td className={`${tdClass} text-amber-700`}>{carryoverTotals.appWaitingPayment || 0}</td>
-                <td className={`${tdClass} text-rose-700`}>{carryoverTotals.appDropoutThisMonth || 0}</td>
-                <td className={`${tdClass} text-rose-700`}>{carryoverTotals.appDropoutPrevMonth || 0}</td>
+                <td className={`${tdClass} text-rose-700`}>{(carryoverTotals.appDropoutThisMonth || 0) + (carryoverTotals.appDropoutPrevMonth || 0)}</td>
 
                 <td className={`${tdClass} text-zinc-700`}>{carryoverTotals.visaLodging || 0}</td>
                 <td className={`${tdClass} text-indigo-700`}>{carryoverTotals.visaInProgress || 0}</td>
@@ -319,8 +317,7 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                         <td className={`${tdClass} bg-blue-50/10`}>{d.sums.appApplied || 0}</td>
                         <td className={`${tdClass} text-amber-600 bg-blue-50/10`}>{d.sums.appWaitingApplication || 0}</td>
                         <td className={`${tdClass} text-amber-600 bg-blue-50/10`}>{d.sums.appWaitingPayment || 0}</td>
-                        <td className={`${tdClass} text-rose-600 bg-blue-50/10`}>{d.sums.appDropoutThisMonth || 0}</td>
-                        <td className={`${tdClass} text-rose-600 bg-blue-50/10`}>{d.sums.appDropoutPrevMonth || 0}</td>
+                        <td className={`${tdClass} text-rose-600 bg-blue-50/10`}>{(d.sums.appDropoutThisMonth || 0) + (d.sums.appDropoutPrevMonth || 0)}</td>
 
                         <td className={`${tdClass} text-zinc-600 bg-blue-50/10`}>{d.sums.visaLodging || 0}</td>
                         <td className={`${tdClass} text-indigo-600 bg-blue-50/10`}>{d.sums.visaInProgress || 0}</td>
@@ -361,8 +358,7 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                 <td className={footerTdClass}>{grandTotals.appApplied}</td>
                 <td className={footerTdClass}>{grandTotals.appWaitingApplication}</td>
                 <td className={footerTdClass}>{grandTotals.appWaitingPayment}</td>
-                <td className={`${footerTdClass} text-rose-900`}>{grandTotals.appDropoutThisMonth}</td>
-                <td className={`${footerTdClass} text-rose-900`}>{grandTotals.appDropoutPrevMonth}</td>
+                <td className={`${footerTdClass} text-rose-900`}>{grandTotals.appDropoutThisMonth + grandTotals.appDropoutPrevMonth}</td>
 
                 <td className={footerTdClass}>{grandTotals.visaLodging}</td>
                 <td className={footerTdClass}>{grandTotals.visaInProgress}</td>
