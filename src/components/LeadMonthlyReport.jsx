@@ -52,10 +52,10 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
     return t;
   }, [counselors, existingReports, selectedMonth]);
 
-  const thClass = "px-4 py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider text-center border-b border-zinc-200 bg-zinc-50 min-w-[80px]";
-  const tdClass = "px-4 py-3 text-sm font-medium text-center text-zinc-700 border-b border-zinc-100";
-  const branchTotalTdClass = "px-4 py-3 text-sm font-bold text-center text-zinc-800 border-b-2 border-zinc-300 bg-slate-50";
-  const footerTdClass = "px-4 py-4 text-sm font-extrabold text-center text-zinc-900 border-t-4 border-zinc-400 bg-zinc-100 uppercase tracking-wider";
+  const thClass = 'px-4 py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider text-center border-b border-zinc-100 min-w-[80px]';
+  const tdClass = 'px-4 py-3 text-sm font-medium text-center text-zinc-600 border-b border-zinc-50';
+  const branchTotalTdClass = "px-4 py-3 text-sm font-bold text-center text-zinc-700 border-b-2 border-zinc-300 bg-transparent";
+  const footerTdClass = "px-4 py-4 text-sm font-extrabold text-center text-zinc-700 border-t-4 border-zinc-400 bg-zinc-100 uppercase tracking-wider";
 
   return (
     <div>
@@ -70,7 +70,7 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
           <select
             value={filterBranch}
             onChange={e => setFilterBranch(e.target.value)}
-            className="px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm font-bold text-notion-black focus:ring-2 focus:ring-notion-blue/20 outline-none transition-all shadow-sm"
+            className="px-4 py-2 bg-transparent border border-zinc-200 rounded-lg text-sm font-bold text-notion-black focus:ring-2 focus:ring-notion-blue/20 outline-none transition-all shadow-sm"
           >
             <option value="All">All Branches</option>
             <option value="Search Australia">Search Australia</option>
@@ -82,7 +82,7 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
           <select 
             value={selectedYear}
             onChange={e => setSelectedYear(e.target.value)}
-            className="px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm font-bold text-notion-black focus:ring-2 focus:ring-notion-blue/20 outline-none transition-all shadow-sm"
+            className="px-4 py-2 bg-transparent border border-zinc-200 rounded-lg text-sm font-bold text-notion-black focus:ring-2 focus:ring-notion-blue/20 outline-none transition-all shadow-sm"
           >
             {[...Array(5)].map((_, i) => {
               const yr = parseInt(currentYear) - i;
@@ -94,9 +94,9 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
           <select 
             value={selectedMonthStr}
             onChange={e => setSelectedMonthStr(e.target.value)}
-            className="px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm font-bold text-notion-black focus:ring-2 focus:ring-notion-blue/20 outline-none transition-all shadow-sm"
+            className="px-4 py-2 bg-transparent border border-zinc-200 rounded-lg text-sm font-bold text-notion-black focus:ring-2 focus:ring-notion-blue/20 outline-none transition-all shadow-sm"
           >
-            <option value="carryover" className="text-amber-700 font-bold">Carryover from {parseInt(selectedYear) - 1}</option>
+            <option value="carryover" className="text-zinc-500 font-bold">Carryover from {parseInt(selectedYear) - 1}</option>
             {monthNames.map((m, i) => (
               <option key={i} value={String(i + 1).padStart(2, '0')}>{m}</option>
             ))}
@@ -108,25 +108,25 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
         <table className="w-full text-left border-collapse min-w-[800px]">
           <thead>
             <tr>
-              <th rowSpan={2} className={`${thClass} min-w-[150px] align-bottom !bg-blue-50 !text-blue-700`}>
+              <th rowSpan={2} className={`${thClass} min-w-[150px] align-bottom bg-transparent text-zinc-500`}>
                 Counselor
               </th>
               <th 
                 colSpan={isLeadSourceExpanded ? 5 : 1} 
-                className={`${thClass} text-center border-l-2 border-l-zinc-300 relative group cursor-pointer hover:bg-orange-100 transition-colors !bg-orange-50 !text-orange-700`}
+                className={`${thClass} text-center   relative group cursor-pointer hover:bg-orange-100 transition-colors bg-transparent text-zinc-500`}
                 onClick={() => setIsLeadSourceExpanded(!isLeadSourceExpanded)}
               >
                 <div className="flex items-center justify-center gap-2">
                   <span>Lead Source</span>
                   <div className={`p-1 rounded-md bg-orange-100 border border-orange-200 shadow-sm transition-transform ${isLeadSourceExpanded ? 'rotate-180' : ''}`}>
-                    <svg className="w-3 h-3 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
+                    <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
                   </div>
                 </div>
               </th>
-              <th colSpan={3} className={`${thClass} text-center border-l-2 border-l-zinc-300 !bg-emerald-50 !text-emerald-700`}>
+              <th colSpan={3} className={`${thClass} text-center   bg-transparent text-zinc-500`}>
                 Conversions
               </th>
-              <th rowSpan={2} className={`${thClass} border-l-2 border-l-zinc-300 align-bottom`}>
+              <th rowSpan={2} className={`${thClass}   align-bottom`}>
                 Application
               </th>
               <th rowSpan={2} className={`${thClass} align-bottom`}>
@@ -145,17 +145,17 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
             <tr>
               {isLeadSourceExpanded && (
                 <>
-                  <th className={`${thClass} border-l-2 border-l-zinc-300 !bg-orange-50 !text-orange-700`}>Facebook</th>
-                  <th className={`${thClass} !bg-orange-50 !text-orange-700`}>Referral</th>
-                  <th className={`${thClass} !bg-orange-50 !text-orange-700`}>Website</th>
-                  <th className={`${thClass} !bg-orange-50 !text-orange-700`}>Walk-in</th>
+                  <th className={`${thClass}   bg-transparent text-zinc-500`}>Facebook</th>
+                  <th className={`${thClass} bg-transparent text-zinc-500`}>Referral</th>
+                  <th className={`${thClass} bg-transparent text-zinc-500`}>Website</th>
+                  <th className={`${thClass} bg-transparent text-zinc-500`}>Walk-in</th>
                 </>
               )}
-              <th className={`${thClass} ${!isLeadSourceExpanded ? 'border-l-2 border-l-zinc-300' : ''} !bg-orange-50 !text-orange-700`}>Total</th>
+              <th className={`${thClass} ${!isLeadSourceExpanded ? ' ' : ''} bg-transparent text-zinc-500`}>Total</th>
               
-              <th className={`${thClass} border-l-2 border-l-zinc-300 !bg-emerald-50 !text-emerald-700`}>Yes</th>
-              <th className={`${thClass} !bg-emerald-50 !text-emerald-700`}>No</th>
-              <th className={`${thClass} !bg-emerald-50 !text-emerald-700`}>DNA</th>
+              <th className={`${thClass}   bg-transparent text-zinc-500`}>Yes</th>
+              <th className={`${thClass} bg-transparent text-zinc-500`}>No</th>
+              <th className={`${thClass} bg-transparent text-zinc-500`}>DNA</th>
             </tr>
           </thead>
           <tbody>
@@ -175,7 +175,7 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
                 return (
                   <React.Fragment key={branch}>
                     <tr>
-                      <td colSpan={isLeadSourceExpanded ? 12 : 8} className="px-4 py-2 bg-zinc-100 text-xs font-extrabold text-zinc-600 uppercase tracking-wider text-left border-b border-zinc-200">
+                      <td colSpan={isLeadSourceExpanded ? 12 : 8} className="px-4 py-2 bg-zinc-100 text-xs font-extrabold text-zinc-500 uppercase tracking-wider text-left border-b border-zinc-200">
                         {branch}
                       </td>
                     </tr>
@@ -197,86 +197,30 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
                           
                           {isLeadSourceExpanded && (
                             <>
-                              <td className={`${tdClass} border-l-2 border-l-zinc-200 text-zinc-600`}>{renderCell('sourceFacebook', report.sourceFacebook)}</td>
-                              <td className={`${tdClass} text-zinc-600`}>{renderCell('sourceReferrals', report.sourceReferrals)}</td>
-                              <td className={`${tdClass} text-zinc-600`}>{renderCell('sourceWebsite', report.sourceWebsite)}</td>
-                              <td className={`${tdClass} text-zinc-600`}>{renderCell('sourceWalkIn', report.sourceWalkIn)}</td>
+                              <td className={`${tdClass}   text-zinc-500`}>{renderCell('sourceFacebook', report.sourceFacebook)}</td>
+                              <td className={`${tdClass} text-zinc-500`}>{renderCell('sourceReferrals', report.sourceReferrals)}</td>
+                              <td className={`${tdClass} text-zinc-500`}>{renderCell('sourceWebsite', report.sourceWebsite)}</td>
+                              <td className={`${tdClass} text-zinc-500`}>{renderCell('sourceWalkIn', report.sourceWalkIn)}</td>
                             </>
                           )}
                           
-                          <td className={`${tdClass} font-extrabold ${!isLeadSourceExpanded ? 'border-l-2 border-l-zinc-200' : ''} bg-zinc-50/50 group-hover:bg-transparent`}>
+                          <td className={`${tdClass} font-extrabold ${!isLeadSourceExpanded ? ' ' : ''} bg-transparent group-hover:bg-transparent`}>
                             {renderCell('totalLeads', report.totalLeads)}
                           </td>
                           
-                          <td className={`${tdClass} border-l-2 border-l-zinc-200 text-emerald-600`}>{renderCell('convYes', report.convYes)}</td>
-                          <td className={`${tdClass} text-rose-600`}>{renderCell('convNo', report.convNo)}</td>
+                          <td className={`${tdClass}   text-zinc-500`}>{renderCell('convYes', report.convYes)}</td>
+                          <td className={`${tdClass} text-zinc-500`}>{renderCell('convNo', report.convNo)}</td>
                           <td className={`${tdClass} text-zinc-400`}>{renderCell('convDNA', report.convDNA)}</td>
                           
-                          <td className={`${tdClass} border-l-2 border-l-zinc-200`}>{renderCell('appApplied', report.appApplied)}</td>
-                          <td className={`${tdClass} ${appRate >= 50 ? 'text-emerald-600' : appRate > 0 ? 'text-amber-600' : 'text-zinc-300'}`}>{appRate > 0 ? `${appRate}%` : '-'}</td>
-                          <td className={`${tdClass} text-emerald-600`}>{renderCell('paymentDone', report.paymentDone)}</td>
+                          <td className={`${tdClass}  `}>{renderCell('appApplied', report.appApplied)}</td>
+                          <td className={`${tdClass} ${appRate >= 50 ? 'text-zinc-500' : appRate > 0 ? 'text-zinc-500' : 'text-zinc-300'}`}>{appRate > 0 ? `${appRate}%` : '-'}</td>
+                          <td className={`${tdClass} text-zinc-500`}>{renderCell('paymentDone', report.paymentDone)}</td>
                           <td className={`${tdClass} text-notion-blue`}>{renderCell('visaGranted', report.visaGranted)}</td>
-                          <td className={`${tdClass} ${visaRate >= 70 ? 'text-emerald-600' : visaRate > 0 ? 'text-amber-600' : 'text-zinc-300'}`}>{visaRate > 0 ? `${visaRate}%` : '-'}</td>
+                          <td className={`${tdClass} ${visaRate >= 70 ? 'text-zinc-500' : visaRate > 0 ? 'text-zinc-500' : 'text-zinc-300'}`}>{visaRate > 0 ? `${visaRate}%` : '-'}</td>
                         </tr>
                       );
                     })}
-                    {/* Branch Total Row */}
-                    {(() => {
-                      const branchTotal = branchCounselors.reduce((acc, c) => {
-                        const r = existingReports.find(rpt => rpt.month === selectedMonth && rpt.counselorId === c.id) || {};
-                        acc.sourceFacebook += parseInt(r.sourceFacebook) || 0;
-                        acc.sourceReferrals += parseInt(r.sourceReferrals) || 0;
-                        acc.sourceWebsite += parseInt(r.sourceWebsite) || 0;
-                        acc.sourceWalkIn += parseInt(r.sourceWalkIn) || 0;
-                        acc.totalLeads += parseInt(r.totalLeads) || 0;
-                        acc.convYes += parseInt(r.convYes) || 0;
-                        acc.convNo += parseInt(r.convNo) || 0;
-                        acc.convDNA += parseInt(r.convDNA) || 0;
-                        acc.appApplied += parseInt(r.appApplied) || 0;
-                        acc.paymentDone += parseInt(r.paymentDone) || 0;
-                        acc.visaLodging += parseInt(r.visaLodging) || 0;
-                        acc.visaGranted += parseInt(r.visaGranted) || 0;
-                        return acc;
-                      }, {
-                        sourceFacebook: 0, sourceReferrals: 0, sourceWebsite: 0, sourceWalkIn: 0,
-                        totalLeads: 0, convYes: 0, convNo: 0, convDNA: 0,
-                        appApplied: 0, paymentDone: 0, visaLodging: 0, visaGranted: 0
-                      });
-                      
-                      const branchAppRate = branchTotal.totalLeads > 0 ? Math.round((branchTotal.appApplied / branchTotal.totalLeads) * 100) : 0;
-                      const branchVisaRate = branchTotal.visaLodging > 0 ? Math.round((branchTotal.visaGranted / branchTotal.visaLodging) * 100) : 0;
-                      
-                      return (
-                        <tr className="bg-slate-50 border-t border-b-2 border-zinc-300">
-                          <td className={`${branchTotalTdClass} text-left uppercase tracking-wider text-slate-800`}>
-                            {branch} Total
-                          </td>
-                          
-                          {isLeadSourceExpanded && (
-                            <>
-                              <td className={`${branchTotalTdClass} border-l-2 border-l-zinc-300`}>{branchTotal.sourceFacebook}</td>
-                              <td className={branchTotalTdClass}>{branchTotal.sourceReferrals}</td>
-                              <td className={branchTotalTdClass}>{branchTotal.sourceWebsite}</td>
-                              <td className={branchTotalTdClass}>{branchTotal.sourceWalkIn}</td>
-                            </>
-                          )}
-                          
-                          <td className={`${branchTotalTdClass} ${!isLeadSourceExpanded ? 'border-l-2 border-l-zinc-300' : ''}`}>
-                            {branchTotal.totalLeads}
-                          </td>
-
-                          <td className={`${branchTotalTdClass} border-l-2 border-l-zinc-300`}>{branchTotal.convYes}</td>
-                          <td className={branchTotalTdClass}>{branchTotal.convNo}</td>
-                          <td className={branchTotalTdClass}>{branchTotal.convDNA}</td>
-
-                          <td className={branchTotalTdClass}>{branchTotal.appApplied}</td>
-                          <td className={`${branchTotalTdClass} ${branchAppRate >= 50 ? 'text-emerald-600' : branchAppRate > 0 ? 'text-amber-600' : 'text-slate-400'}`}>{branchAppRate > 0 ? `${branchAppRate}%` : '-'}</td>
-                          <td className={branchTotalTdClass}>{branchTotal.paymentDone}</td>
-                          <td className={branchTotalTdClass}>{branchTotal.visaGranted}</td>
-                          <td className={`${branchTotalTdClass} ${branchVisaRate >= 70 ? 'text-emerald-600' : branchVisaRate > 0 ? 'text-amber-600' : 'text-slate-400'}`}>{branchVisaRate > 0 ? `${branchVisaRate}%` : '-'}</td>
-                        </tr>
-                      );
-                    })()}
+                    
                   </React.Fragment>
                 );
               })
@@ -285,26 +229,26 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
             {/* Grand Totals Footer */}
             {counselors.length > 0 && filterBranch === 'All' && (
               <tr>
-                <td className={`${footerTdClass} text-left uppercase tracking-wider !border-r-zinc-300`}>
+                <td className={`${footerTdClass} text-left uppercase tracking-wider `}>
                   Grand Total
                 </td>
                 
                 {isLeadSourceExpanded && (
                   <>
-                    <td className={`${footerTdClass} border-l-2 border-l-zinc-300`}>{totals.sourceFacebook}</td>
+                    <td className={`${footerTdClass}  `}>{totals.sourceFacebook}</td>
                     <td className={footerTdClass}>{totals.sourceReferrals}</td>
                     <td className={footerTdClass}>{totals.sourceWebsite}</td>
                     <td className={footerTdClass}>{totals.sourceWalkIn}</td>
                   </>
                 )}
                 
-                <td className={`${footerTdClass} ${!isLeadSourceExpanded ? 'border-l-2 border-l-zinc-300' : ''}`}>
+                <td className={`${footerTdClass} ${!isLeadSourceExpanded ? ' ' : ''}`}>
                   {totals.totalLeads}
                 </td>
 
-                <td className={`${footerTdClass} border-l-2 border-l-zinc-300`}>{totals.convYes}</td>
+                <td className={`${footerTdClass}  `}>{totals.convYes}</td>
                 <td className={footerTdClass}>{totals.convNo}</td>
-                <td className={`${footerTdClass} !border-r-zinc-300`}>{totals.convDNA}</td>
+                <td className={`${footerTdClass} `}>{totals.convDNA}</td>
 
                 <td className={footerTdClass}>{totals.appApplied}</td>
                 <td className={`${footerTdClass} text-zinc-400`}>{totals.totalLeads > 0 ? Math.round((totals.appApplied / totals.totalLeads) * 100) + '%' : '-'}</td>
