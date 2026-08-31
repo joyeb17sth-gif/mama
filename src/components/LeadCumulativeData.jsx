@@ -174,11 +174,11 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                 Lead Stage
               </th>
               
-              <th colSpan={4} className={`${groupThClass} bg-emerald-50 text-emerald-700 `}>
+              <th colSpan={3} className={`${groupThClass} bg-emerald-50 text-emerald-700 `}>
                 Application State
               </th>
               
-              <th colSpan={5} className={`${groupThClass} bg-indigo-50 text-indigo-700`}>
+              <th colSpan={4} className={`${groupThClass} bg-indigo-50 text-indigo-700`}>
                 Visa Stage
               </th>
             </tr>
@@ -203,7 +203,7 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
               <th rowSpan={2} className={`${thClass} align-bottom  !bg-orange-50 !text-orange-700`}>DNA</th>
 
               <th rowSpan={2} className={`${thClass} align-bottom !bg-emerald-50 !text-emerald-700`}>Application</th>
-              <th rowSpan={2} className={`${thClass} align-bottom !bg-emerald-50 !text-emerald-700`}>App %</th>
+              
               <th rowSpan={2} className={`${thClass} align-bottom min-w-[110px] !bg-emerald-50 !text-emerald-700`}>Wait on<br/>Payment</th>
               <th rowSpan={2} className={`${thClass} align-bottom  min-w-[120px] !bg-emerald-50 !text-emerald-700`}>Dropout from<br/>Application</th>
 
@@ -211,7 +211,7 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
               <th rowSpan={2} className={`${thClass} align-bottom !bg-indigo-50 !text-indigo-700`}>In Process</th>
               <th rowSpan={2} className={`${thClass} align-bottom !bg-indigo-50 !text-indigo-700`}>Granted</th>
               <th rowSpan={2} className={`${thClass} align-bottom !bg-indigo-50 !text-indigo-700`}>Refusal</th>
-              <th rowSpan={2} className={`${thClass} align-bottom !bg-indigo-50 !text-indigo-700`}>Visa %</th>
+              
             </tr>
             
             {/* Expansion Headers for Lead */}
@@ -251,24 +251,7 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                 <td className={`${tdClass} text-rose-700 font-bold`}>{carryoverTotals.convNo || 0}</td>
                 <td className={`${tdClass} text-zinc-500 `}>{carryoverTotals.convDNA || 0}</td>
 
-                {(() => {
-                  const appRate = carryoverTotals.totalLeads > 0 ? Math.round((carryoverTotals.appApplied / carryoverTotals.totalLeads) * 100) : 0;
-                  const visaRate = carryoverTotals.visaLodging > 0 ? Math.round((carryoverTotals.visaGranted / carryoverTotals.visaLodging) * 100) : 0;
-                  return (
-                    <>
-                      <td className={`${tdClass} font-bold text-amber-900`}>{carryoverTotals.appApplied || 0}</td>
-                      <td className={`${tdClass} ${appRate >= 50 ? 'text-emerald-600' : appRate > 0 ? 'text-amber-600' : 'text-amber-900/50'}`}>{appRate > 0 ? `${appRate}%` : '-'}</td>
-                      <td className={`${tdClass} text-amber-700`}>{carryoverTotals.appWaitingPayment || 0}</td>
-                      <td className={`${tdClass} text-rose-700 `}>{carryoverTotals.appDroppedOut || 0}</td>
-
-                      <td className={`${tdClass} text-zinc-700`}>{carryoverTotals.visaLodging || 0}</td>
-                      <td className={`${tdClass} text-indigo-700`}>{carryoverTotals.visaInProgress || 0}</td>
-                      <td className={`${tdClass} text-emerald-700 font-bold`}>{carryoverTotals.visaGranted || 0}</td>
-                      <td className={`${tdClass} text-rose-700`}>{carryoverTotals.visaRefusal || 0}</td>
-                      <td className={`${tdClass} ${visaRate >= 70 ? 'text-emerald-600' : visaRate > 0 ? 'text-amber-600' : 'text-amber-900/50'}`}>{visaRate > 0 ? `${visaRate}%` : '-'}</td>
-                    </>
-                  );
-                })()}
+                
               </tr>
             )}
             
@@ -316,10 +299,6 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                         <td className={`${tdClass} text-zinc-400 bg-blue-50/10 `}>{d.sums.convDNA || 0}</td>
 
                         <td className={`${tdClass} bg-blue-50/10`}>{d.sums.appApplied || 0}</td>
-                        {(() => {
-                          const appRate = d.sums.totalLeads > 0 ? Math.round((d.sums.appApplied / d.sums.totalLeads) * 100) : 0;
-                          return <td className={`${tdClass} bg-blue-50/10 ${appRate >= 50 ? 'text-emerald-600' : appRate > 0 ? 'text-amber-600' : 'text-zinc-300'}`}>{appRate > 0 ? `${appRate}%` : '-'}</td>;
-                        })()}
                         <td className={`${tdClass} text-amber-600 bg-blue-50/10`}>{d.sums.appWaitingPayment || 0}</td>
                         <td className={`${tdClass} text-rose-600 bg-blue-50/10 `}>{d.sums.appDroppedOut || 0}</td>
 
@@ -327,10 +306,6 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                         <td className={`${tdClass} text-indigo-600 bg-blue-50/10`}>{d.sums.visaInProgress || 0}</td>
                         <td className={`${tdClass} text-emerald-600 bg-blue-50/10 font-bold`}>{d.sums.visaGranted || 0}</td>
                         <td className={`${tdClass} text-rose-600 bg-blue-50/10`}>{d.sums.visaRefusal || 0}</td>
-                        {(() => {
-                          const visaRate = d.sums.visaLodging > 0 ? Math.round((d.sums.visaGranted / d.sums.visaLodging) * 100) : 0;
-                          return <td className={`${tdClass} bg-blue-50/10 ${visaRate >= 70 ? 'text-emerald-600' : visaRate > 0 ? 'text-amber-600' : 'text-zinc-300'}`}>{visaRate > 0 ? `${visaRate}%` : '-'}</td>;
-                        })()}
                       </tr>
                     ))}
                     
@@ -364,7 +339,7 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                 <td className={`${footerTdClass} `}>{grandTotals.convDNA}</td>
 
                 <td className={footerTdClass}>{grandTotals.appApplied}</td>
-                <td className={`${footerTdClass} text-zinc-400`}>{grandTotals.totalLeads > 0 ? Math.round((grandTotals.appApplied / grandTotals.totalLeads) * 100) + '%' : '-'}</td>
+                
                 <td className={footerTdClass}>{grandTotals.appWaitingPayment}</td>
                 <td className={`${footerTdClass} `}>{grandTotals.appDroppedOut}</td>
 
@@ -372,7 +347,7 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                 <td className={footerTdClass}>{grandTotals.visaInProgress}</td>
                 <td className={footerTdClass}>{grandTotals.visaGranted}</td>
                 <td className={footerTdClass}>{grandTotals.visaRefusal}</td>
-                <td className={`${footerTdClass} text-zinc-400`}>{grandTotals.visaLodging > 0 ? Math.round((grandTotals.visaGranted / grandTotals.visaLodging) * 100) + '%' : '-'}</td>
+                
               </tr>
             )}
           </tbody>

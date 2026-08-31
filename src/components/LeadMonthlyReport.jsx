@@ -129,18 +129,14 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
               <th rowSpan={2} className={`${thClass}   align-bottom`}>
                 Application
               </th>
-              <th rowSpan={2} className={`${thClass} align-bottom`}>
-                App %
-              </th>
+              
               <th rowSpan={2} className={`${thClass} align-bottom`}>
                 Payment
               </th>
               <th rowSpan={2} className={`${thClass} align-bottom`}>
                 Visa Granted
               </th>
-              <th rowSpan={2} className={`${thClass} align-bottom`}>
-                Visa %
-              </th>
+              
             </tr>
             <tr>
               {isLeadSourceExpanded && (
@@ -182,9 +178,7 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
                     {branchCounselors.map(c => {
                       const report = existingReports.find(r => r.month === selectedMonth && r.counselorId === c.id) || {};
                       
-                      const appRate = report.totalLeads > 0 ? Math.round(((report.appApplied || 0) / report.totalLeads) * 100) : 0;
-                      const visaRate = report.visaLodging > 0 ? Math.round(((report.visaGranted || 0) / report.visaLodging) * 100) : 0;
-
+                                            
                       const renderCell = (field, value, fallback = '-') => {
                         return value !== undefined && value !== null ? value : fallback;
                       };
@@ -211,12 +205,9 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
                           <td className={`${tdClass}   text-emerald-600`}>{renderCell('convYes', report.convYes)}</td>
                           <td className={`${tdClass} text-rose-600`}>{renderCell('convNo', report.convNo)}</td>
                           <td className={`${tdClass} text-zinc-400`}>{renderCell('convDNA', report.convDNA)}</td>
-                          
                           <td className={`${tdClass}  `}>{renderCell('appApplied', report.appApplied)}</td>
-                          <td className={`${tdClass} ${appRate >= 50 ? 'text-emerald-600' : appRate > 0 ? 'text-amber-600' : 'text-zinc-300'}`}>{appRate > 0 ? `${appRate}%` : '-'}</td>
                           <td className={`${tdClass} text-emerald-600`}>{renderCell('paymentDone', report.paymentDone)}</td>
                           <td className={`${tdClass} text-notion-blue`}>{renderCell('visaGranted', report.visaGranted)}</td>
-                          <td className={`${tdClass} ${visaRate >= 70 ? 'text-emerald-600' : visaRate > 0 ? 'text-amber-600' : 'text-zinc-300'}`}>{visaRate > 0 ? `${visaRate}%` : '-'}</td>
                         </tr>
                       );
                     })}
@@ -251,10 +242,10 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
                 <td className={`${footerTdClass} `}>{totals.convDNA}</td>
 
                 <td className={footerTdClass}>{totals.appApplied}</td>
-                <td className={`${footerTdClass} text-zinc-400`}>{totals.totalLeads > 0 ? Math.round((totals.appApplied / totals.totalLeads) * 100) + '%' : '-'}</td>
+                
                 <td className={footerTdClass}>{totals.paymentDone}</td>
                 <td className={footerTdClass}>{totals.visaGranted}</td>
-                <td className={`${footerTdClass} text-zinc-400`}>{totals.visaLodging > 0 ? Math.round((totals.visaGranted / totals.visaLodging) * 100) + '%' : '-'}</td>
+                
               </tr>
             )}
           </tbody>
