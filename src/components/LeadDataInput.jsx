@@ -478,16 +478,6 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
                 <input type="number" min="0" name="appDroppedOut" value={formData.appDroppedOut} onChange={handleChange} className={inputClasses} placeholder="0" />
               </div>
             </div>
-
-            <div className="mt-8 p-5 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100 flex items-center justify-between">
-              <div>
-                <h4 className="text-sm font-bold text-emerald-800">Payment Done</h4>
-                <p className="text-xs text-emerald-600 mt-1">Automatically calculated (Applied - Waiting - Dropped)</p>
-              </div>
-              <div className="text-3xl font-extrabold text-emerald-600">
-                {paymentDone}
-              </div>
-            </div>
           </div>
         )}
 
