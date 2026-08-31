@@ -119,11 +119,11 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
     return t;
   }, [counselorData]);
 
-  const groupThClass = 'px-4 py-2 text-xs font-extrabold uppercase tracking-widest text-center border-b-2 border-zinc-100 text-zinc-800';
-  const thClass = 'px-4 py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider text-center border-b border-zinc-100 min-w-[80px]';
-  const tdClass = 'px-4 py-3 text-sm font-medium text-center text-zinc-600 border-b border-zinc-50';
-  const branchTotalTdClass = "px-4 py-3 text-sm font-bold text-center text-zinc-700 border-b-2 border-zinc-300 bg-transparent";
-  const footerTdClass = "px-4 py-3 text-sm font-extrabold text-center text-zinc-700 border-t-4 border-zinc-400 bg-zinc-100";
+  const groupThClass = "px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-center border-b-2 border-zinc-300";
+  const thClass = "px-4 py-3 text-xs font-bold text-zinc-500 uppercase tracking-wider text-center border-b border-zinc-200 bg-zinc-50 min-w-[80px]";
+  const tdClass = "px-4 py-3 text-sm font-medium text-center text-zinc-700 border-b border-zinc-100";
+  const branchTotalTdClass = "px-4 py-3 text-sm font-bold text-center text-zinc-800 border-b-2 border-zinc-300 bg-slate-50";
+  const footerTdClass = "px-4 py-3 text-sm font-extrabold text-center text-zinc-900 border-t-4 border-zinc-400 bg-zinc-100";
 
   return (
     <div>
@@ -138,7 +138,7 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
           <select
             value={filterYear}
             onChange={e => setFilterYear(e.target.value)}
-            className="px-4 py-2 bg-transparent border border-zinc-200 rounded-lg text-sm font-bold text-notion-black focus:ring-2 focus:ring-notion-blue/20 outline-none transition-all shadow-sm"
+            className="px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm font-bold text-notion-black focus:ring-2 focus:ring-notion-blue/20 outline-none transition-all shadow-sm"
           >
             <option value="All">All Time</option>
             {[...Array(5)].map((_, i) => {
@@ -151,7 +151,7 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
           <select
             value={filterBranch}
             onChange={e => setFilterBranch(e.target.value)}
-            className="px-4 py-2 bg-transparent border border-zinc-200 rounded-lg text-sm font-bold text-notion-black focus:ring-2 focus:ring-notion-blue/20 outline-none transition-all shadow-sm"
+            className="px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm font-bold text-notion-black focus:ring-2 focus:ring-notion-blue/20 outline-none transition-all shadow-sm"
           >
             <option value="All">All Branches</option>
             <option value="Search Australia">Search Australia</option>
@@ -166,19 +166,19 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
           <thead>
             {/* Stage Grouping Headers */}
             <tr>
-              <th rowSpan={3} className={`${thClass} min-w-[150px] align-bottom text-left bg-transparent text-zinc-500 `}>
+              <th rowSpan={3} className={`${thClass} min-w-[150px] align-bottom text-left !bg-blue-50 !text-blue-700 `}>
                 Counselor
               </th>
               
-              <th colSpan={isLeadSourceExpanded ? 8 : 4} className={`${groupThClass} bg-transparent text-zinc-500 `}>
+              <th colSpan={isLeadSourceExpanded ? 8 : 4} className={`${groupThClass} bg-orange-50 text-orange-700 `}>
                 Lead Stage
               </th>
               
-              <th colSpan={4} className={`${groupThClass} bg-transparent text-zinc-500 `}>
+              <th colSpan={4} className={`${groupThClass} bg-emerald-50 text-emerald-700 `}>
                 Application State
               </th>
               
-              <th colSpan={5} className={`${groupThClass} bg-transparent text-zinc-500`}>
+              <th colSpan={5} className={`${groupThClass} bg-indigo-50 text-indigo-700`}>
                 Visa Stage
               </th>
             </tr>
@@ -187,68 +187,68 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
             <tr>
               <th 
                 colSpan={isLeadSourceExpanded ? 5 : 1} 
-                className={`${thClass}   relative group cursor-pointer hover:bg-orange-100 transition-colors align-middle bg-transparent text-zinc-500`}
+                className={`${thClass}   relative group cursor-pointer hover:bg-orange-100 transition-colors align-middle !bg-orange-50 !text-orange-700`}
                 onClick={() => setIsLeadSourceExpanded(!isLeadSourceExpanded)}
               >
                 <div className="flex items-center justify-center gap-2">
                   <span>Lead</span>
                   <div className={`p-1 rounded-md bg-orange-100 border border-orange-200 shadow-sm transition-transform ${isLeadSourceExpanded ? 'rotate-180' : ''}`}>
-                    <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
+                    <svg className="w-3 h-3 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
                   </div>
                 </div>
               </th>
               
-              <th rowSpan={2} className={`${thClass}   align-bottom bg-transparent text-zinc-500`}>Yes</th>
-              <th rowSpan={2} className={`${thClass} align-bottom bg-transparent text-zinc-500`}>No</th>
-              <th rowSpan={2} className={`${thClass} align-bottom  bg-transparent text-zinc-500`}>DNA</th>
+              <th rowSpan={2} className={`${thClass}   align-bottom !bg-orange-50 !text-orange-700`}>Yes</th>
+              <th rowSpan={2} className={`${thClass} align-bottom !bg-orange-50 !text-orange-700`}>No</th>
+              <th rowSpan={2} className={`${thClass} align-bottom  !bg-orange-50 !text-orange-700`}>DNA</th>
 
-              <th rowSpan={2} className={`${thClass} align-bottom bg-transparent text-zinc-500`}>Application</th>
-              <th rowSpan={2} className={`${thClass} align-bottom bg-transparent text-zinc-500`}>App %</th>
-              <th rowSpan={2} className={`${thClass} align-bottom min-w-[110px] bg-transparent text-zinc-500`}>Wait on<br/>Payment</th>
-              <th rowSpan={2} className={`${thClass} align-bottom  min-w-[120px] bg-transparent text-zinc-500`}>Dropout from<br/>Application</th>
+              <th rowSpan={2} className={`${thClass} align-bottom !bg-emerald-50 !text-emerald-700`}>Application</th>
+              <th rowSpan={2} className={`${thClass} align-bottom !bg-emerald-50 !text-emerald-700`}>App %</th>
+              <th rowSpan={2} className={`${thClass} align-bottom min-w-[110px] !bg-emerald-50 !text-emerald-700`}>Wait on<br/>Payment</th>
+              <th rowSpan={2} className={`${thClass} align-bottom  min-w-[120px] !bg-emerald-50 !text-emerald-700`}>Dropout from<br/>Application</th>
 
-              <th rowSpan={2} className={`${thClass} align-bottom bg-transparent text-zinc-500`}>Visa Lodge</th>
-              <th rowSpan={2} className={`${thClass} align-bottom bg-transparent text-zinc-500`}>In Process</th>
-              <th rowSpan={2} className={`${thClass} align-bottom bg-transparent text-zinc-500`}>Granted</th>
-              <th rowSpan={2} className={`${thClass} align-bottom bg-transparent text-zinc-500`}>Refusal</th>
-              <th rowSpan={2} className={`${thClass} align-bottom bg-transparent text-zinc-500`}>Visa %</th>
+              <th rowSpan={2} className={`${thClass} align-bottom !bg-indigo-50 !text-indigo-700`}>Visa Lodge</th>
+              <th rowSpan={2} className={`${thClass} align-bottom !bg-indigo-50 !text-indigo-700`}>In Process</th>
+              <th rowSpan={2} className={`${thClass} align-bottom !bg-indigo-50 !text-indigo-700`}>Granted</th>
+              <th rowSpan={2} className={`${thClass} align-bottom !bg-indigo-50 !text-indigo-700`}>Refusal</th>
+              <th rowSpan={2} className={`${thClass} align-bottom !bg-indigo-50 !text-indigo-700`}>Visa %</th>
             </tr>
             
             {/* Expansion Headers for Lead */}
             <tr>
               {isLeadSourceExpanded && (
                 <>
-                  <th className={`${thClass}   bg-transparent text-zinc-500`}>Facebook</th>
-                  <th className={`${thClass} bg-transparent text-zinc-500`}>Referral</th>
-                  <th className={`${thClass} bg-transparent text-zinc-500`}>Website</th>
-                  <th className={`${thClass} min-w-[90px] bg-transparent text-zinc-500`}>Walk-in</th>
+                  <th className={`${thClass}   !bg-orange-50 !text-orange-700`}>Facebook</th>
+                  <th className={`${thClass} !bg-orange-50 !text-orange-700`}>Referral</th>
+                  <th className={`${thClass} !bg-orange-50 !text-orange-700`}>Website</th>
+                  <th className={`${thClass} min-w-[90px] !bg-orange-50 !text-orange-700`}>Walk-in</th>
                 </>
               )}
-              <th className={`${thClass} ${!isLeadSourceExpanded ? ' ' : ''} bg-transparent text-zinc-500`}>Total</th>
+              <th className={`${thClass} ${!isLeadSourceExpanded ? ' ' : ''} !bg-orange-50 !text-orange-700`}>Total</th>
             </tr>
           </thead>
           <tbody>
             {filterYear !== 'All' && carryoverTotals.hasData && (
-              <tr className="bg-transparent/60 hover:bg-amber-100 transition-colors group border-b-2 border-amber-200">
-                <td className={`${tdClass} text-left font-extrabold text-zinc-700 `}>
+              <tr className="bg-amber-50/60 hover:bg-amber-100 transition-colors group border-b-2 border-amber-200">
+                <td className={`${tdClass} text-left font-extrabold text-amber-900 `}>
                   Carryover from {parseInt(filterYear) - 1}
                 </td>
                 
                 {isLeadSourceExpanded && (
                   <>
-                    <td className={`${tdClass}   text-zinc-700`}>{carryoverTotals.sourceFacebook || 0}</td>
-                    <td className={`${tdClass} text-zinc-700`}>{carryoverTotals.sourceReferrals || 0}</td>
-                    <td className={`${tdClass} text-zinc-700`}>{carryoverTotals.sourceWebsite || 0}</td>
-                    <td className={`${tdClass} text-zinc-700`}>{carryoverTotals.sourceWalkIn || 0}</td>
+                    <td className={`${tdClass}   text-amber-800`}>{carryoverTotals.sourceFacebook || 0}</td>
+                    <td className={`${tdClass} text-amber-800`}>{carryoverTotals.sourceReferrals || 0}</td>
+                    <td className={`${tdClass} text-amber-800`}>{carryoverTotals.sourceWebsite || 0}</td>
+                    <td className={`${tdClass} text-amber-800`}>{carryoverTotals.sourceWalkIn || 0}</td>
                   </>
                 )}
                 
-                <td className={`${tdClass} font-extrabold ${!isLeadSourceExpanded ? ' ' : ''} text-zinc-700`}>
+                <td className={`${tdClass} font-extrabold ${!isLeadSourceExpanded ? ' ' : ''} text-amber-900`}>
                   {carryoverTotals.totalLeads || 0}
                 </td>
 
-                <td className={`${tdClass}   text-zinc-500 font-bold`}>{carryoverTotals.convYes || 0}</td>
-                <td className={`${tdClass} text-zinc-500 font-bold`}>{carryoverTotals.convNo || 0}</td>
+                <td className={`${tdClass}   text-emerald-700 font-bold`}>{carryoverTotals.convYes || 0}</td>
+                <td className={`${tdClass} text-rose-700 font-bold`}>{carryoverTotals.convNo || 0}</td>
                 <td className={`${tdClass} text-zinc-500 `}>{carryoverTotals.convDNA || 0}</td>
 
                 {(() => {
@@ -256,16 +256,16 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                   const visaRate = carryoverTotals.visaLodging > 0 ? Math.round((carryoverTotals.visaGranted / carryoverTotals.visaLodging) * 100) : 0;
                   return (
                     <>
-                      <td className={`${tdClass} font-bold text-zinc-700`}>{carryoverTotals.appApplied || 0}</td>
-                      <td className={`${tdClass} ${appRate >= 50 ? 'text-zinc-500' : appRate > 0 ? 'text-zinc-500' : 'text-zinc-700/50'}`}>{appRate > 0 ? `${appRate}%` : '-'}</td>
-                      <td className={`${tdClass} text-zinc-500`}>{carryoverTotals.appWaitingPayment || 0}</td>
-                      <td className={`${tdClass} text-zinc-500 `}>{carryoverTotals.appDroppedOut || 0}</td>
+                      <td className={`${tdClass} font-bold text-amber-900`}>{carryoverTotals.appApplied || 0}</td>
+                      <td className={`${tdClass} ${appRate >= 50 ? 'text-emerald-600' : appRate > 0 ? 'text-amber-600' : 'text-amber-900/50'}`}>{appRate > 0 ? `${appRate}%` : '-'}</td>
+                      <td className={`${tdClass} text-amber-700`}>{carryoverTotals.appWaitingPayment || 0}</td>
+                      <td className={`${tdClass} text-rose-700 `}>{carryoverTotals.appDroppedOut || 0}</td>
 
-                      <td className={`${tdClass} text-zinc-500`}>{carryoverTotals.visaLodging || 0}</td>
-                      <td className={`${tdClass} text-zinc-500`}>{carryoverTotals.visaInProgress || 0}</td>
-                      <td className={`${tdClass} text-zinc-500 font-bold`}>{carryoverTotals.visaGranted || 0}</td>
-                      <td className={`${tdClass} text-zinc-500`}>{carryoverTotals.visaRefusal || 0}</td>
-                      <td className={`${tdClass} ${visaRate >= 70 ? 'text-zinc-500' : visaRate > 0 ? 'text-zinc-500' : 'text-zinc-700/50'}`}>{visaRate > 0 ? `${visaRate}%` : '-'}</td>
+                      <td className={`${tdClass} text-zinc-700`}>{carryoverTotals.visaLodging || 0}</td>
+                      <td className={`${tdClass} text-indigo-700`}>{carryoverTotals.visaInProgress || 0}</td>
+                      <td className={`${tdClass} text-emerald-700 font-bold`}>{carryoverTotals.visaGranted || 0}</td>
+                      <td className={`${tdClass} text-rose-700`}>{carryoverTotals.visaRefusal || 0}</td>
+                      <td className={`${tdClass} ${visaRate >= 70 ? 'text-emerald-600' : visaRate > 0 ? 'text-amber-600' : 'text-amber-900/50'}`}>{visaRate > 0 ? `${visaRate}%` : '-'}</td>
                     </>
                   );
                 })()}
@@ -288,7 +288,7 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                 return (
                   <React.Fragment key={branch}>
                     <tr>
-                      <td colSpan={isLeadSourceExpanded ? 16 : 12} className="px-4 py-2 bg-zinc-100 text-xs font-extrabold text-zinc-500 uppercase tracking-wider text-left border-b border-zinc-200">
+                      <td colSpan={isLeadSourceExpanded ? 16 : 12} className="px-4 py-2 bg-zinc-100 text-xs font-extrabold text-zinc-600 uppercase tracking-wider text-left border-b border-zinc-200">
                         {branch}
                       </td>
                     </tr>
@@ -300,36 +300,36 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                         
                         {isLeadSourceExpanded && (
                           <>
-                            <td className={`${tdClass}   text-zinc-500`}>{d.sums.sourceFacebook || 0}</td>
-                            <td className={`${tdClass} text-zinc-500`}>{d.sums.sourceReferrals || 0}</td>
-                            <td className={`${tdClass} text-zinc-500`}>{d.sums.sourceWebsite || 0}</td>
-                            <td className={`${tdClass} text-zinc-500`}>{d.sums.sourceWalkIn || 0}</td>
+                            <td className={`${tdClass}   text-zinc-600`}>{d.sums.sourceFacebook || 0}</td>
+                            <td className={`${tdClass} text-zinc-600`}>{d.sums.sourceReferrals || 0}</td>
+                            <td className={`${tdClass} text-zinc-600`}>{d.sums.sourceWebsite || 0}</td>
+                            <td className={`${tdClass} text-zinc-600`}>{d.sums.sourceWalkIn || 0}</td>
                           </>
                         )}
                         
-                        <td className={`${tdClass} font-extrabold ${!isLeadSourceExpanded ? ' ' : ''} bg-transparent group-hover:bg-transparent`}>
+                        <td className={`${tdClass} font-extrabold ${!isLeadSourceExpanded ? ' ' : ''} bg-zinc-50/50 group-hover:bg-transparent`}>
                           {d.sums.totalLeads || 0}
                         </td>
 
-                        <td className={`${tdClass}   text-zinc-500 bg-transparent`}>{d.sums.convYes || 0}</td>
-                        <td className={`${tdClass} text-zinc-500 bg-transparent`}>{d.sums.convNo || 0}</td>
-                        <td className={`${tdClass} text-zinc-400 bg-transparent `}>{d.sums.convDNA || 0}</td>
+                        <td className={`${tdClass}   text-emerald-600 bg-blue-50/10`}>{d.sums.convYes || 0}</td>
+                        <td className={`${tdClass} text-rose-600 bg-blue-50/10`}>{d.sums.convNo || 0}</td>
+                        <td className={`${tdClass} text-zinc-400 bg-blue-50/10 `}>{d.sums.convDNA || 0}</td>
 
-                        <td className={`${tdClass} bg-transparent`}>{d.sums.appApplied || 0}</td>
+                        <td className={`${tdClass} bg-blue-50/10`}>{d.sums.appApplied || 0}</td>
                         {(() => {
                           const appRate = d.sums.totalLeads > 0 ? Math.round((d.sums.appApplied / d.sums.totalLeads) * 100) : 0;
-                          return <td className={`${tdClass} bg-transparent ${appRate >= 50 ? 'text-zinc-500' : appRate > 0 ? 'text-zinc-500' : 'text-zinc-300'}`}>{appRate > 0 ? `${appRate}%` : '-'}</td>;
+                          return <td className={`${tdClass} bg-blue-50/10 ${appRate >= 50 ? 'text-emerald-600' : appRate > 0 ? 'text-amber-600' : 'text-zinc-300'}`}>{appRate > 0 ? `${appRate}%` : '-'}</td>;
                         })()}
-                        <td className={`${tdClass} text-zinc-500 bg-transparent`}>{d.sums.appWaitingPayment || 0}</td>
-                        <td className={`${tdClass} text-zinc-500 bg-transparent `}>{d.sums.appDroppedOut || 0}</td>
+                        <td className={`${tdClass} text-amber-600 bg-blue-50/10`}>{d.sums.appWaitingPayment || 0}</td>
+                        <td className={`${tdClass} text-rose-600 bg-blue-50/10 `}>{d.sums.appDroppedOut || 0}</td>
 
-                        <td className={`${tdClass} text-zinc-500 bg-transparent`}>{d.sums.visaLodging || 0}</td>
-                        <td className={`${tdClass} text-zinc-500 bg-transparent`}>{d.sums.visaInProgress || 0}</td>
-                        <td className={`${tdClass} text-zinc-500 bg-transparent font-bold`}>{d.sums.visaGranted || 0}</td>
-                        <td className={`${tdClass} text-zinc-500 bg-transparent`}>{d.sums.visaRefusal || 0}</td>
+                        <td className={`${tdClass} text-zinc-600 bg-blue-50/10`}>{d.sums.visaLodging || 0}</td>
+                        <td className={`${tdClass} text-indigo-600 bg-blue-50/10`}>{d.sums.visaInProgress || 0}</td>
+                        <td className={`${tdClass} text-emerald-600 bg-blue-50/10 font-bold`}>{d.sums.visaGranted || 0}</td>
+                        <td className={`${tdClass} text-rose-600 bg-blue-50/10`}>{d.sums.visaRefusal || 0}</td>
                         {(() => {
                           const visaRate = d.sums.visaLodging > 0 ? Math.round((d.sums.visaGranted / d.sums.visaLodging) * 100) : 0;
-                          return <td className={`${tdClass} bg-transparent ${visaRate >= 70 ? 'text-zinc-500' : visaRate > 0 ? 'text-zinc-500' : 'text-zinc-300'}`}>{visaRate > 0 ? `${visaRate}%` : '-'}</td>;
+                          return <td className={`${tdClass} bg-blue-50/10 ${visaRate >= 70 ? 'text-emerald-600' : visaRate > 0 ? 'text-amber-600' : 'text-zinc-300'}`}>{visaRate > 0 ? `${visaRate}%` : '-'}</td>;
                         })()}
                       </tr>
                     ))}
