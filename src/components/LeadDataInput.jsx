@@ -69,7 +69,7 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
   const blankForm = {
     totalLeads: '', sourceFacebook: '', sourceReferrals: '', sourceWebsite: '', sourceWalkIn: '',
     convYes: '', convNo: '', convDNA: '',
-    appApplied: '', appWaitingPayment: '', appWaitingApplication: '', appDropoutThisMonth: '', appDropoutPrevMonth: '', paymentDone: '',
+    appApplied: '', appWaitingApplication: '', appWaitingPayment: '', appDropoutThisMonth: '', appDropoutPrevMonth: '', paymentDone: '',
     visaLodging: '', visaInProgress: '', visaGranted: '', visaRefusal: ''
   };
 
@@ -93,8 +93,8 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
         convNo: existing.convNo || '',
         convDNA: existing.convDNA || '',
         appApplied: existing.appApplied || '',
-        appWaitingPayment: existing.appWaitingPayment || '',
         appWaitingApplication: existing.appWaitingApplication || '',
+        appWaitingPayment: existing.appWaitingPayment || '',
         appDropoutThisMonth: existing.appDropoutThisMonth || existing.appDroppedOut || '',
         appDropoutPrevMonth: existing.appDropoutPrevMonth || '',
         paymentDone: existing.paymentDone || '',
@@ -474,12 +474,12 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
             <h3 className="text-xl font-bold text-notion-black mb-6">Application & Payment Phase</h3>
             
             <div className="mb-6 flex items-center justify-between p-4 bg-zinc-50 rounded-xl border border-zinc-100">
-              <span className="text-sm font-bold text-zinc-500">Applied vs Total 'Yes' Conversions:</span>
+              <span className="text-sm font-bold text-zinc-500">Applied + Wait (App) + Dropout (This) vs Total 'Yes' Conversions:</span>
               <span className={`text-lg font-bold ${
-                (parseInt(formData.appApplied) || 0) === (parseInt(formData.convYes) || 0)
+                ((parseInt(formData.appApplied) || 0) + (parseInt(formData.appWaitingApplication) || 0) + (parseInt(formData.appDropoutThisMonth) || 0)) === (parseInt(formData.convYes) || 0)
                 ? 'text-emerald-600' : 'text-rose-600'
               }`}>
-                {parseInt(formData.appApplied) || 0}
+                {((parseInt(formData.appApplied) || 0) + (parseInt(formData.appWaitingApplication) || 0) + (parseInt(formData.appDropoutThisMonth) || 0))}
                 <span className="text-sm text-zinc-400 mx-1">/</span> 
                 {parseInt(formData.convYes) || 0}
               </span>
@@ -490,8 +490,22 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
               <input type="number" min="0" name="appApplied" value={formData.appApplied} onChange={handleChange} className={inputClasses} placeholder="0" />
             </div>
 
+            <div className="pt-4 border-t border-zinc-100 mb-6">
+              <h4 className="text-sm font-bold text-notion-black mb-4">Conversion Outcomes (Must sum to Total Yes)</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label className={labelClasses}>Waiting on Application</label>
+                  <input type="number" min="0" name="appWaitingApplication" value={formData.appWaitingApplication} onChange={handleChange} className={inputClasses} placeholder="0" />
+                </div>
+                <div>
+                  <label className={labelClasses}>This Month Dropout (Before App)</label>
+                  <input type="number" min="0" name="appDropoutThisMonth" value={formData.appDropoutThisMonth} onChange={handleChange} className={inputClasses} placeholder="0" />
+                </div>
+              </div>
+            </div>
+
             <div className="pt-4 border-t border-zinc-100">
-              <h4 className="text-sm font-bold text-notion-black mb-4">Application Outcomes Breakdown</h4>
+              <h4 className="text-sm font-bold text-notion-black mb-4">Application Outcomes & Carryover Updates</h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div>
                   <label className={labelClasses}>Payment Done</label>
@@ -502,8 +516,8 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
                   <input type="number" min="0" name="appWaitingPayment" value={formData.appWaitingPayment} onChange={handleChange} className={inputClasses} placeholder="0" />
                 </div>
                 <div>
-                  <label className={labelClasses}>Dropped Out</label>
-                  <input type="number" min="0" name="appDroppedOut" value={formData.appDroppedOut} onChange={handleChange} className={inputClasses} placeholder="0" />
+                  <label className={labelClasses}>Previous Month Dropout (Late)</label>
+                  <input type="number" min="0" name="appDropoutPrevMonth" value={formData.appDropoutPrevMonth} onChange={handleChange} className={inputClasses} placeholder="0" />
                 </div>
               </div>
             </div>

@@ -26,6 +26,10 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
       convNo: 0,
       convDNA: 0,
       appApplied: 0,
+      appWaitingApplication: 0,
+      appWaitingPayment: 0,
+      appDropoutThisMonth: 0,
+      appDropoutPrevMonth: 0,
       paymentDone: 0,
       visaLodging: 0,
       visaGranted: 0
@@ -43,6 +47,10 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
         t.convNo += parseInt(report.convNo) || 0;
         t.convDNA += parseInt(report.convDNA) || 0;
         t.appApplied += parseInt(report.appApplied) || 0;
+        t.appWaitingApplication += parseInt(report.appWaitingApplication) || 0;
+        t.appWaitingPayment += parseInt(report.appWaitingPayment) || 0;
+        t.appDropoutThisMonth += parseInt(report.appDropoutThisMonth) || parseInt(report.appDroppedOut) || 0;
+        t.appDropoutPrevMonth += parseInt(report.appDropoutPrevMonth) || 0;
         t.paymentDone += parseInt(report.paymentDone) || 0;
         t.visaLodging += parseInt(report.visaLodging) || 0;
         t.visaGranted += parseInt(report.visaGranted) || 0;
@@ -127,9 +135,20 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
                 Conversions
               </th>
               <th rowSpan={2} className={`${thClass}   align-bottom`}>
-                Application
+                Applied
               </th>
-              
+              <th rowSpan={2} className={`${thClass} align-bottom`}>
+                Wait App
+              </th>
+              <th rowSpan={2} className={`${thClass} align-bottom`}>
+                Wait Pay
+              </th>
+              <th rowSpan={2} className={`${thClass} align-bottom`}>
+                Drop (This)
+              </th>
+              <th rowSpan={2} className={`${thClass} align-bottom`}>
+                Drop (Prev)
+              </th>
               <th rowSpan={2} className={`${thClass} align-bottom`}>
                 Payment
               </th>
@@ -206,6 +225,10 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
                           <td className={`${tdClass} text-rose-600`}>{renderCell('convNo', report.convNo)}</td>
                           <td className={`${tdClass} text-zinc-400`}>{renderCell('convDNA', report.convDNA)}</td>
                           <td className={`${tdClass}  `}>{renderCell('appApplied', report.appApplied)}</td>
+                          <td className={`${tdClass} text-amber-600`}>{renderCell('appWaitingApplication', report.appWaitingApplication)}</td>
+                          <td className={`${tdClass} text-amber-600`}>{renderCell('appWaitingPayment', report.appWaitingPayment)}</td>
+                          <td className={`${tdClass} text-rose-600`}>{renderCell('appDropoutThisMonth', report.appDropoutThisMonth || report.appDroppedOut)}</td>
+                          <td className={`${tdClass} text-rose-600`}>{renderCell('appDropoutPrevMonth', report.appDropoutPrevMonth)}</td>
                           <td className={`${tdClass} text-emerald-600`}>{renderCell('paymentDone', report.paymentDone)}</td>
                           <td className={`${tdClass} text-notion-blue`}>{renderCell('visaGranted', report.visaGranted)}</td>
                         </tr>
@@ -242,7 +265,10 @@ const LeadMonthlyReport = ({ counselors, existingReports, onSaveData }) => {
                 <td className={`${footerTdClass} `}>{totals.convDNA}</td>
 
                 <td className={footerTdClass}>{totals.appApplied}</td>
-                
+                <td className={footerTdClass}>{totals.appWaitingApplication}</td>
+                <td className={footerTdClass}>{totals.appWaitingPayment}</td>
+                <td className={`${footerTdClass} text-rose-900`}>{totals.appDropoutThisMonth}</td>
+                <td className={`${footerTdClass} text-rose-900`}>{totals.appDropoutPrevMonth}</td>
                 <td className={footerTdClass}>{totals.paymentDone}</td>
                 <td className={footerTdClass}>{totals.visaGranted}</td>
                 
