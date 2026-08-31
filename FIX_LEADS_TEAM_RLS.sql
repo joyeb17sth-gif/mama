@@ -20,22 +20,4 @@ CREATE POLICY "leads_admin" ON public.leads
     )
   );
 
--- Also ensure leads_team can manage the lead_status_history table
-DROP POLICY IF EXISTS "lead_history_admin" ON public.lead_status_history;
 
-CREATE POLICY "lead_history_admin" ON public.lead_status_history
-  FOR ALL TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE profiles.id = auth.uid() 
-      AND profiles.role IN ('admin', 'leads_team')
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE profiles.id = auth.uid() 
-      AND profiles.role IN ('admin', 'leads_team')
-    )
-  );

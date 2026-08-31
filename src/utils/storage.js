@@ -384,9 +384,7 @@ export const saveLeadReports = async (reports) => {
   await localforage.setItem('payscleep_lead_reports_v2', encryptData(reports));
   
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-    await saveToCloud('leads', 'payscleep_lead_reports_v2', reports, userId);
+    await saveToCloud('leads', 'payscleep_lead_reports_v2', reports);
   } catch (err) {
     if (import.meta.env.DEV) console.error("Error saving lead reports to cloud:", err);
     if (_onSaveError) _onSaveError('Failed to sync data to cloud. Changes saved locally.');
@@ -401,9 +399,7 @@ export const saveLeadCounselors = async (counselors) => {
   await localforage.setItem('payscleep_lead_counselors_v3', encryptData(counselors));
   
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-    await saveToCloud('leads', 'payscleep_lead_counselors_v3', counselors, userId);
+    await saveToCloud('leads', 'payscleep_lead_counselors_v3', counselors);
   } catch (err) {
     if (import.meta.env.DEV) console.error("Error saving lead counselors to cloud:", err);
     if (_onSaveError) _onSaveError('Failed to sync data to cloud. Changes saved locally.');

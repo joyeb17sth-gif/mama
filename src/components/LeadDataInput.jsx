@@ -36,6 +36,9 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
   // KPI Aggregates for the grid
   const monthAggregates = useMemo(() => {
     const agg = {};
+    const carryoverStr = `${selectedYear}-carryover`;
+    agg[carryoverStr] = { totalLeads: 0, paymentDone: 0, visaGranted: 0, hasData: false };
+    
     for (let i = 0; i < 12; i++) {
       const monthStr = `${selectedYear}-${String(i + 1).padStart(2, '0')}`;
       agg[monthStr] = { totalLeads: 0, paymentDone: 0, visaGranted: 0, hasData: false };
@@ -151,6 +154,23 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
       }
     }
 
+    if (step === 3) {
+      const yes = parseInt(formData.convYes) || 0;
+      const applied = parseInt(formData.appApplied) || 0;
+      const waiting = parseInt(formData.appWaitingPayment) || 0;
+      const dropped = parseInt(formData.appDroppedOut) || 0;
+      
+      if (applied > yes) {
+        setError(`Applications (${applied}) cannot exceed 'Yes' conversions (${yes}).`);
+        return;
+      }
+      
+      if ((waiting + dropped) > applied) {
+        setError(`Waiting Payment (${waiting}) + Dropped Out (${dropped}) cannot exceed Total Applications (${applied}).`);
+        return;
+      }
+    }
+
     setError('');
     setStep(prev => prev + 1);
   };
@@ -161,6 +181,24 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
   };
 
   const handleSave = () => {
+    // Validate Step 4
+    const lodging = parseInt(formData.visaLodging) || 0;
+    const inProgress = parseInt(formData.visaInProgress) || 0;
+    const granted = parseInt(formData.visaGranted) || 0;
+    const refusal = parseInt(formData.visaRefusal) || 0;
+    
+    if (lodging > paymentDone) {
+      setError(`Visa Lodging (${lodging}) cannot exceed Payment Done (${paymentDone}).`);
+      return;
+    }
+
+    if (lodging !== (inProgress + granted + refusal)) {
+      setError(`Sum of Visa outcomes (${inProgress + granted + refusal}) must equal Visa Lodging (${lodging}).`);
+      return;
+    }
+
+    setError('');
+
     const reportData = {
       id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2),
       createdAt: new Date().toISOString(),
@@ -241,8 +279,11 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {monthNames.map((monthName, index) => {
-            const monthStr = `${selectedYear}-${String(index + 1).padStart(2, '0')}`;
+          {[
+            { id: `${selectedYear}-carryover`, name: `Carryover from ${parseInt(selectedYear) - 1}`, isCarryover: true },
+            ...monthNames.map((name, i) => ({ id: `${selectedYear}-${String(i + 1).padStart(2, '0')}`, name }))
+          ].map((monthData) => {
+            const monthStr = monthData.id;
             const stats = monthAggregates[monthStr];
             
             return (
@@ -255,14 +296,14 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
                 }}
                 className={`relative overflow-hidden rounded-2xl border p-6 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
                   stats.hasData 
-                    ? 'bg-white border-zinc-200 hover:border-notion-blue/50' 
-                    : 'bg-zinc-50 border-dashed border-zinc-300 hover:border-zinc-400 opacity-70 hover:opacity-100'
+                    ? (monthData.isCarryover ? 'bg-amber-50 border-amber-200 hover:border-amber-400' : 'bg-white border-zinc-200 hover:border-notion-blue/50')
+                    : (monthData.isCarryover ? 'bg-amber-50/50 border-dashed border-amber-200 hover:border-amber-400 opacity-80 hover:opacity-100' : 'bg-zinc-50 border-dashed border-zinc-300 hover:border-zinc-400 opacity-70 hover:opacity-100')
                 }`}
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-extrabold text-lg text-notion-black">{monthName}</h4>
+                  <h4 className={`font-extrabold text-lg ${monthData.isCarryover ? 'text-amber-900' : 'text-notion-black'}`}>{monthData.name}</h4>
                   {stats.hasData && (
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                    <span className={`w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.2)] ${monthData.isCarryover ? 'bg-amber-500 shadow-amber-500/50' : 'bg-emerald-500 shadow-emerald-500/50'}`}></span>
                   )}
                 </div>
                 
@@ -297,7 +338,9 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
   }
 
   // FORM VIEW
-  const monthNameDisplay = new Date(`${selectedMonthForInput}-02`).toLocaleString('default', { month: 'long', year: 'numeric' });
+  const monthNameDisplay = selectedMonthForInput?.endsWith('-carryover')
+    ? `Carryover from ${parseInt(selectedMonthForInput.split('-')[0]) - 1}`
+    : selectedMonthForInput ? new Date(`${selectedMonthForInput}-02`).toLocaleString('default', { month: 'long', year: 'numeric' }) : '';
 
   return (
     <div className="max-w-2xl mx-auto">

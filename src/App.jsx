@@ -358,11 +358,6 @@ function App() {
           }
           setUserProfileData({ name: email, role });
           setIsAdmin(role === 'admin');
-
-          const normalizedRole = role.toLowerCase();
-          if (normalizedRole === 'supervisor' || normalizedRole === 'manager') {
-            setActiveTab(prev => (prev === 'dashboard' ? 'task-matrix' : prev));
-          }
         }
 
         setSites(getSites());
@@ -765,13 +760,16 @@ function App() {
         {/* Content Area */}
         <React.Suspense fallback={<div className="flex items-center justify-center h-full text-notion-warm-gray-400">Loading module...</div>}>
         {/* Tab Content */}
-        {activeTab === 'dashboard' && hasPermission('dashboard') && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-display-secondary text-notion-black tracking-notion-display">System Overview</h2>
-            </div>
-            <Dashboard syncVersion={syncVersion} periodicalTasks={visiblePeriodicalTasks} />
-          </div>
+        {activeTab === 'dashboard' && (
+          <Dashboard
+            syncVersion={syncVersion}
+            periodicalTasks={visiblePeriodicalTasks}
+            userRole={simulatedRole || userProfileData.role}
+            leads={leads}
+            leadReports={leadReports}
+            counselors={leadCounselors}
+            navigateTo={setActiveTab}
+          />
         )}
 
 

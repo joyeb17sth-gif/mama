@@ -72,15 +72,15 @@ const Layout = ({
         if (role === 'admin') return navItems;
 
         if (role === 'supervisor' || role === 'manager') {
-            return navItems.filter(item => ['task-matrix', 'sites'].includes(item.id));
+            return navItems.filter(item => ['dashboard', 'task-matrix', 'sites'].includes(item.id));
         }
 
         if (role === 'leads_team') {
-            return navItems.filter(item => ['lead-manager'].includes(item.id));
+            return navItems.filter(item => ['dashboard', 'lead-manager'].includes(item.id));
         }
 
-        // Default user cannot see any navigation items
-        return [];
+        // Default user can only see the dashboard
+        return navItems.filter(item => item.id === 'dashboard');
     };
 
     const filteredNavItems = getFilteredNavItems();

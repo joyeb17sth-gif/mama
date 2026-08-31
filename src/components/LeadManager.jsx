@@ -87,6 +87,7 @@ const LeadManager = ({ leads, onSave, leadReports = [], setLeadReports, counselo
           <LeadMonthlyReport 
             counselors={counselors} 
             existingReports={leadReports} 
+            onSaveData={handleSaveReport}
           />
         )}
 
