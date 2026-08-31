@@ -498,22 +498,30 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
             </div>
 
             <div className="pt-4 border-t border-zinc-100 mb-6">
-              <h4 className="text-sm font-bold text-notion-black mb-4">Conversion Outcomes (Must sum to Total Yes)</h4>
+              <h4 className="text-sm font-bold text-notion-black mb-4">Waiting</h4>
+              <div>
+                <label className={labelClasses}>Waiting on Application</label>
+                <input type="number" min="0" name="appWaitingApplication" value={formData.appWaitingApplication} onChange={handleChange} className={inputClasses} placeholder="0" />
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-zinc-100 mb-6">
+              <h4 className="text-sm font-bold text-notion-black mb-4">Dropouts</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <label className={labelClasses}>Waiting on Application</label>
-                  <input type="number" min="0" name="appWaitingApplication" value={formData.appWaitingApplication} onChange={handleChange} className={inputClasses} placeholder="0" />
+                  <label className={labelClasses}>This Month Dropout</label>
+                  <input type="number" min="0" name="appDropoutThisMonth" value={formData.appDropoutThisMonth} onChange={handleChange} className={inputClasses} placeholder="0" />
                 </div>
                 <div>
-                  <label className={labelClasses}>This Month Dropout (Before App)</label>
-                  <input type="number" min="0" name="appDropoutThisMonth" value={formData.appDropoutThisMonth} onChange={handleChange} className={inputClasses} placeholder="0" />
+                  <label className={labelClasses}>Previous Month Dropout</label>
+                  <input type="number" min="0" name="appDropoutPrevMonth" value={formData.appDropoutPrevMonth} onChange={handleChange} className={inputClasses} placeholder="0" />
                 </div>
               </div>
             </div>
 
             <div className="pt-4 border-t border-zinc-100">
-              <h4 className="text-sm font-bold text-notion-black mb-4">Application Outcomes & Carryover Updates</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <h4 className="text-sm font-bold text-notion-black mb-4">Application Outcomes</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <label className={labelClasses}>Payment Done</label>
                   <input type="number" min="0" name="paymentDone" value={formData.paymentDone} onChange={handleChange} className={inputClasses} placeholder="0" />
@@ -521,10 +529,6 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
                 <div>
                   <label className={labelClasses}>Waiting on Payment</label>
                   <input type="number" min="0" name="appWaitingPayment" value={formData.appWaitingPayment} onChange={handleChange} className={inputClasses} placeholder="0" />
-                </div>
-                <div>
-                  <label className={labelClasses}>Previous Month Dropout (Late)</label>
-                  <input type="number" min="0" name="appDropoutPrevMonth" value={formData.appDropoutPrevMonth} onChange={handleChange} className={inputClasses} placeholder="0" />
                 </div>
               </div>
             </div>
