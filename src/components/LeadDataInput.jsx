@@ -469,6 +469,19 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
             <h3 className="text-xl font-bold text-notion-black mb-6">Application & Payment Phase</h3>
             
+            <div className="mb-6 flex items-center justify-between p-4 bg-zinc-50 rounded-xl border border-zinc-100">
+              <span className="text-sm font-bold text-zinc-500">Conversions Sum:</span>
+              <span className={`text-lg font-bold ${
+                (parseInt(formData.totalLeads) || 0) === 
+                ((parseInt(formData.convYes) || 0) + (parseInt(formData.convNo) || 0) + (parseInt(formData.convDNA) || 0))
+                ? 'text-emerald-600' : 'text-rose-600'
+              }`}>
+                {((parseInt(formData.convYes) || 0) + (parseInt(formData.convNo) || 0) + (parseInt(formData.convDNA) || 0))} 
+                <span className="text-sm text-zinc-400 mx-1">/</span> 
+                {parseInt(formData.totalLeads) || 0}
+              </span>
+            </div>
+            
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
                 <label className={labelClasses}>Applied</label>
@@ -494,6 +507,19 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
         {step === 4 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
             <h3 className="text-xl font-bold text-notion-black mb-6">Visa Stage</h3>
+            
+            <div className="mb-6 flex items-center justify-between p-4 bg-zinc-50 rounded-xl border border-zinc-100">
+              <span className="text-sm font-bold text-zinc-500">Conversions Sum:</span>
+              <span className={`text-lg font-bold ${
+                (parseInt(formData.totalLeads) || 0) === 
+                ((parseInt(formData.convYes) || 0) + (parseInt(formData.convNo) || 0) + (parseInt(formData.convDNA) || 0))
+                ? 'text-emerald-600' : 'text-rose-600'
+              }`}>
+                {((parseInt(formData.convYes) || 0) + (parseInt(formData.convNo) || 0) + (parseInt(formData.convDNA) || 0))} 
+                <span className="text-sm text-zinc-400 mx-1">/</span> 
+                {parseInt(formData.totalLeads) || 0}
+              </span>
+            </div>
             
             <div className="grid grid-cols-2 gap-6">
               <div>
