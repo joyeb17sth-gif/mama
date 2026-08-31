@@ -251,7 +251,14 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                 <td className={`${tdClass} text-rose-700 font-bold`}>{carryoverTotals.convNo || 0}</td>
                 <td className={`${tdClass} text-zinc-500 `}>{carryoverTotals.convDNA || 0}</td>
 
-                
+                <td className={`${tdClass} font-bold text-amber-900`}>{carryoverTotals.appApplied || 0}</td>
+                <td className={`${tdClass} text-amber-700`}>{carryoverTotals.appWaitingPayment || 0}</td>
+                <td className={`${tdClass} text-rose-700 `}>{carryoverTotals.appDroppedOut || 0}</td>
+
+                <td className={`${tdClass} text-zinc-700`}>{carryoverTotals.visaLodging || 0}</td>
+                <td className={`${tdClass} text-indigo-700`}>{carryoverTotals.visaInProgress || 0}</td>
+                <td className={`${tdClass} text-emerald-700 font-bold`}>{carryoverTotals.visaGranted || 0}</td>
+                <td className={`${tdClass} text-rose-700`}>{carryoverTotals.visaRefusal || 0}</td>
               </tr>
             )}
             
