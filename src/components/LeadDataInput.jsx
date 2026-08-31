@@ -471,8 +471,13 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
             <h3 className="text-xl font-bold text-notion-black mb-6">Application & Payment Phase</h3>
             
             <div className="mb-6 flex items-center justify-between p-4 bg-zinc-50 rounded-xl border border-zinc-100">
-              <span className="text-sm font-bold text-zinc-500">Total 'Yes' Conversions:</span>
-              <span className="text-lg font-bold text-emerald-600">
+              <span className="text-sm font-bold text-zinc-500">Applied vs Total 'Yes' Conversions:</span>
+              <span className={`text-lg font-bold ${
+                (parseInt(formData.appApplied) || 0) === (parseInt(formData.convYes) || 0)
+                ? 'text-emerald-600' : 'text-rose-600'
+              }`}>
+                {parseInt(formData.appApplied) || 0}
+                <span className="text-sm text-zinc-400 mx-1">/</span> 
                 {parseInt(formData.convYes) || 0}
               </span>
             </div>
@@ -504,8 +509,13 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
             <h3 className="text-xl font-bold text-notion-black mb-6">Visa Stage</h3>
             
             <div className="mb-6 flex items-center justify-between p-4 bg-zinc-50 rounded-xl border border-zinc-100">
-              <span className="text-sm font-bold text-zinc-500">Total Payments Done:</span>
-              <span className="text-lg font-bold text-emerald-600">
+              <span className="text-sm font-bold text-zinc-500">Visa Lodging vs Total Payments Done:</span>
+              <span className={`text-lg font-bold ${
+                (parseInt(formData.visaLodging) || 0) === (parseInt(formData.paymentDone) || 0)
+                ? 'text-emerald-600' : 'text-rose-600'
+              }`}>
+                {parseInt(formData.visaLodging) || 0}
+                <span className="text-sm text-zinc-400 mx-1">/</span> 
                 {parseInt(formData.paymentDone) || 0}
               </span>
             </div>
