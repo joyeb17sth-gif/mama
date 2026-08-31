@@ -513,7 +513,7 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
                   <input type="number" min="0" name="appDropoutThisMonth" value={formData.appDropoutThisMonth} onChange={handleChange} className={inputClasses} placeholder="0" />
                 </div>
                 <div>
-                  <label className={labelClasses}>Previous Month Dropout</label>
+                  <label className={labelClasses}>Previous Dropout</label>
                   <input type="number" min="0" name="appDropoutPrevMonth" value={formData.appDropoutPrevMonth} onChange={handleChange} className={inputClasses} placeholder="0" />
                 </div>
               </div>
