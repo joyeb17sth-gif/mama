@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import PremiumDialog from './PremiumDialog';
 
 const generateId = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 
 const LeadSettings = ({ counselors, setCounselors, setLeadReports }) => {
   const [newCounselor, setNewCounselor] = useState({ name: '', specialty: '', branch: 'Search Nepal' });
+  const [dialogConfig, setDialogConfig] = useState({ isOpen: false });
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({ name: '', specialty: '', branch: 'Search Nepal' });
 
@@ -35,130 +37,133 @@ const LeadSettings = ({ counselors, setCounselors, setLeadReports }) => {
   };
 
   const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this counselor? Their historical reports will remain in the system.')) {
-      setCounselors(prev => prev.filter(c => c.id !== id));
-    }
+    setDialogConfig({
+      isOpen: true,
+      type: 'danger',
+      title: 'Delete Counselor',
+      message: 'Are you sure you want to delete this counselor? Their historical reports will remain in the system.',
+      confirmText: 'Delete',
+      onCancel: () => setDialogConfig(prev => ({ ...prev, isOpen: false })),
+      onConfirm: () => {
+        setCounselors(prev => prev.filter(c => c.id !== id));
+        setDialogConfig(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   };
 
   const handleClearData = () => {
-    if (window.confirm('Are you SURE you want to delete ALL lead reports and historical data? This cannot be undone.')) {
-      setLeadReports && setLeadReports([]);
-      
-      // Explicitly remove old and current lead data keys
-      const keysToRemove = [
-        'payscleep_leads',
-        'payscleep_lead_reports',
-        'payscleep_lead_reports_v2',
-        'payscleep_lead_reports_v3'
-      ];
-      
-      keysToRemove.forEach(k => localStorage.removeItem(k));
-      
-      // Also check for any other old keys containing 'leads' (excluding counselors)
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.includes('leads') && !key.includes('counselor')) {
-          localStorage.removeItem(key);
+    setDialogConfig({
+      isOpen: true,
+      type: 'danger',
+      title: 'Clear All Data',
+      message: 'Are you SURE you want to delete ALL lead reports and historical data? This cannot be undone.',
+      confirmText: 'Yes, Clear All',
+      onCancel: () => setDialogConfig(prev => ({ ...prev, isOpen: false })),
+      onConfirm: () => {
+        setLeadReports && setLeadReports([]);
+        const keysToRemove = ['payscleep_leads', 'payscleep_lead_reports', 'payscleep_lead_reports_v2', 'payscleep_lead_reports_v3'];
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.includes('leads') && !key.includes('counselor')) {
+            localStorage.removeItem(key);
+          }
         }
+        setDialogConfig({
+          isOpen: true,
+          type: 'success',
+          title: 'Success',
+          message: 'All lead data has been cleared.',
+          confirmText: 'Reload Page',
+          onConfirm: () => window.location.reload()
+        });
       }
-
-      alert('All lead data has been cleared.');
-      window.location.reload();
-    }
+    });
   };
 
   const handleGenerateSampleData = () => {
+    const doGenerate = (activeCounselorsToUse) => {
+      const currentYear = new Date().getFullYear();
+      const mockReports = [];
+      const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+      activeCounselorsToUse.forEach(c => {
+        const months = [`${currentYear}-carryover`, ...Array.from({ length: 12 }, (_, i) => `${currentYear}-${String(i + 1).padStart(2, '0')}`)];
+        months.forEach(month => {
+          const fb = r(5, 25); const ref = r(2, 10); const web = r(5, 20); const walk = r(1, 10);
+          const totalLeads = fb + ref + web + walk;
+          const yes = r(Math.floor(totalLeads * 0.4), Math.floor(totalLeads * 0.8));
+          const no = r(1, totalLeads - yes); const dna = totalLeads - yes - no;
+          const appApplied = r(Math.floor(yes * 0.5), yes);
+          const appWaitingPayment = r(0, Math.floor(appApplied * 0.3));
+          const appDroppedOut = r(0, Math.floor(appApplied * 0.2));
+          const paymentDone = appApplied - appWaitingPayment - appDroppedOut;
+          const visaLodging = r(Math.floor(paymentDone * 0.8), paymentDone);
+          const visaGranted = r(Math.floor(visaLodging * 0.5), visaLodging);
+          const visaRefusal = r(0, visaLodging - visaGranted);
+          const visaInProgress = visaLodging - visaGranted - visaRefusal;
+
+          mockReports.push({
+            id: generateId(), createdAt: new Date().toISOString(), counselorId: c.id, month,
+            totalLeads, sourceFacebook: fb, sourceReferrals: ref, sourceWebsite: web, sourceWalkIn: walk,
+            convYes: yes, convNo: no, convDNA: dna, appApplied, appWaitingPayment, appDroppedOut, paymentDone,
+            visaLodging, visaInProgress, visaGranted, visaRefusal
+          });
+        });
+      });
+
+      if (setLeadReports) {
+        setLeadReports(prev => {
+          let filtered = [...prev];
+          mockReports.forEach(mr => {
+            filtered = filtered.filter(existing => !(existing.counselorId === mr.counselorId && existing.month === mr.month));
+          });
+          return [...filtered, ...mockReports];
+        });
+      }
+      
+      setDialogConfig({
+        isOpen: true,
+        type: 'success',
+        title: 'Data Generated',
+        message: 'Smart sample data generated successfully!',
+        confirmText: 'Awesome',
+        onConfirm: () => setDialogConfig(prev => ({ ...prev, isOpen: false }))
+      });
+    };
+
     let activeCounselors = [...counselors];
 
     if (activeCounselors.length === 0) {
-      if (!window.confirm("You have no counselors. Would you like to automatically create sample counselors and data?")) return;
-      
-      const mockCounselors = [
-        { id: generateId(), name: 'Joyeb', specialty: 'General', branch: 'Search Nepal' },
-        { id: generateId(), name: 'Ajay', specialty: 'General', branch: 'Search Nepal' },
-        { id: generateId(), name: 'Suraj', specialty: 'General', branch: 'Search Australia' },
-        { id: generateId(), name: 'Mandira', specialty: 'General', branch: 'Search Chili' }
-      ];
-      setCounselors(mockCounselors);
-      activeCounselors = mockCounselors;
+      setDialogConfig({
+        isOpen: true,
+        type: 'info',
+        title: 'No Counselors Found',
+        message: 'You have no counselors. Would you like to automatically create sample counselors and data?',
+        confirmText: 'Yes, Create',
+        onCancel: () => setDialogConfig(prev => ({ ...prev, isOpen: false })),
+        onConfirm: () => {
+          const mockCounselors = [
+            { id: generateId(), name: 'Joyeb', specialty: 'General', branch: 'Search Nepal' },
+            { id: generateId(), name: 'Ajay', specialty: 'General', branch: 'Search Nepal' },
+            { id: generateId(), name: 'Suraj', specialty: 'General', branch: 'Search Australia' },
+            { id: generateId(), name: 'Mandira', specialty: 'General', branch: 'Search Chili' }
+          ];
+          setCounselors(mockCounselors);
+          doGenerate(mockCounselors);
+        }
+      });
     } else {
-      if (!window.confirm("This will generate smart sample data for all existing counselors covering carryover and recent months. Proceed?")) return;
-    }
-
-    const currentYear = new Date().getFullYear();
-    const mockReports = [];
-    
-    const r = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-
-    activeCounselors.forEach(c => {
-      // Generate for Carryover and all 12 months
-      const months = [
-        `${currentYear}-carryover`,
-        ...Array.from({ length: 12 }, (_, i) => `${currentYear}-${String(i + 1).padStart(2, '0')}`)
-      ];
-      
-      months.forEach(month => {
-        // Step 1: Initial
-        const fb = r(5, 25);
-        const ref = r(2, 10);
-        const web = r(5, 20);
-        const walk = r(1, 10);
-        const totalLeads = fb + ref + web + walk;
-        
-        // Step 2: Conversion (sum = totalLeads)
-        const yes = r(Math.floor(totalLeads * 0.4), Math.floor(totalLeads * 0.8));
-        const no = r(1, totalLeads - yes);
-        const dna = totalLeads - yes - no;
-        
-        // Step 3: Application (applied <= yes, wait + drop <= applied)
-        const appApplied = r(Math.floor(yes * 0.5), yes);
-        const appWaitingPayment = r(0, Math.floor(appApplied * 0.3));
-        const appDroppedOut = r(0, Math.floor(appApplied * 0.2));
-        const paymentDone = appApplied - appWaitingPayment - appDroppedOut;
-        
-        // Step 4: Visa (lodging <= paymentDone)
-        const visaLodging = r(Math.floor(paymentDone * 0.8), paymentDone);
-        const visaGranted = r(Math.floor(visaLodging * 0.5), visaLodging);
-        const visaRefusal = r(0, visaLodging - visaGranted);
-        const visaInProgress = visaLodging - visaGranted - visaRefusal;
-
-        mockReports.push({
-          id: generateId(),
-          createdAt: new Date().toISOString(),
-          counselorId: c.id,
-          month,
-          totalLeads,
-          sourceFacebook: fb,
-          sourceReferrals: ref,
-          sourceWebsite: web,
-          sourceWalkIn: walk,
-          convYes: yes,
-          convNo: no,
-          convDNA: dna,
-          appApplied,
-          appWaitingPayment,
-          appDroppedOut,
-          paymentDone,
-          visaLodging,
-          visaInProgress,
-          visaGranted,
-          visaRefusal
-        });
-      });
-    });
-
-    if (setLeadReports) {
-      setLeadReports(prev => {
-        // filter out exact same months for same counselors so we can re-generate safely
-        let filtered = [...prev];
-        mockReports.forEach(mr => {
-          filtered = filtered.filter(existing => !(existing.counselorId === mr.counselorId && existing.month === mr.month));
-        });
-        return [...filtered, ...mockReports];
+      setDialogConfig({
+        isOpen: true,
+        type: 'info',
+        title: 'Generate Sample Data',
+        message: 'This will generate smart sample data for all existing counselors covering carryover and recent months. Proceed?',
+        confirmText: 'Generate',
+        onCancel: () => setDialogConfig(prev => ({ ...prev, isOpen: false })),
+        onConfirm: () => doGenerate(activeCounselors)
       });
     }
-    
-    alert("Smart sample data generated successfully!");
   };
 
   const inputClasses = "w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-notion-blue/20 focus:border-notion-blue outline-none transition-all";
@@ -305,6 +310,7 @@ const LeadSettings = ({ counselors, setCounselors, setLeadReports }) => {
           ))
         )}
       </div>
+      <PremiumDialog {...dialogConfig} />
     </div>
   );
 };

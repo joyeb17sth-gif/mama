@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import PremiumDialog from './PremiumDialog';
 
 
 const monthNames = [
@@ -14,6 +15,7 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
   const [selectedCounselorId, setSelectedCounselorId] = useState('');
+  const [dialogConfig, setDialogConfig] = useState({ isOpen: false });
 
   const [formData, setFormData] = useState({
     totalLeads: '',
@@ -201,7 +203,14 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
     setStep(1);
     setSelectedCounselorId('');
     setSelectedMonthForInput(null);
-    alert('Report saved locally and will sync to the cloud automatically.');
+    setDialogConfig({
+      isOpen: true,
+      type: 'success',
+      title: 'Report Saved',
+      message: 'Report saved locally and will sync to the cloud automatically.',
+      confirmText: 'Awesome',
+      onConfirm: () => setDialogConfig(prev => ({ ...prev, isOpen: false }))
+    });
   };
 
   const renderStepIndicator = () => {
@@ -538,6 +547,7 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
         </div>
 
       </div>
+      <PremiumDialog {...dialogConfig} />
     </div>
   );
 };
