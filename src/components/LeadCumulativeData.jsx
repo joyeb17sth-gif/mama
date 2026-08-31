@@ -18,7 +18,7 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
     const t = {
         sourceFacebook: 0, sourceReferrals: 0, sourceWebsite: 0, sourceWalkIn: 0,
         totalLeads: 0, convYes: 0, convNo: 0, convDNA: 0,
-        appApplied: 0, appWaitingPayment: 0, appDroppedOut: 0,
+        appApplied: 0, appWaitingApplication: 0, appWaitingPayment: 0, appDropoutThisMonth: 0, appDropoutPrevMonth: 0,
         visaLodging: 0, visaInProgress: 0, visaGranted: 0, visaRefusal: 0,
         hasData: false
     };
@@ -34,8 +34,10 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
         t.convNo += parseInt(r.convNo) || 0;
         t.convDNA += parseInt(r.convDNA) || 0;
         t.appApplied += parseInt(r.appApplied) || 0;
+        t.appWaitingApplication += parseInt(r.appWaitingApplication) || 0;
         t.appWaitingPayment += parseInt(r.appWaitingPayment) || 0;
-        t.appDroppedOut += parseInt(r.appDroppedOut) || 0;
+        t.appDropoutThisMonth += parseInt(r.appDropoutThisMonth) || parseInt(r.appDroppedOut) || 0;
+        t.appDropoutPrevMonth += parseInt(r.appDropoutPrevMonth) || 0;
         t.visaLodging += parseInt(r.visaLodging) || 0;
         t.visaInProgress += parseInt(r.visaInProgress) || 0;
         t.visaGranted += parseInt(r.visaGranted) || 0;
@@ -60,8 +62,10 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
         convNo: 0,
         convDNA: 0,
         appApplied: 0,
+        appWaitingApplication: 0,
         appWaitingPayment: 0,
-        appDroppedOut: 0,
+        appDropoutThisMonth: 0,
+        appDropoutPrevMonth: 0,
         visaLodging: 0,
         visaInProgress: 0,
         visaGranted: 0,
@@ -78,8 +82,10 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
         sums.convNo += parseInt(r.convNo) || 0;
         sums.convDNA += parseInt(r.convDNA) || 0;
         sums.appApplied += parseInt(r.appApplied) || 0;
+        sums.appWaitingApplication += parseInt(r.appWaitingApplication) || 0;
         sums.appWaitingPayment += parseInt(r.appWaitingPayment) || 0;
-        sums.appDroppedOut += parseInt(r.appDroppedOut) || 0;
+        sums.appDropoutThisMonth += parseInt(r.appDropoutThisMonth) || parseInt(r.appDroppedOut) || 0;
+        sums.appDropoutPrevMonth += parseInt(r.appDropoutPrevMonth) || 0;
         sums.visaLodging += parseInt(r.visaLodging) || 0;
         sums.visaInProgress += parseInt(r.visaInProgress) || 0;
         sums.visaGranted += parseInt(r.visaGranted) || 0;
@@ -102,8 +108,10 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
         convNo: 0,
         convDNA: 0,
         appApplied: 0,
+        appWaitingApplication: 0,
         appWaitingPayment: 0,
-        appDroppedOut: 0,
+        appDropoutThisMonth: 0,
+        appDropoutPrevMonth: 0,
         visaLodging: 0,
         visaInProgress: 0,
         visaGranted: 0,
@@ -174,7 +182,7 @@ const LeadCumulativeData = ({ counselors, existingReports }) => {
                 Lead Stage
               </th>
               
-              <th colSpan={3} className={`${groupThClass} bg-emerald-50 text-emerald-700 `}>
+              <th colSpan={5} className={`${groupThClass} bg-emerald-50 text-emerald-700 `}>
                 Application State
               </th>
               

@@ -28,7 +28,7 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
     convDNA: '',
     appApplied: '',
     appWaitingPayment: '',
-    appDroppedOut: '',
+    appWaitingApplication: '', appDropoutThisMonth: '', appDropoutPrevMonth: '',
     paymentDone: '',
     visaLodging: '',
     visaInProgress: '',
@@ -69,7 +69,7 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
   const blankForm = {
     totalLeads: '', sourceFacebook: '', sourceReferrals: '', sourceWebsite: '', sourceWalkIn: '',
     convYes: '', convNo: '', convDNA: '',
-    appApplied: '', appWaitingPayment: '', appDroppedOut: '', paymentDone: '',
+    appApplied: '', appWaitingPayment: '', appWaitingApplication: '', appDropoutThisMonth: '', appDropoutPrevMonth: '', paymentDone: '',
     visaLodging: '', visaInProgress: '', visaGranted: '', visaRefusal: ''
   };
 
@@ -94,7 +94,9 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
         convDNA: existing.convDNA || '',
         appApplied: existing.appApplied || '',
         appWaitingPayment: existing.appWaitingPayment || '',
-        appDroppedOut: existing.appDroppedOut || '',
+        appWaitingApplication: existing.appWaitingApplication || '',
+        appDropoutThisMonth: existing.appDropoutThisMonth || existing.appDroppedOut || '',
+        appDropoutPrevMonth: existing.appDropoutPrevMonth || '',
         paymentDone: existing.paymentDone || '',
         visaLodging: existing.visaLodging || '',
         visaInProgress: existing.visaInProgress || '',
@@ -153,12 +155,13 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
     if (step === 3) {
       const yes = parseInt(formData.convYes) || 0;
       const applied = parseInt(formData.appApplied) || 0;
-      const waiting = parseInt(formData.appWaitingPayment) || 0;
-      const dropped = parseInt(formData.appDroppedOut) || 0;
+      const waitingApp = parseInt(formData.appWaitingApplication) || 0;
+      const dropoutThis = parseInt(formData.appDropoutThisMonth) || 0;
       
-      
-      
-      
+      if (yes !== (applied + waitingApp + dropoutThis)) {
+        setError(`Application outcomes (${applied} + ${waitingApp} + ${dropoutThis} = ${applied + waitingApp + dropoutThis}) must equal Total 'Yes' Conversions (${yes}).`);
+        return;
+      }
     }
 
     setError('');

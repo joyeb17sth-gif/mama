@@ -93,21 +93,26 @@ const LeadSettings = ({ counselors, setCounselors, setLeadReports }) => {
           const fb = r(5, 25); const ref = r(2, 10); const web = r(5, 20); const walk = r(1, 10);
           const totalLeads = fb + ref + web + walk;
           const yes = r(Math.floor(totalLeads * 0.4), Math.floor(totalLeads * 0.8));
-          const no = r(1, totalLeads - yes); const dna = totalLeads - yes - no;
+          const no = r(0, totalLeads - yes); const dna = totalLeads - yes - no;
+          
           const appApplied = r(Math.floor(yes * 0.5), yes);
+          const appWaitingApplication = r(0, yes - appApplied);
+          const appDropoutThisMonth = yes - appApplied - appWaitingApplication;
+          
           const appWaitingPayment = r(0, Math.floor(appApplied * 0.3));
-          const appDroppedOut = r(0, Math.floor(appApplied * 0.2));
-          const paymentDone = appApplied - appWaitingPayment - appDroppedOut;
-          const visaLodging = r(Math.floor(paymentDone * 0.8), paymentDone);
-          const visaGranted = r(Math.floor(visaLodging * 0.5), visaLodging);
-          const visaRefusal = r(0, visaLodging - visaGranted);
-          const visaInProgress = visaLodging - visaGranted - visaRefusal;
+          const appDropoutPrevMonth = r(0, Math.floor(appApplied * 0.1));
+          const paymentDone = appApplied - appWaitingPayment;
+
+          const visaLodging = paymentDone;
+          const visaGranted = r(Math.floor(visaLodging * 0.6), visaLodging);
+          const visaInProgress = r(0, visaLodging - visaGranted);
+          const visaRefusal = visaLodging - visaGranted - visaInProgress;
 
           mockReports.push({
             id: generateId(), createdAt: new Date().toISOString(), counselorId: c.id, month,
             totalLeads, sourceFacebook: fb, sourceReferrals: ref, sourceWebsite: web, sourceWalkIn: walk,
-            convYes: yes, convNo: no, convDNA: dna, appApplied, appWaitingPayment, appDroppedOut, paymentDone,
-            visaLodging, visaInProgress, visaGranted, visaRefusal
+            convYes: yes, convNo: no, convDNA: dna, appApplied, appWaitingApplication, appDropoutThisMonth, appDropoutPrevMonth,
+            appWaitingPayment, paymentDone, visaLodging, visaInProgress, visaGranted, visaRefusal
           });
         });
       });
