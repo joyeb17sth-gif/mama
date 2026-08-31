@@ -482,22 +482,26 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
               </span>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div>
-                <label className={labelClasses}>Applied</label>
-                <input type="number" min="0" name="appApplied" value={formData.appApplied} onChange={handleChange} className={inputClasses} placeholder="0" />
-              </div>
-              <div>
-                <label className={labelClasses}>Payment Done</label>
-                <input type="number" min="0" name="paymentDone" value={formData.paymentDone} onChange={handleChange} className={inputClasses} placeholder="0" />
-              </div>
-              <div>
-                <label className={labelClasses}>Waiting on Payment</label>
-                <input type="number" min="0" name="appWaitingPayment" value={formData.appWaitingPayment} onChange={handleChange} className={inputClasses} placeholder="0" />
-              </div>
-              <div>
-                <label className={labelClasses}>Dropped Out</label>
-                <input type="number" min="0" name="appDroppedOut" value={formData.appDroppedOut} onChange={handleChange} className={inputClasses} placeholder="0" />
+            <div className="mb-6">
+              <label className={labelClasses}>Total Applied</label>
+              <input type="number" min="0" name="appApplied" value={formData.appApplied} onChange={handleChange} className={inputClasses} placeholder="0" />
+            </div>
+
+            <div className="pt-4 border-t border-zinc-100">
+              <h4 className="text-sm font-bold text-notion-black mb-4">Application Outcomes Breakdown</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div>
+                  <label className={labelClasses}>Payment Done</label>
+                  <input type="number" min="0" name="paymentDone" value={formData.paymentDone} onChange={handleChange} className={inputClasses} placeholder="0" />
+                </div>
+                <div>
+                  <label className={labelClasses}>Waiting on Payment</label>
+                  <input type="number" min="0" name="appWaitingPayment" value={formData.appWaitingPayment} onChange={handleChange} className={inputClasses} placeholder="0" />
+                </div>
+                <div>
+                  <label className={labelClasses}>Dropped Out</label>
+                  <input type="number" min="0" name="appDroppedOut" value={formData.appDroppedOut} onChange={handleChange} className={inputClasses} placeholder="0" />
+                </div>
               </div>
             </div>
           </div>
@@ -520,22 +524,26 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
               </span>
             </div>
             
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className={labelClasses}>Visa Lodging</label>
-                <input type="number" min="0" name="visaLodging" value={formData.visaLodging} onChange={handleChange} className={inputClasses} placeholder="0" />
-              </div>
-              <div>
-                <label className={labelClasses}>In Progress</label>
-                <input type="number" min="0" name="visaInProgress" value={formData.visaInProgress} onChange={handleChange} className={inputClasses} placeholder="0" />
-              </div>
-              <div>
-                <label className={labelClasses}>Granted</label>
-                <input type="number" min="0" name="visaGranted" value={formData.visaGranted} onChange={handleChange} className={inputClasses} placeholder="0" />
-              </div>
-              <div>
-                <label className={labelClasses}>Refusal</label>
-                <input type="number" min="0" name="visaRefusal" value={formData.visaRefusal} onChange={handleChange} className={inputClasses} placeholder="0" />
+            <div className="mb-6">
+              <label className={labelClasses}>Total Visa Lodging</label>
+              <input type="number" min="0" name="visaLodging" value={formData.visaLodging} onChange={handleChange} className={inputClasses} placeholder="0" />
+            </div>
+
+            <div className="pt-4 border-t border-zinc-100">
+              <h4 className="text-sm font-bold text-notion-black mb-4">Visa Outcomes Breakdown</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div>
+                  <label className={labelClasses}>In Progress</label>
+                  <input type="number" min="0" name="visaInProgress" value={formData.visaInProgress} onChange={handleChange} className={inputClasses} placeholder="0" />
+                </div>
+                <div>
+                  <label className={labelClasses}>Granted</label>
+                  <input type="number" min="0" name="visaGranted" value={formData.visaGranted} onChange={handleChange} className={inputClasses} placeholder="0" />
+                </div>
+                <div>
+                  <label className={labelClasses}>Refusal</label>
+                  <input type="number" min="0" name="visaRefusal" value={formData.visaRefusal} onChange={handleChange} className={inputClasses} placeholder="0" />
+                </div>
               </div>
             </div>
           </div>
