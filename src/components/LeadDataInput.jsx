@@ -325,6 +325,7 @@ const LeadDataInput = ({ onSaveData, existingReports = [], counselors = [] }) =>
             );
           })}
         </div>
+        <PremiumDialog {...dialogConfig} />
       </div>
     );
   }
