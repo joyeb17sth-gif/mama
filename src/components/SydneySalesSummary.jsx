@@ -63,13 +63,15 @@ export default function SydneySalesSummary() {
   }, [isConfigModalOpen]);
 
   useEffect(() => {
+    let isMounted = true;
+
     const loadConfigAndData = async () => {
       // 1. Load Config
       let config = getSydneySalesConfig();
-      if (!config) {
+      if (!config || config.length === 0) {
         config = await getSydneySalesConfigAsync();
       }
-      if (config && config.length > 0) {
+      if (isMounted && config && config.length > 0) {
         setColumns(config);
       }
 
@@ -79,17 +81,36 @@ export default function SydneySalesSummary() {
         loadedData = await getSydneySalesAsync();
       }
       
-      if (loadedData && loadedData.length > 0) {
-        setData(loadedData);
-      } else {
-        // Init blank data based on current months
-        setData(MONTHS.map(month => ({ month })));
+      if (isMounted) {
+        if (loadedData && Array.isArray(loadedData) && loadedData.length > 0) {
+          setData(loadedData);
+        } else {
+          // Never wipe out if previous state already has data!
+          setData(prev => (prev && prev.length > 0 ? prev : MONTHS.map(month => ({ month }))));
+        }
       }
     };
+
     loadConfigAndData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleSave = () => {
+    // Safety check: Don't allow accidental wipe of cloud data
+    const hasValues = data && data.some(row => columns.some(col => row[col.id] && Number(row[col.id]) > 0));
+    const cachedData = getSydneySales();
+    const cachedHasValues = cachedData && cachedData.some(row => columns.some(col => row[col.id] && Number(row[col.id]) > 0));
+
+    if (!hasValues && cachedHasValues) {
+      const confirmSave = window.confirm(
+        "WARNING: The current table has no sales numbers entered. Saving will erase the existing sales data in the cloud. Do you really want to proceed?"
+      );
+      if (!confirmSave) return;
+    }
+
     saveSydneySales(data);
     setIsEditing(false);
   };
@@ -99,7 +120,7 @@ export default function SydneySalesSummary() {
     if (loadedData && loadedData.length > 0) {
       setData(loadedData);
     } else {
-      setData(MONTHS.map(month => ({ month })));
+      setData(prev => (prev && prev.length > 0 ? prev : MONTHS.map(month => ({ month }))));
     }
     setIsEditing(false);
   };

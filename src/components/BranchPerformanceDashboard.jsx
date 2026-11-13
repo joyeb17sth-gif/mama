@@ -134,13 +134,15 @@ export default function BranchPerformanceDashboard() {
   }, [isConfigModalOpen]);
 
   useEffect(() => {
+    let isMounted = true;
+
     const loadData = async () => {
       // 1. Load config
       let loadedConfig = getBranchPerformanceConfig();
-      if (!loadedConfig) {
+      if (!loadedConfig || loadedConfig.length === 0) {
         loadedConfig = await getBranchPerformanceConfigAsync();
       }
-      if (loadedConfig && loadedConfig.length > 0) {
+      if (isMounted && loadedConfig && loadedConfig.length > 0) {
         setConfig(loadedConfig);
       }
 
@@ -149,28 +151,52 @@ export default function BranchPerformanceDashboard() {
       if (!loadedData || loadedData.length === 0) {
         loadedData = await getBranchPerformanceAsync();
       }
-      if (loadedData && loadedData.length > 0) {
-        setData(loadedData);
-      } else {
-        // Initialize blank data dynamically based on config
-        const blank = MONTHS.map(month => {
-          const rowObj = { month };
-          const activeConfig = loadedConfig || DEFAULT_CONFIG;
-          activeConfig.forEach(branch => {
-            rowObj[branch.id] = {};
-            branch.metrics.forEach(m => {
-              rowObj[branch.id][m.id] = 0;
+      if (isMounted) {
+        if (loadedData && Array.isArray(loadedData) && loadedData.length > 0) {
+          setData(loadedData);
+        } else {
+          // Initialize blank data dynamically only if state doesn't have data
+          setData(prev => {
+            if (prev && prev.length > 0) return prev;
+            const activeConfig = (loadedConfig && loadedConfig.length > 0) ? loadedConfig : DEFAULT_CONFIG;
+            return MONTHS.map(month => {
+              const rowObj = { month };
+              activeConfig.forEach(branch => {
+                rowObj[branch.id] = {};
+                branch.metrics.forEach(m => {
+                  rowObj[branch.id][m.id] = 0;
+                });
+              });
+              return rowObj;
             });
           });
-          return rowObj;
-        });
-        setData(blank);
+        }
       }
     };
     loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleSave = () => {
+    // Safety check: Don't allow accidental wipe of cloud data
+    const hasValues = data && data.some(row => 
+      config.some(b => b.metrics.some(m => row[b.id]?.[m.id] && Number(row[b.id][m.id]) > 0))
+    );
+    const cachedData = getBranchPerformance();
+    const cachedHasValues = cachedData && cachedData.some(row => 
+      config.some(b => b.metrics.some(m => row[b.id]?.[m.id] && Number(row[b.id][m.id]) > 0))
+    );
+
+    if (!hasValues && cachedHasValues) {
+      const confirmSave = window.confirm(
+        "WARNING: The current table has no performance values entered. Saving will erase the existing data in the cloud. Do you really want to proceed?"
+      );
+      if (!confirmSave) return;
+    }
+
     saveBranchPerformance(data);
     setIsEditing(false);
   };
@@ -180,18 +206,20 @@ export default function BranchPerformanceDashboard() {
     if (loadedData && loadedData.length > 0) {
       setData(loadedData);
     } else {
-      // Create blank
-      const blank = MONTHS.map(month => {
-        const rowObj = { month };
-        config.forEach(branch => {
-          rowObj[branch.id] = {};
-          branch.metrics.forEach(m => {
-            rowObj[branch.id][m.id] = 0;
+      setData(prev => {
+        if (prev && prev.length > 0) return prev;
+        const activeConfig = config || DEFAULT_CONFIG;
+        return MONTHS.map(month => {
+          const rowObj = { month };
+          activeConfig.forEach(branch => {
+            rowObj[branch.id] = {};
+            branch.metrics.forEach(m => {
+              rowObj[branch.id][m.id] = 0;
+            });
           });
+          return rowObj;
         });
-        return rowObj;
       });
-      setData(blank);
     }
     setIsEditing(false);
   };

@@ -9,6 +9,8 @@ import {
   saveLeadReports, getLeadReportsAsync, getLeadReports,
   saveLeadCounselors, getLeadCounselorsAsync, getLeadCounselors,
   getStaffProductivityReportsAsync,
+  getSydneySalesAsync, getSydneySalesConfigAsync,
+  getBranchPerformanceAsync, getBranchPerformanceConfigAsync,
   clearSyncTimestamps, setOnSaveError
 } from './utils/storage';
 import { encryptData } from './utils/encryptionUtils';
@@ -119,6 +121,7 @@ function App() {
       const role = (simulatedRole || userProfileData.role)?.toLowerCase() || 'user';
 
       let cloudSites, cloudPeriodicalTasks, cloudProfitLoss, cloudLeads, cloudLeadReports, cloudLeadCounselors, cloudStaffProductivityReports;
+      let cloudBranchPerformance, cloudBranchPerformanceConfig, cloudSydneySales, cloudSydneySalesConfig;
 
       const promises = [];
       const promiseKeys = [];
@@ -132,7 +135,11 @@ function App() {
           getLeadsAsync(),
           getLeadReportsAsync(),
           getLeadCounselorsAsync(),
-          getStaffProductivityReportsAsync()
+          getStaffProductivityReportsAsync(),
+          getBranchPerformanceAsync(),
+          getBranchPerformanceConfigAsync(),
+          getSydneySalesAsync(),
+          getSydneySalesConfigAsync()
         );
         promiseKeys.push(
           'sites',
@@ -141,7 +148,11 @@ function App() {
           'leads',
           'leadReports',
           'leadCounselors',
-          'staffProductivityReports'
+          'staffProductivityReports',
+          'branchPerformance',
+          'branchPerformanceConfig',
+          'sydneySales',
+          'sydneySalesConfig'
         );
       } else if (role === 'supervisor' || role === 'manager') {
         promises.push(
@@ -179,6 +190,10 @@ function App() {
           else if (key === 'leadReports') cloudLeadReports = val;
           else if (key === 'leadCounselors') cloudLeadCounselors = val;
           else if (key === 'staffProductivityReports') cloudStaffProductivityReports = val;
+          else if (key === 'branchPerformance') cloudBranchPerformance = val;
+          else if (key === 'branchPerformanceConfig') cloudBranchPerformanceConfig = val;
+          else if (key === 'sydneySales') cloudSydneySales = val;
+          else if (key === 'sydneySalesConfig') cloudSydneySalesConfig = val;
         });
       }
 
@@ -255,6 +270,38 @@ function App() {
           hasChanges = true;
           memoryCache.staffProductivityReports = cloudStaffProductivityReports;
           await localforage.setItem('staffProductivityReports', encryptData(cloudStaffProductivityReports));
+        }
+      }
+
+      if (cloudBranchPerformance !== undefined) {
+        if (Array.isArray(cloudBranchPerformance) && cloudBranchPerformance.length > 0) {
+          hasChanges = true;
+          memoryCache.branchPerformance = cloudBranchPerformance;
+          await localforage.setItem('branchPerformance', encryptData(cloudBranchPerformance));
+        }
+      }
+
+      if (cloudBranchPerformanceConfig !== undefined) {
+        if (Array.isArray(cloudBranchPerformanceConfig) && cloudBranchPerformanceConfig.length > 0) {
+          hasChanges = true;
+          memoryCache.branchPerformanceConfig = cloudBranchPerformanceConfig;
+          await localforage.setItem('branchPerformanceConfig', encryptData(cloudBranchPerformanceConfig));
+        }
+      }
+
+      if (cloudSydneySales !== undefined) {
+        if (Array.isArray(cloudSydneySales) && cloudSydneySales.length > 0) {
+          hasChanges = true;
+          memoryCache.sydneySalesSummary = cloudSydneySales;
+          await localforage.setItem('sydneySalesSummary', encryptData(cloudSydneySales));
+        }
+      }
+
+      if (cloudSydneySalesConfig !== undefined) {
+        if (Array.isArray(cloudSydneySalesConfig) && cloudSydneySalesConfig.length > 0) {
+          hasChanges = true;
+          memoryCache.sydneySalesConfig = cloudSydneySalesConfig;
+          await localforage.setItem('sydneySalesConfig', encryptData(cloudSydneySalesConfig));
         }
       }
 

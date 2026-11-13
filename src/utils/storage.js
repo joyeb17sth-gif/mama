@@ -452,9 +452,50 @@ export const saveBranchPerformance = async (data) => {
     if (_onSaveError) _onSaveError('Failed to sync data to cloud. Changes saved locally.');
   }
 };
-export const getBranchPerformanceAsync = () => getSingleFromCloud('leads', 'branchPerformance_v1');
+export const getBranchPerformanceAsync = async () => {
+  const cloudData = await getSingleFromCloud('leads', 'branchPerformance_v1');
+  if (cloudData && Array.isArray(cloudData) && cloudData.length > 0) {
+    memoryCache.branchPerformance = cloudData;
+    await localforage.setItem('branchPerformance', encryptData(cloudData));
+    return cloudData;
+  }
+  // Cloud returned undefined (local is up to date according to timestamp), or null (network error)
+  if (memoryCache.branchPerformance && memoryCache.branchPerformance.length > 0) {
+    return memoryCache.branchPerformance;
+  }
+  const local = await localforage.getItem('branchPerformance');
+  if (local) {
+    const decrypted = decryptData(local);
+    if (decrypted && decrypted.length > 0) {
+      memoryCache.branchPerformance = decrypted;
+      return decrypted;
+    }
+  }
+  // Fallback: If local storage was somehow cleared despite metadata timestamp matching,
+  // fetch directly from Supabase to recover
+  try {
+    const { data: directData, error: directError } = await supabase
+      .from('leads')
+      .select('data')
+      .eq('id', 'branchPerformance_v1')
+      .single();
+    if (!directError && directData?.data) {
+      const decrypted = decryptData(directData.data);
+      if (decrypted && decrypted.length > 0) {
+        memoryCache.branchPerformance = decrypted;
+        await localforage.setItem('branchPerformance', encryptData(decrypted));
+        return decrypted;
+      }
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) console.error("Error direct-fetching branch performance:", e);
+  }
+  return memoryCache.branchPerformance || [];
+};
 export const getBranchPerformance = () => memoryCache.branchPerformance || [];
+
 export const saveBranchPerformanceConfig = async (data) => {
+  if (!data || !Array.isArray(data)) return;
   memoryCache.branchPerformanceConfig = data;
   await localforage.setItem('branchPerformanceConfig', encryptData(data));
   try {
@@ -466,11 +507,48 @@ export const saveBranchPerformanceConfig = async (data) => {
     if (_onSaveError) _onSaveError('Failed to sync data to cloud. Changes saved locally.');
   }
 };
-export const getBranchPerformanceConfigAsync = () => getSingleFromCloud('leads', 'branchPerformanceConfig_v1');
-export const getBranchPerformanceConfig = () => memoryCache.branchPerformanceConfig;
+export const getBranchPerformanceConfigAsync = async () => {
+  const cloudConfig = await getSingleFromCloud('leads', 'branchPerformanceConfig_v1');
+  if (cloudConfig && Array.isArray(cloudConfig) && cloudConfig.length > 0) {
+    memoryCache.branchPerformanceConfig = cloudConfig;
+    await localforage.setItem('branchPerformanceConfig', encryptData(cloudConfig));
+    return cloudConfig;
+  }
+  if (memoryCache.branchPerformanceConfig && memoryCache.branchPerformanceConfig.length > 0) {
+    return memoryCache.branchPerformanceConfig;
+  }
+  const local = await localforage.getItem('branchPerformanceConfig');
+  if (local) {
+    const decrypted = decryptData(local);
+    if (decrypted && decrypted.length > 0) {
+      memoryCache.branchPerformanceConfig = decrypted;
+      return decrypted;
+    }
+  }
+  try {
+    const { data: directData, error: directError } = await supabase
+      .from('leads')
+      .select('data')
+      .eq('id', 'branchPerformanceConfig_v1')
+      .single();
+    if (!directError && directData?.data) {
+      const decrypted = decryptData(directData.data);
+      if (decrypted && decrypted.length > 0) {
+        memoryCache.branchPerformanceConfig = decrypted;
+        await localforage.setItem('branchPerformanceConfig', encryptData(decrypted));
+        return decrypted;
+      }
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) console.error("Error direct-fetching branch performance config:", e);
+  }
+  return (memoryCache.branchPerformanceConfig && memoryCache.branchPerformanceConfig.length > 0) ? memoryCache.branchPerformanceConfig : null;
+};
+export const getBranchPerformanceConfig = () => (memoryCache.branchPerformanceConfig && memoryCache.branchPerformanceConfig.length > 0) ? memoryCache.branchPerformanceConfig : null;
 
 // --- SYDNEY SALES SUMMARY ---
 export const saveSydneySales = async (data) => {
+  if (!data || !Array.isArray(data)) return;
   memoryCache.sydneySalesSummary = data;
   await localforage.setItem('sydneySalesSummary', encryptData(data));
   try {
@@ -482,9 +560,50 @@ export const saveSydneySales = async (data) => {
     if (_onSaveError) _onSaveError('Failed to sync data to cloud. Changes saved locally.');
   }
 };
-export const getSydneySalesAsync = () => getSingleFromCloud('leads', 'sydneySalesSummary_v1');
+export const getSydneySalesAsync = async () => {
+  const cloudData = await getSingleFromCloud('leads', 'sydneySalesSummary_v1');
+  if (cloudData && Array.isArray(cloudData) && cloudData.length > 0) {
+    memoryCache.sydneySalesSummary = cloudData;
+    await localforage.setItem('sydneySalesSummary', encryptData(cloudData));
+    return cloudData;
+  }
+  // Cloud returned undefined (local is up to date according to timestamp), or null (network error)
+  if (memoryCache.sydneySalesSummary && memoryCache.sydneySalesSummary.length > 0) {
+    return memoryCache.sydneySalesSummary;
+  }
+  const local = await localforage.getItem('sydneySalesSummary');
+  if (local) {
+    const decrypted = decryptData(local);
+    if (decrypted && decrypted.length > 0) {
+      memoryCache.sydneySalesSummary = decrypted;
+      return decrypted;
+    }
+  }
+  // Fallback: If local storage was somehow cleared despite metadata timestamp matching,
+  // fetch directly from Supabase to recover
+  try {
+    const { data: directData, error: directError } = await supabase
+      .from('leads')
+      .select('data')
+      .eq('id', 'sydneySalesSummary_v1')
+      .single();
+    if (!directError && directData?.data) {
+      const decrypted = decryptData(directData.data);
+      if (decrypted && decrypted.length > 0) {
+        memoryCache.sydneySalesSummary = decrypted;
+        await localforage.setItem('sydneySalesSummary', encryptData(decrypted));
+        return decrypted;
+      }
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) console.error("Error direct-fetching sydney sales:", e);
+  }
+  return memoryCache.sydneySalesSummary || [];
+};
 export const getSydneySales = () => memoryCache.sydneySalesSummary || [];
+
 export const saveSydneySalesConfig = async (data) => {
+  if (!data || !Array.isArray(data)) return;
   memoryCache.sydneySalesConfig = data;
   await localforage.setItem('sydneySalesConfig', encryptData(data));
   try {
@@ -496,6 +615,42 @@ export const saveSydneySalesConfig = async (data) => {
     if (_onSaveError) _onSaveError('Failed to sync data to cloud. Changes saved locally.');
   }
 };
-export const getSydneySalesConfigAsync = () => getSingleFromCloud('leads', 'sydneySalesConfig_v1');
-export const getSydneySalesConfig = () => memoryCache.sydneySalesConfig;
+export const getSydneySalesConfigAsync = async () => {
+  const cloudConfig = await getSingleFromCloud('leads', 'sydneySalesConfig_v1');
+  if (cloudConfig && Array.isArray(cloudConfig) && cloudConfig.length > 0) {
+    memoryCache.sydneySalesConfig = cloudConfig;
+    await localforage.setItem('sydneySalesConfig', encryptData(cloudConfig));
+    return cloudConfig;
+  }
+  if (memoryCache.sydneySalesConfig && memoryCache.sydneySalesConfig.length > 0) {
+    return memoryCache.sydneySalesConfig;
+  }
+  const local = await localforage.getItem('sydneySalesConfig');
+  if (local) {
+    const decrypted = decryptData(local);
+    if (decrypted && decrypted.length > 0) {
+      memoryCache.sydneySalesConfig = decrypted;
+      return decrypted;
+    }
+  }
+  try {
+    const { data: directData, error: directError } = await supabase
+      .from('leads')
+      .select('data')
+      .eq('id', 'sydneySalesConfig_v1')
+      .single();
+    if (!directError && directData?.data) {
+      const decrypted = decryptData(directData.data);
+      if (decrypted && decrypted.length > 0) {
+        memoryCache.sydneySalesConfig = decrypted;
+        await localforage.setItem('sydneySalesConfig', encryptData(decrypted));
+        return decrypted;
+      }
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) console.error("Error direct-fetching sydney sales config:", e);
+  }
+  return (memoryCache.sydneySalesConfig && memoryCache.sydneySalesConfig.length > 0) ? memoryCache.sydneySalesConfig : null;
+};
+export const getSydneySalesConfig = () => (memoryCache.sydneySalesConfig && memoryCache.sydneySalesConfig.length > 0) ? memoryCache.sydneySalesConfig : null;
 
