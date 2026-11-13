@@ -78,7 +78,8 @@ export const initStorage = async () => {
 // Helper to save data to Supabase
 const saveToCloud = async (table, id, data, consultantId = null) => {
   const encrypted = encryptData(data);
-  const payload = { id, data: encrypted };
+  const now = new Date().toISOString();
+  const payload = { id, data: encrypted, updated_at: now };
   if (consultantId) {
     payload.consultant_id = consultantId;
   }

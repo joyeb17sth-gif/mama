@@ -107,7 +107,7 @@ const EditableCell = ({ value, onChange, className = '', isEditable = true }) =>
     <div
       onClick={handleStartEdit}
       className={`w-full h-full px-2 py-1 text-right text-xs rounded-sm transition-colors select-none ${isEditable ? 'cursor-pointer hover:bg-emerald-50/30' : ''} ${className}`}
-      title={isEditable ? "Click to edit" : undefined}
+      title={isEditable ? "Click to edit" : "Click 'Edit Mode' button above to edit"}
     >
       {fmt(value)}
     </div>
@@ -124,8 +124,10 @@ const ProfitLossMedisafe = ({ companyPeriods, onSave, isEditMode, view = 'table'
   const [showAddItemModal, setShowAddItemModal] = useState({ show: false, type: null });
 
   useEffect(() => {
-    setAllPeriods(companyPeriods || []);
-  }, [companyPeriods]);
+    if (!isEditMode) {
+      setAllPeriods(companyPeriods || []);
+    }
+  }, [companyPeriods, isEditMode]);
 
   // Current period
   const periodId = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;

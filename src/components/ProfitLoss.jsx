@@ -248,8 +248,8 @@ const EditableCell = ({ value, onChange, isPct = false, className = '', isEditab
   return (
     <div
       onClick={handleStartEdit}
-      className={`w-full h-full px-1.5 py-1 text-right text-xs rounded-sm transition-colors select-none ${isEditable ? 'cursor-pointer hover:bg-notion-blue/5' : ''} ${className}`}
-      title={isEditable ? "Click to edit" : undefined}
+      className={`w-full h-full px-1.5 py-1 text-right text-xs rounded-sm transition-colors select-none ${isEditable ? 'cursor-pointer hover:bg-notion-blue/5' : 'cursor-not-allowed opacity-90'} ${className}`}
+      title={isEditable ? "Click to edit" : "Click 'Edit Mode' button above to edit"}
     >
       {isPct ? (value ? fmtPct(value) : '-') : fmt(value)}
     </div>
@@ -358,6 +358,9 @@ const ProfitLoss = ({ syncVersion }) => {
 
   // Load data from cache — now uses multi-company structure
   useEffect(() => {
+    // If user is currently in edit mode, do NOT wipe in-flight edits!
+    if (isEditMode) return;
+
     const cached = getProfitLoss(); // Returns migrated { version: 2, profiles, companies }
     if (cached && cached.version === 2) {
       setPlData(cached);
@@ -376,14 +379,14 @@ const ProfitLoss = ({ syncVersion }) => {
         setAllPeriods(seetalPeriods);
       }
     }
-  }, [syncVersion]);
+  }, [syncVersion, isEditMode]);
 
   // When company changes, load that company's periods into allPeriods (for Seetal)
   useEffect(() => {
-    if (plData && selectedCompany === 'seetal_management') {
+    if (!isEditMode && plData && selectedCompany === 'seetal_management') {
       setAllPeriods(plData.companies?.seetal_management || []);
     }
-  }, [plData, selectedCompany]);
+  }, [plData, selectedCompany, isEditMode]);
 
   // Handler for sub-companies (Search Education / Medisafe) to save their data
   const handleSubCompanySave = useCallback((companyId, updatedPeriods) => {
@@ -496,6 +499,9 @@ const ProfitLoss = ({ syncVersion }) => {
       const idx = prev.findIndex(p => p.id === updatedPeriod.id);
       const next = idx >= 0 ? prev.map(p => p.id === updatedPeriod.id ? updatedPeriod : p) : [...prev, updatedPeriod];
 
+      // Auto-save debounced so typed edits are immediately persisted and never lost on sync/re-render!
+      saveData(next);
+
       return next;
     });
   }, [periodId, selectedYear, selectedMonth, saveData]);
@@ -538,10 +544,16 @@ const ProfitLoss = ({ syncVersion }) => {
   }, [updatePeriod]);
 
   const handleSaveData = () => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     setPlData(prev => {
+      const currentCompany = selectedCompany;
+      let updatedCompanies = { ...(prev?.companies || {}) };
+      if (currentCompany === 'seetal_management') {
+        updatedCompanies.seetal_management = allPeriods;
+      }
       const updated = {
         ...(prev || { version: 2, profiles: [], companies: {} }),
-        companies: { ...(prev?.companies || {}), seetal_management: allPeriods },
+        companies: updatedCompanies,
       };
       saveProfitLoss(updated);
       return updated;
