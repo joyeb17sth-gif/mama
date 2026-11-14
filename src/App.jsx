@@ -11,6 +11,7 @@ import {
   getStaffProductivityReportsAsync,
   getSydneySalesAsync, getSydneySalesConfigAsync,
   getBranchPerformanceAsync, getBranchPerformanceConfigAsync,
+  hasBranchPerformanceValues, hasSydneySalesValues,
   clearSyncTimestamps, setOnSaveError
 } from './utils/storage';
 import { encryptData } from './utils/encryptionUtils';
@@ -275,9 +276,20 @@ function App() {
 
       if (cloudBranchPerformance !== undefined) {
         if (Array.isArray(cloudBranchPerformance) && cloudBranchPerformance.length > 0) {
-          hasChanges = true;
-          memoryCache.branchPerformance = cloudBranchPerformance;
-          await localforage.setItem('branchPerformance', encryptData(cloudBranchPerformance));
+          const cloudHasVals = hasBranchPerformanceValues(cloudBranchPerformance);
+          const localHasVals = hasBranchPerformanceValues(memoryCache.branchPerformance);
+
+          // Safeguard: Never overwrite non-zero local data with an all-zero cloud table
+          if (!cloudHasVals && localHasVals) {
+            console.warn('[Sync] Skipped overwriting populated local branch performance with empty cloud data.');
+          } else {
+            hasChanges = true;
+            memoryCache.branchPerformance = cloudBranchPerformance;
+            await localforage.setItem('branchPerformance', encryptData(cloudBranchPerformance));
+            if (cloudHasVals) {
+              await localforage.setItem('branchPerformance_backup_last_good', encryptData(cloudBranchPerformance));
+            }
+          }
         }
       }
 
@@ -291,9 +303,20 @@ function App() {
 
       if (cloudSydneySales !== undefined) {
         if (Array.isArray(cloudSydneySales) && cloudSydneySales.length > 0) {
-          hasChanges = true;
-          memoryCache.sydneySalesSummary = cloudSydneySales;
-          await localforage.setItem('sydneySalesSummary', encryptData(cloudSydneySales));
+          const cloudHasVals = hasSydneySalesValues(cloudSydneySales);
+          const localHasVals = hasSydneySalesValues(memoryCache.sydneySalesSummary);
+
+          // Safeguard: Never overwrite non-zero local data with an all-zero cloud table
+          if (!cloudHasVals && localHasVals) {
+            console.warn('[Sync] Skipped overwriting populated local sydney sales with empty cloud data.');
+          } else {
+            hasChanges = true;
+            memoryCache.sydneySalesSummary = cloudSydneySales;
+            await localforage.setItem('sydneySalesSummary', encryptData(cloudSydneySales));
+            if (cloudHasVals) {
+              await localforage.setItem('sydneySalesSummary_backup_last_good', encryptData(cloudSydneySales));
+            }
+          }
         }
       }
 

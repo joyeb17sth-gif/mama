@@ -440,40 +440,105 @@ export const clearSyncTimestamps = async () => {
   await localforage.removeItem('sync_metadata');
 };
 
+// --- VALUE VALIDATION HELPERS (DATA LOSS PREVENTION) ---
+export const hasBranchPerformanceValues = (rows) => {
+  if (!rows || !Array.isArray(rows) || rows.length === 0) return false;
+  return rows.some(row => 
+    Object.keys(row).some(k => {
+      if (k === 'month' || k === 'totals') return false;
+      const b = row[k];
+      if (typeof b === 'object' && b !== null) {
+        return Object.values(b).some(val => val !== undefined && val !== null && val !== '' && Number(val) > 0);
+      }
+      return false;
+    })
+  );
+};
+
+export const hasSydneySalesValues = (rows) => {
+  if (!rows || !Array.isArray(rows) || rows.length === 0) return false;
+  return rows.some(row => 
+    Object.keys(row).some(k => {
+      if (k === 'month' || k === 'total') return false;
+      const val = row[k];
+      return val !== undefined && val !== null && val !== '' && Number(val) > 0;
+    })
+  );
+};
+
 // --- BRANCH PERFORMANCE ---
-export const saveBranchPerformance = async (data) => {
+export const saveBranchPerformance = async (data, force = false) => {
+  if (!data || !Array.isArray(data)) return;
+  const hasValues = hasBranchPerformanceValues(data);
+
+  // Safeguard: Never accidentally wipe existing valid data with an empty save unless explicitly forced
+  if (!hasValues && !force) {
+    const existing = memoryCache.branchPerformance || [];
+    if (hasBranchPerformanceValues(existing)) {
+      console.warn("Prevented saving empty branch performance data over existing non-empty data.");
+      return;
+    }
+  }
+
   memoryCache.branchPerformance = data;
   await localforage.setItem('branchPerformance', encryptData(data));
+
+  // If this payload has valid numbers, also persist a snapshot to the permanent backup slots
+  if (hasValues) {
+    await localforage.setItem('branchPerformance_backup_last_good', encryptData(data));
+  }
+
   try {
     const { data: { session } } = await supabase.auth.getSession();
     const userId = session?.user?.id;
     await saveToCloud('leads', 'branchPerformance_v1', data, userId);
+
+    // Save cloud snapshot copy that is never overwritten by empty data
+    if (hasValues) {
+      await saveToCloud('leads', 'branchPerformance_last_good', data, userId);
+    }
   } catch (err) {
     if (import.meta.env.DEV) console.error("Error saving branch performance to cloud:", err);
     if (_onSaveError) _onSaveError('Failed to sync data to cloud. Changes saved locally.');
   }
 };
+
 export const getBranchPerformanceAsync = async () => {
+  // 1. Try to fetch standard cloud row
   const cloudData = await getSingleFromCloud('leads', 'branchPerformance_v1');
-  if (cloudData && Array.isArray(cloudData) && cloudData.length > 0) {
+  if (cloudData && Array.isArray(cloudData) && hasBranchPerformanceValues(cloudData)) {
     memoryCache.branchPerformance = cloudData;
     await localforage.setItem('branchPerformance', encryptData(cloudData));
+    await localforage.setItem('branchPerformance_backup_last_good', encryptData(cloudData));
     return cloudData;
   }
-  // Cloud returned undefined (local is up to date according to timestamp), or null (network error)
-  if (memoryCache.branchPerformance && memoryCache.branchPerformance.length > 0) {
+
+  // 2. Check in-memory cache if it has real values
+  if (memoryCache.branchPerformance && hasBranchPerformanceValues(memoryCache.branchPerformance)) {
     return memoryCache.branchPerformance;
   }
+
+  // 3. Check localforage standard slot
   const local = await localforage.getItem('branchPerformance');
   if (local) {
     const decrypted = decryptData(local);
-    if (decrypted && decrypted.length > 0) {
+    if (decrypted && hasBranchPerformanceValues(decrypted)) {
       memoryCache.branchPerformance = decrypted;
       return decrypted;
     }
   }
-  // Fallback: If local storage was somehow cleared despite metadata timestamp matching,
-  // fetch directly from Supabase to recover
+
+  // 4. Check localforage permanent backup slot
+  const localBackup = await localforage.getItem('branchPerformance_backup_last_good');
+  if (localBackup) {
+    const decryptedBackup = decryptData(localBackup);
+    if (decryptedBackup && hasBranchPerformanceValues(decryptedBackup)) {
+      memoryCache.branchPerformance = decryptedBackup;
+      return decryptedBackup;
+    }
+  }
+
+  // 5. Direct-fetch branchPerformance_v1 from Supabase
   try {
     const { data: directData, error: directError } = await supabase
       .from('leads')
@@ -482,17 +547,68 @@ export const getBranchPerformanceAsync = async () => {
       .single();
     if (!directError && directData?.data) {
       const decrypted = decryptData(directData.data);
-      if (decrypted && decrypted.length > 0) {
+      if (decrypted && hasBranchPerformanceValues(decrypted)) {
         memoryCache.branchPerformance = decrypted;
         await localforage.setItem('branchPerformance', encryptData(decrypted));
+        await localforage.setItem('branchPerformance_backup_last_good', encryptData(decrypted));
         return decrypted;
       }
     }
   } catch (e) {
     if (import.meta.env.DEV) console.error("Error direct-fetching branch performance:", e);
   }
-  return memoryCache.branchPerformance || [];
+
+  // 6. Cloud Snapshot Fallback: Fetch branchPerformance_last_good from Supabase
+  try {
+    const { data: goodData, error: goodError } = await supabase
+      .from('leads')
+      .select('data')
+      .eq('id', 'branchPerformance_last_good')
+      .single();
+    if (!goodError && goodData?.data) {
+      const decrypted = decryptData(goodData.data);
+      if (decrypted && hasBranchPerformanceValues(decrypted)) {
+        memoryCache.branchPerformance = decrypted;
+        await localforage.setItem('branchPerformance', encryptData(decrypted));
+        await localforage.setItem('branchPerformance_backup_last_good', encryptData(decrypted));
+        return decrypted;
+      }
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) console.error("Error fetching branch performance last_good backup:", e);
+  }
+
+  return (cloudData && Array.isArray(cloudData) && cloudData.length > 0) ? cloudData : (memoryCache.branchPerformance || []);
 };
+
+export const restoreBranchPerformanceFromBackup = async () => {
+  // 1. Try local backup first
+  const localBackup = await localforage.getItem('branchPerformance_backup_last_good');
+  if (localBackup) {
+    const decrypted = decryptData(localBackup);
+    if (hasBranchPerformanceValues(decrypted)) {
+      await saveBranchPerformance(decrypted, true);
+      return decrypted;
+    }
+  }
+  // 2. Try cloud backup
+  try {
+    const { data: goodData } = await supabase
+      .from('leads')
+      .select('data')
+      .eq('id', 'branchPerformance_last_good')
+      .single();
+    if (goodData?.data) {
+      const decrypted = decryptData(goodData.data);
+      if (hasBranchPerformanceValues(decrypted)) {
+        await saveBranchPerformance(decrypted, true);
+        return decrypted;
+      }
+    }
+  } catch (e) {}
+  return null;
+};
+
 export const getBranchPerformance = () => memoryCache.branchPerformance || [];
 
 export const saveBranchPerformanceConfig = async (data) => {
@@ -548,40 +664,78 @@ export const getBranchPerformanceConfigAsync = async () => {
 export const getBranchPerformanceConfig = () => (memoryCache.branchPerformanceConfig && memoryCache.branchPerformanceConfig.length > 0) ? memoryCache.branchPerformanceConfig : null;
 
 // --- SYDNEY SALES SUMMARY ---
-export const saveSydneySales = async (data) => {
+export const saveSydneySales = async (data, force = false) => {
   if (!data || !Array.isArray(data)) return;
+  const hasValues = hasSydneySalesValues(data);
+
+  // Safeguard: Never accidentally wipe existing valid data with an empty save unless explicitly forced
+  if (!hasValues && !force) {
+    const existing = memoryCache.sydneySalesSummary || [];
+    if (hasSydneySalesValues(existing)) {
+      console.warn("Prevented saving empty sydney sales data over existing non-empty data.");
+      return;
+    }
+  }
+
   memoryCache.sydneySalesSummary = data;
   await localforage.setItem('sydneySalesSummary', encryptData(data));
+
+  // If this payload has valid numbers, also persist a snapshot to the permanent backup slots
+  if (hasValues) {
+    await localforage.setItem('sydneySalesSummary_backup_last_good', encryptData(data));
+  }
+
   try {
     const { data: { session } } = await supabase.auth.getSession();
     const userId = session?.user?.id;
     await saveToCloud('leads', 'sydneySalesSummary_v1', data, userId);
+
+    // Save cloud snapshot copy that is never overwritten by empty data
+    if (hasValues) {
+      await saveToCloud('leads', 'sydneySalesSummary_last_good', data, userId);
+    }
   } catch (err) {
     if (import.meta.env.DEV) console.error("Error saving sydney sales to cloud:", err);
     if (_onSaveError) _onSaveError('Failed to sync data to cloud. Changes saved locally.');
   }
 };
+
 export const getSydneySalesAsync = async () => {
+  // 1. Try to fetch standard cloud row
   const cloudData = await getSingleFromCloud('leads', 'sydneySalesSummary_v1');
-  if (cloudData && Array.isArray(cloudData) && cloudData.length > 0) {
+  if (cloudData && Array.isArray(cloudData) && hasSydneySalesValues(cloudData)) {
     memoryCache.sydneySalesSummary = cloudData;
     await localforage.setItem('sydneySalesSummary', encryptData(cloudData));
+    await localforage.setItem('sydneySalesSummary_backup_last_good', encryptData(cloudData));
     return cloudData;
   }
-  // Cloud returned undefined (local is up to date according to timestamp), or null (network error)
-  if (memoryCache.sydneySalesSummary && memoryCache.sydneySalesSummary.length > 0) {
+
+  // 2. Check in-memory cache if it has real values
+  if (memoryCache.sydneySalesSummary && hasSydneySalesValues(memoryCache.sydneySalesSummary)) {
     return memoryCache.sydneySalesSummary;
   }
+
+  // 3. Check localforage standard slot
   const local = await localforage.getItem('sydneySalesSummary');
   if (local) {
     const decrypted = decryptData(local);
-    if (decrypted && decrypted.length > 0) {
+    if (decrypted && hasSydneySalesValues(decrypted)) {
       memoryCache.sydneySalesSummary = decrypted;
       return decrypted;
     }
   }
-  // Fallback: If local storage was somehow cleared despite metadata timestamp matching,
-  // fetch directly from Supabase to recover
+
+  // 4. Check localforage permanent backup slot
+  const localBackup = await localforage.getItem('sydneySalesSummary_backup_last_good');
+  if (localBackup) {
+    const decryptedBackup = decryptData(localBackup);
+    if (decryptedBackup && hasSydneySalesValues(decryptedBackup)) {
+      memoryCache.sydneySalesSummary = decryptedBackup;
+      return decryptedBackup;
+    }
+  }
+
+  // 5. Direct-fetch sydneySalesSummary_v1 from Supabase
   try {
     const { data: directData, error: directError } = await supabase
       .from('leads')
@@ -590,17 +744,68 @@ export const getSydneySalesAsync = async () => {
       .single();
     if (!directError && directData?.data) {
       const decrypted = decryptData(directData.data);
-      if (decrypted && decrypted.length > 0) {
+      if (decrypted && hasSydneySalesValues(decrypted)) {
         memoryCache.sydneySalesSummary = decrypted;
         await localforage.setItem('sydneySalesSummary', encryptData(decrypted));
+        await localforage.setItem('sydneySalesSummary_backup_last_good', encryptData(decrypted));
         return decrypted;
       }
     }
   } catch (e) {
     if (import.meta.env.DEV) console.error("Error direct-fetching sydney sales:", e);
   }
-  return memoryCache.sydneySalesSummary || [];
+
+  // 6. Cloud Snapshot Fallback: Fetch sydneySalesSummary_last_good from Supabase
+  try {
+    const { data: goodData, error: goodError } = await supabase
+      .from('leads')
+      .select('data')
+      .eq('id', 'sydneySalesSummary_last_good')
+      .single();
+    if (!goodError && goodData?.data) {
+      const decrypted = decryptData(goodData.data);
+      if (decrypted && hasSydneySalesValues(decrypted)) {
+        memoryCache.sydneySalesSummary = decrypted;
+        await localforage.setItem('sydneySalesSummary', encryptData(decrypted));
+        await localforage.setItem('sydneySalesSummary_backup_last_good', encryptData(decrypted));
+        return decrypted;
+      }
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) console.error("Error fetching sydney sales last_good backup:", e);
+  }
+
+  return (cloudData && Array.isArray(cloudData) && cloudData.length > 0) ? cloudData : (memoryCache.sydneySalesSummary || []);
 };
+
+export const restoreSydneySalesFromBackup = async () => {
+  // 1. Try local backup first
+  const localBackup = await localforage.getItem('sydneySalesSummary_backup_last_good');
+  if (localBackup) {
+    const decrypted = decryptData(localBackup);
+    if (hasSydneySalesValues(decrypted)) {
+      await saveSydneySales(decrypted, true);
+      return decrypted;
+    }
+  }
+  // 2. Try cloud backup
+  try {
+    const { data: goodData } = await supabase
+      .from('leads')
+      .select('data')
+      .eq('id', 'sydneySalesSummary_last_good')
+      .single();
+    if (goodData?.data) {
+      const decrypted = decryptData(goodData.data);
+      if (hasSydneySalesValues(decrypted)) {
+        await saveSydneySales(decrypted, true);
+        return decrypted;
+      }
+    }
+  } catch (e) {}
+  return null;
+};
+
 export const getSydneySales = () => memoryCache.sydneySalesSummary || [];
 
 export const saveSydneySalesConfig = async (data) => {

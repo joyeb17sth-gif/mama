@@ -5,7 +5,9 @@ import {
   getBranchPerformanceAsync,
   getBranchPerformanceConfig,
   saveBranchPerformanceConfig,
-  getBranchPerformanceConfigAsync
+  getBranchPerformanceConfigAsync,
+  hasBranchPerformanceValues,
+  restoreBranchPerformanceFromBackup
 } from '../utils/storage';
 
 const DEFAULT_CONFIG = [
@@ -180,24 +182,53 @@ export default function BranchPerformanceDashboard() {
     };
   }, []);
 
+  const handleRestoreBackup = async () => {
+    const confirmRestore = window.confirm(
+      "Do you want to restore the last saved backup of Branch Performance numbers?"
+    );
+    if (!confirmRestore) return;
+    const restored = await restoreBranchPerformanceFromBackup();
+    if (restored && Array.isArray(restored) && restored.length > 0) {
+      setData(restored);
+      alert("Previous backup successfully restored!");
+    } else {
+      alert("No non-empty backup was found.");
+    }
+  };
+
+  const handleExportBackup = () => {
+    const exportPayload = {
+      exportDate: new Date().toISOString(),
+      type: "branchPerformance",
+      config,
+      data
+    };
+    const jsonStr = JSON.stringify(exportPayload, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Branch_Performance_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleSave = () => {
     // Safety check: Don't allow accidental wipe of cloud data
-    const hasValues = data && data.some(row => 
-      config.some(b => b.metrics.some(m => row[b.id]?.[m.id] && Number(row[b.id][m.id]) > 0))
-    );
+    const hasValues = hasBranchPerformanceValues(data);
     const cachedData = getBranchPerformance();
-    const cachedHasValues = cachedData && cachedData.some(row => 
-      config.some(b => b.metrics.some(m => row[b.id]?.[m.id] && Number(row[b.id][m.id]) > 0))
-    );
+    const cachedHasValues = hasBranchPerformanceValues(cachedData);
 
     if (!hasValues && cachedHasValues) {
       const confirmSave = window.confirm(
-        "WARNING: The current table has no performance values entered. Saving will erase the existing data in the cloud. Do you really want to proceed?"
+        "WARNING: The current table has no performance values entered. To prevent accidental data loss, existing backup data will be preserved. Do you really want to clear the active view?"
       );
       if (!confirmSave) return;
+      saveBranchPerformance(data, true);
+    } else {
+      saveBranchPerformance(data);
     }
 
-    saveBranchPerformance(data);
     setIsEditing(false);
   };
 
@@ -400,13 +431,31 @@ export default function BranchPerformanceDashboard() {
         </h2>
         <div className="flex gap-2">
           {!isEditing && (
-            <button 
-              onClick={openConfigModal}
-              className="px-4 py-2 text-sm font-medium text-zinc-700 bg-white border border-zinc-300 rounded hover:bg-zinc-50 transition-colors flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-              Manage Columns
-            </button>
+            <>
+              <button 
+                onClick={handleExportBackup}
+                title="Download backup file of current Branch Performance data"
+                className="px-3 py-2 text-sm font-medium text-zinc-700 bg-white border border-zinc-300 rounded hover:bg-zinc-50 transition-colors flex items-center gap-1.5"
+              >
+                <svg className="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Export
+              </button>
+              <button 
+                onClick={handleRestoreBackup}
+                title="Restore from permanent backup snapshot"
+                className="px-3 py-2 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded hover:bg-amber-100 transition-colors flex items-center gap-1.5"
+              >
+                <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Restore Backup
+              </button>
+              <button 
+                onClick={openConfigModal}
+                className="px-4 py-2 text-sm font-medium text-zinc-700 bg-white border border-zinc-300 rounded hover:bg-zinc-50 transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                Manage Columns
+              </button>
+            </>
           )}
           {isEditing ? (
             <>
